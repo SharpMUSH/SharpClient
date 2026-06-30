@@ -41,6 +41,22 @@ public sealed class LoopbackServer : IAsyncDisposable
         return Encoding.ASCII.GetString(buffer, 0, read);
     }
 
+    /// <summary>Writes raw bytes to the client (e.g. a hand-built telnet negotiation sequence).</summary>
+    public async Task SendBytesAsync(byte[] bytes)
+    {
+        await _stream!.WriteAsync(bytes);
+        await _stream.FlushAsync();
+    }
+
+    /// <summary>Reads whatever bytes are currently available from the client, raw.</summary>
+    public async Task<byte[]> ReadAvailableBytesAsync(TimeSpan timeout)
+    {
+        var buffer = new byte[4096];
+        using var cts = new CancellationTokenSource(timeout);
+        var read = await _stream!.ReadAsync(buffer, cts.Token);
+        return buffer[..read];
+    }
+
     public async ValueTask DisposeAsync()
     {
         _stream?.Dispose();

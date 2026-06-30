@@ -19,6 +19,17 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
 
     public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
 
+    /// <summary>
+    /// Telnet CHARSET (RFC 2066) preference order offered during negotiation, most
+    /// preferred first: UTF-8, then Latin-1 (ISO-8859-1), then US-ASCII. The negotiated
+    /// result drives <see cref="TelnetInterpreter.CurrentEncoding"/>, which is used for
+    /// both sending and receiving text.
+    /// </summary>
+    public static Encoding[] CharsetPreference { get; } = [Encoding.UTF8, Encoding.Latin1, Encoding.ASCII];
+
+    /// <summary>The encoding currently negotiated with the server, or null when not connected.</summary>
+    public Encoding? CurrentEncoding => _interpreter?.CurrentEncoding;
+
     public async Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default)
     {
         if (_client is not null)
@@ -36,7 +47,8 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
                 .OnSubmit(OnSubmitAsync)
                 .AddDefaultMUDProtocols(
                     onGMCPMessage: OnGmcpMessageAsync,
-                    onMSSP: OnMsspAsync)
+                    onMSSP: OnMsspAsync,
+                    charsetOrder: CharsetPreference)
                 .BuildAndStartAsync(_client, cancellationToken);
 
             _interpreter = interpreter;
