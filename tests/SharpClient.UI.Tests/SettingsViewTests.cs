@@ -1,4 +1,6 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
+using SharpClient.Core.Diagnostics;
 using SharpClient.Core.Presentation;
 using SharpClient.UI.Components;
 
@@ -20,10 +22,19 @@ public sealed class SettingsViewTests
 {
     private static SettingsViewModel MakeVm() => new(new LocalFakePrefs());
 
+    // SettingsView injects ILogExporter; register a no-op so renders resolve. IsAvailable == false
+    // hides the Diagnostics section, leaving the assertions below (font/accent/slider counts) intact.
+    private static BunitContext NewContext()
+    {
+        var ctx = new BunitContext();
+        ctx.Services.AddSingleton<ILogExporter>(new NoopLogExporter());
+        return ctx;
+    }
+
     [Test]
     public async Task RendersAllFourFontOptions()
     {
-        using var ctx = new BunitContext();
+        using var ctx = NewContext();
         var vm = MakeVm();
 
         var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
@@ -35,7 +46,7 @@ public sealed class SettingsViewTests
     [Test]
     public async Task RendersAllFiveAccentSwatches()
     {
-        using var ctx = new BunitContext();
+        using var ctx = NewContext();
         var vm = MakeVm();
 
         var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
@@ -47,7 +58,7 @@ public sealed class SettingsViewTests
     [Test]
     public async Task RendersGlowAndScanlineToggles()
     {
-        using var ctx = new BunitContext();
+        using var ctx = NewContext();
         var vm = MakeVm();
 
         var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
@@ -60,7 +71,7 @@ public sealed class SettingsViewTests
     [Test]
     public async Task ClickingAccentSwatchUpdatesVmAccent()
     {
-        using var ctx = new BunitContext();
+        using var ctx = NewContext();
         var vm = MakeVm();
         vm.Accent = "#9b7ed4"; // start with default
 
@@ -76,7 +87,7 @@ public sealed class SettingsViewTests
     [Test]
     public async Task ClickingFontOptionUpdatesVmFont()
     {
-        using var ctx = new BunitContext();
+        using var ctx = NewContext();
         var vm = MakeVm();
 
         var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
@@ -91,7 +102,7 @@ public sealed class SettingsViewTests
     [Test]
     public async Task MinColumnsSliderRendersWithCorrectValue()
     {
-        using var ctx = new BunitContext();
+        using var ctx = NewContext();
         var vm = MakeVm();
         vm.MinColumns = 90;
 
@@ -105,7 +116,7 @@ public sealed class SettingsViewTests
     [Test]
     public async Task MaxFontSizeSliderRendersWithCorrectValue()
     {
-        using var ctx = new BunitContext();
+        using var ctx = NewContext();
         var vm = MakeVm();
         vm.MaxFontSize = 16;
 
