@@ -1,13 +1,10 @@
+@page "/"
 @page "/worlds"
-@rendermode InteractiveServer
-
-@using SharpClient.Core.Presentation
-@using SharpClient.UI.Components
 
 @inject WorldManagerViewModel Vm
 @inject NavigationManager Nav
 
-<PageTitle>SharpClient · Worlds</PageTitle>
+<PageTitle>SharpClient &middot; Worlds</PageTitle>
 
 <WorldManager Vm="@Vm" OnOpenRules="NavigateToRules" />
 

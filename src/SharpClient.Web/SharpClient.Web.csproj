@@ -12,6 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="TelnetNegotiationCore" Version="2.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\SharpClient.Core\SharpClient.Core.csproj" />
     <ProjectReference Include="..\SharpClient.UI\SharpClient.UI.csproj" />
     <ProjectReference Include="..\SharpClient.Data\SharpClient.Data.csproj" />

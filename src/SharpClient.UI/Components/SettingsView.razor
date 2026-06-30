@@ -25,7 +25,7 @@
     <div class="sc-settings-section">
         <div class="sc-settings-section-header">Layout</div>
         <div class="sc-setting">
-            <span class="sc-setting-label">Min columns <span style="color:var(--faint);font-size:10px;">(font auto-sizing — coming soon)</span></span>
+            <span class="sc-setting-label">Min columns</span>
             <div class="sc-slider-row">
                 <input type="range" class="sc-slider"
                        min="60" max="120" step="1"
@@ -38,7 +38,7 @@
             <span class="sc-setting-label">Max text size</span>
             <div class="sc-slider-row">
                 <input type="range" class="sc-slider"
-                       min="10" max="18" step="1"
+                       min="6" max="18" step="1"
                        value="@Vm.MaxFontSize"
                        @onchange="e => Vm.MaxFontSize = int.Parse(e.Value!.ToString()!)" />
                 <span class="sc-setting-value">@Vm.MaxFontSize px</span>

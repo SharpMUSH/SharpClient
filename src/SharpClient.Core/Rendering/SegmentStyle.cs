@@ -4,13 +4,13 @@ namespace SharpClient.Core.Rendering;
 
 public static class SegmentStyle
 {
-    private const string PhosphorDefault = "#c4d1c8";
+    // PhosphorDefault is the single source of truth: AnsiPalette.PhosphorDefault (internal const).
     private const string OutputBackground = "#090c10";
 
     public static string ToCss(StyledSegment segment)
     {
         var style = segment.Style;
-        var fg = Resolve(style.Foreground, PhosphorDefault);
+        var fg = Resolve(style.Foreground, AnsiPalette.PhosphorDefault);
         string? bg = style.Background.Kind == AnsiColorKind.Indexed
             ? AnsiPalette.ToHex(style.Background.Index)
             : null;
@@ -42,5 +42,7 @@ public static class SegmentStyle
     }
 
     private static string Resolve(AnsiColor color, string fallback) =>
-        color.Kind == AnsiColorKind.Indexed ? AnsiPalette.ToHex(color.Index) : fallback;
+        color.Kind == AnsiColorKind.Indexed
+            ? AnsiPalette.ToHex(color.Index)
+            : fallback;
 }

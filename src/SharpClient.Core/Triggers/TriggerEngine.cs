@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using SharpClient.Core.Domain;
 using SharpClient.Core.Rendering;
@@ -7,6 +8,12 @@ namespace SharpClient.Core.Triggers;
 public sealed class TriggerEngine : ITriggerEngine
 {
     private static readonly TimeSpan MatchTimeout = TimeSpan.FromMilliseconds(100);
+
+    // Compiled-regex cache keyed by (pattern, options).  Invalid patterns are never
+    // inserted (the factory throws and GetOrAdd propagates the exception, leaving the
+    // slot empty) so the catch block in TryRegexMatch remains the only error path.
+    private static readonly ConcurrentDictionary<(string Pattern, RegexOptions Options), Regex>
+        RegexCache = new();
 
     public TriggerOutcome Apply(string rawLine, IReadOnlyList<TriggerRule> rules)
     {
@@ -70,11 +77,17 @@ public sealed class TriggerEngine : ITriggerEngine
     {
         try
         {
-            return Regex.IsMatch(input, pattern, RegexOptions.None, MatchTimeout);
+            var regex = RegexCache.GetOrAdd(
+                (pattern, RegexOptions.None),
+                static key => new Regex(key.Pattern, key.Options, MatchTimeout));
+            return regex.IsMatch(input);
         }
         catch (Exception)
         {
-            // Invalid pattern or timeout — treat as non-match rather than propagating.
+            // Invalid pattern, compilation failure, or match timeout — treat as non-match
+            // rather than propagating. The entry is not inserted into the cache when the
+            // factory throws, so each invalid pattern re-attempts compilation on every call
+            // (acceptable: invalid patterns are rare and compilation is fast to fail).
             return false;
         }
     }

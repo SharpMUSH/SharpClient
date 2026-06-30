@@ -1,6 +1,94 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    AndroidManifest.xml — Play Store readiness review (2026-06-30)
+
+    Target SDK: MAUI net10.0-android defaults to Android 15 (API 35), meeting the Play Store
+    requirement of targeting API 35 (mandatory for new apps and updates from August 31 2025).
+    minSdkVersion is controlled by <SupportedOSPlatformVersion android="24.0"> in the csproj.
+
+    Cleartext traffic (telnet): Android's usesCleartextTraffic and networkSecurityConfig ONLY
+    restrict HTTP/HTTPS connections made through framework HTTP APIs (HttpURLConnection, OkHttp).
+    Raw TCP sockets (including telnet) bypass this policy entirely. No cleartext flag is needed.
+
+    Backup: allowBackup="false" because SharpClient stores connection credentials (host, port,
+    character name) in SQLite. Backing these up to Google Drive via Auto Backup without an
+    explicit dataExtractionRules exclusion list would expose credentials. Opt out entirely until
+    a proper backup policy (excluding the credentials DB) is authored.
+
+    Foreground service type: connectedDevice (API 29+, declared in <service> below).
+    See ConnectionKeepAliveService.cs for the type-selection rationale.
+-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:allowBackup="true" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true"></application>
+
+    <application
+        android:label="SharpClient"
+        android:icon="@mipmap/appicon"
+        android:roundIcon="@mipmap/appicon_round"
+        android:supportsRtl="true"
+        android:allowBackup="false">
+        <!--
+            android:label — display name shown on the launcher and in Settings.
+                            The ApplicationTitle in the csproj retains the default template value;
+                            this attribute overrides it for Android.
+
+            android:icon / android:roundIcon — resolved from MAUI's adaptive-icon generation
+                            triggered by <MauiIcon Include="Resources\AppIcon\appicon.svg"
+                            ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#0b0e12" />.
+                            MAUI places the generated mipmap files at mipmap-*/appicon.png and
+                            mipmap-*/appicon_round.png, matching these references.
+
+            android:allowBackup="false" — see header comment.
+
+            MainActivity android:exported — not declared here; the [Activity(MainLauncher=true)]
+                            attribute in MainActivity.cs causes MAUI's manifest merger to emit
+                            android:exported="true" automatically (required for Android 12+ / API 31).
+        -->
+
+        <!--
+            ConnectionKeepAliveService
+            ──────────────────────────
+            Started foreground service that maintains the TCP socket connection through
+            Android Doze and battery-saver. This manifest entry adds foregroundServiceType
+            (API 29+, mandatory from API 34) to the entry that the C# [Service] attribute
+            generates; the two entries are merged by MAUI's Android manifest merger on android:name.
+
+            foregroundServiceType="connectedDevice"
+              Appropriate for a service that connects to a remote host over the network
+              (Android docs: "connected through Bluetooth, NFC, IR, USB, or **network**").
+              Unlike dataSync, connectedDevice has no 6-hour per-24-hours time cap (Android 15),
+              making it suitable for all-day MUSH sessions.
+              Required permission: FOREGROUND_SERVICE_CONNECTED_DEVICE (below).
+
+            android:exported="false" — the service is only started by this app, never by external
+              components. Explicit declaration required for Android 12+ (API 31).
+        -->
+        <service
+            android:name="com.companyname.sharpclient.app.ConnectionKeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
+    </application>
+
+    <!-- ── Permissions ──────────────────────────────────────────────────────── -->
+
+    <!-- Network access for raw TCP connections to MUSH servers -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        Foreground-service permissions (all three are required when using connectedDevice):
+
+        FOREGROUND_SERVICE         — required for any foreground service (all API levels).
+        FOREGROUND_SERVICE_CONNECTED_DEVICE
+                                   — required from Android 14 (API 34) when
+                                     foregroundServiceType="connectedDevice" is declared.
+                                     The OS throws SecurityException in startForeground() if absent.
+        POST_NOTIFICATIONS         — required from Android 13 (API 33) to post the mandatory
+                                     persistent notification that a foreground service must show.
+                                     On API < 33 this permission is silently ignored.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
 </manifest>

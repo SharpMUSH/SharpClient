@@ -112,4 +112,21 @@ public sealed class SessionsViewModelTests
         vm.Select(b);
         await Assert.That(vm.History).Contains("look");
     }
+
+    [Test]
+    public async Task LineAppendedOnActiveSessionRaisesVmChanged()
+    {
+        var mgr = new SessionManager();
+        var session = new FakeSession { State = ConnectionState.Connected };
+        mgr.Add(session); // makes session active; fires manager.Changed
+        var vm = new SessionsViewModel(mgr); // constructor subscribes to LineAppended
+
+        var fired = false;
+        vm.Changed += () => fired = true;
+
+        // Simulate server line arriving on the active session.
+        session.Append(new ScrollbackLine([]));
+
+        await Assert.That(fired).IsTrue();
+    }
 }

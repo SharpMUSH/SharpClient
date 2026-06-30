@@ -59,7 +59,14 @@
 
     <ItemGroup>
         <!-- App Icon -->
-        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+        <!--
+            App icon — SharpMUSH logo (fetched from SharpMUSH/SharpMUSH, Solution Files/).
+            appicon.svg    : Logo.svg     — the full teal (#00f5b7) logo, used as the icon base.
+            appiconfg.svg  : LogoBlackFg.svg — dark (#111) foreground variant for adaptive icons.
+            Color="#0b0e12": near-black background complements the teal logo on adaptive-icon
+                             aware launchers; also used as the legacy icon background.
+        -->
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#0b0e12" />
 
         <!-- Splash Screen -->
         <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />

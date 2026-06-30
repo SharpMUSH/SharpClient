@@ -16,6 +16,10 @@ public interface ISession : IAsyncDisposable
 
     public string WorldName { get; }
 
+    public Guid WorldId => Guid.Empty;
+
+    public Guid CharacterId => Guid.Empty;
+
     public IReadOnlyList<NegotiationEvent> NegotiationLog => [];
 
     public IReadOnlyList<GmcpMessage> GmcpLog => [];
@@ -25,4 +29,6 @@ public interface ISession : IAsyncDisposable
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default);
 
     public Task SendAsync(string line);
+
+    public Task SendWindowSizeAsync(int cols, int rows) => Task.CompletedTask;
 }

@@ -61,6 +61,9 @@ public sealed class TelnetConnectionTests
 
         var sent = await server.ReadAvailableAsync(TimeSpan.FromSeconds(5));
         await Assert.That(sent.Contains("look")).IsTrue();
+        // Exactly one CR LF terminator — TNC adds it, we must not double it (regression guard).
+        await Assert.That(sent.Contains("look\r\n")).IsTrue();
+        await Assert.That(sent.Contains("look\r\n\r\n")).IsFalse();
     }
 
     [Test]

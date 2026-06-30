@@ -11,8 +11,11 @@ public sealed class FakeSession : ISession
     public ConnectionState State { get; set; } = ConnectionState.Connected;
     public string CharacterName { get; set; } = string.Empty;
     public string WorldName { get; set; } = string.Empty;
+    public Guid WorldId { get; set; } = Guid.Empty;
+    public Guid CharacterId { get; set; } = Guid.Empty;
     public bool Disposed { get; private set; }
     public List<string> Sent { get; } = [];
+    public List<(int Cols, int Rows)> WindowSizesSent { get; } = [];
 
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
@@ -20,6 +23,12 @@ public sealed class FakeSession : ISession
     public Task SendAsync(string line)
     {
         Sent.Add(line);
+        return Task.CompletedTask;
+    }
+
+    public Task SendWindowSizeAsync(int cols, int rows)
+    {
+        WindowSizesSent.Add((cols, rows));
         return Task.CompletedTask;
     }
 

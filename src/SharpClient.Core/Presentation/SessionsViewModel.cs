@@ -11,17 +11,14 @@ public sealed class SessionsViewModel
 
     private readonly ISessionManager _manager;
     private readonly Dictionary<ISession, List<string>> _histories = [];
+    private ISession? _activeSession;
 
     public SessionsViewModel(ISessionManager manager)
     {
         _manager = manager;
-        _manager.Changed += () =>
-        {
-            var active = _manager.Sessions;
-            foreach (var key in _histories.Keys.Where(k => !active.Contains(k)).ToList())
-                _histories.Remove(key);
-            Changed?.Invoke();
-        };
+        _manager.Changed += OnManagerChanged;
+        // Wire the initial active session if one is already present.
+        TrackActiveSession(_manager.Active);
     }
 
     internal int TrackedHistoryCount => _histories.Count;
@@ -46,9 +43,7 @@ public sealed class SessionsViewModel
     public async Task SendAsync()
     {
         if (!CanSend || Active is null)
-        {
             return;
-        }
 
         var command = Input.Trim();
         var active = Active;
@@ -63,11 +58,43 @@ public sealed class SessionsViewModel
         history.RemoveAll(c => c == command);
         history.Insert(0, command);
         if (history.Count > HistoryCap)
-        {
             history.RemoveRange(HistoryCap, history.Count - HistoryCap);
-        }
 
         Input = string.Empty;
         Changed?.Invoke();
     }
+
+    private void OnManagerChanged()
+    {
+        var sessions = _manager.Sessions;
+        foreach (var key in _histories.Keys.Where(k => !sessions.Contains(k)).ToList())
+            _histories.Remove(key);
+
+        TrackActiveSession(_manager.Active);
+        Changed?.Invoke();
+    }
+
+    private void TrackActiveSession(ISession? newActive)
+    {
+        if (ReferenceEquals(newActive, _activeSession))
+            return;
+
+        if (_activeSession is not null)
+        {
+            _activeSession.LineAppended -= OnActiveLineAppended;
+            _activeSession.StateChanged -= OnActiveStateChanged;
+        }
+
+        _activeSession = newActive;
+
+        if (_activeSession is not null)
+        {
+            _activeSession.LineAppended += OnActiveLineAppended;
+            _activeSession.StateChanged += OnActiveStateChanged;
+        }
+    }
+
+    private void OnActiveLineAppended(ScrollbackLine _) => Changed?.Invoke();
+
+    private void OnActiveStateChanged(ConnectionState _) => Changed?.Invoke();
 }

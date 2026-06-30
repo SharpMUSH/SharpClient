@@ -75,7 +75,7 @@ public static class MauiProgram
                 sp.GetRequiredService<ISessionLauncher>()));
 
         // ── Session launcher (real telnet) ────────────────────────────────
-        builder.Services.AddTransient<ISessionLauncher, TelnetSessionLauncher>();
+        builder.Services.AddTransient<ISessionLauncher, SharpClient.Core.Sessions.TelnetSessionLauncher>();
 
         // ── Trigger / alias engines (stateless) ──────────────────────────
         builder.Services.AddSingleton<ITriggerEngine, TriggerEngine>();

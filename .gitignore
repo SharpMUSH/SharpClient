@@ -7,3 +7,6 @@ obj/
 # Machine-specific tool paths (Android SDK / JDK)
 Directory.Local.props
 .superpowers/
+
+# ASP.NET runtime data (web host EF db)
+src/SharpClient.Web/App_Data/

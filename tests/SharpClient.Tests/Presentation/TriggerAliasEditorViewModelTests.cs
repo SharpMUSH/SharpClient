@@ -209,4 +209,187 @@ public sealed class TriggerAliasEditorViewModelTests
         await Assert.That(vm.Triggers).IsEmpty();
         await Assert.That(vm.Aliases).IsEmpty();
     }
+
+    // ── Character-scope tests ─────────────────────────────────────────────
+
+    private static async Task<(TriggerAliasEditorViewModel vm, FakeWorldStore store, World world, Character character)>
+        BuildWithCharacterAsync()
+    {
+        var store = new FakeWorldStore();
+        var world = new World { Name = "TestWorld", Host = "test.mud", Port = 4000 };
+        var character = new Character { Name = "Mannaz", WorldId = world.Id };
+        world.Characters.Add(character);
+        await store.AddWorldAsync(world);
+        var vm = new TriggerAliasEditorViewModel(store);
+        await vm.LoadAsync(world.Id);
+        return (vm, store, world, character);
+    }
+
+    [Test]
+    public async Task DefaultScopeIsWorld()
+    {
+        var (vm, _, _, _) = await BuildWithCharacterAsync();
+
+        await Assert.That(vm.CharacterScopeId).IsNull();
+        await Assert.That(vm.ScopeName).IsEqualTo("World");
+    }
+
+    [Test]
+    public async Task SetScopeSwitchesToCharacter()
+    {
+        var (vm, _, _, character) = await BuildWithCharacterAsync();
+
+        vm.SetScope(character.Id);
+
+        await Assert.That(vm.CharacterScopeId).IsEqualTo(character.Id);
+        await Assert.That(vm.ScopeName).IsEqualTo("Mannaz");
+    }
+
+    [Test]
+    public async Task SetScopeNullReverts()
+    {
+        var (vm, _, _, character) = await BuildWithCharacterAsync();
+        vm.SetScope(character.Id);
+
+        vm.SetScope(null);
+
+        await Assert.That(vm.CharacterScopeId).IsNull();
+        await Assert.That(vm.ScopeName).IsEqualTo("World");
+    }
+
+    [Test]
+    public async Task SetScopeFiresChanged()
+    {
+        var (vm, _, _, character) = await BuildWithCharacterAsync();
+        var fired = 0;
+        vm.Changed += () => fired++;
+
+        vm.SetScope(character.Id);
+
+        await Assert.That(fired).IsGreaterThanOrEqualTo(1);
+    }
+
+    [Test]
+    public async Task CharacterScopeTriggersAreSeparateFromWorldTriggers()
+    {
+        var (vm, store, world, character) = await BuildWithCharacterAsync();
+        world.Triggers.Add(new TriggerRule { Pattern = "world-only", Kind = TriggerKind.Substring, Action = TriggerActionKind.Highlight, ActionValue = "1" });
+        character.Triggers.Add(new TriggerRule { Pattern = "char-only", Kind = TriggerKind.Substring, Action = TriggerActionKind.Send, ActionValue = "cmd" });
+        await store.UpdateWorldAsync(world);
+        await vm.LoadAsync(world.Id);
+
+        // world scope
+        await Assert.That(vm.Triggers.Select(t => t.Pattern)).Contains("world-only");
+        await Assert.That(vm.Triggers.Select(t => t.Pattern)).DoesNotContain("char-only");
+
+        // character scope
+        vm.SetScope(character.Id);
+        await Assert.That(vm.Triggers.Select(t => t.Pattern)).Contains("char-only");
+        await Assert.That(vm.Triggers.Select(t => t.Pattern)).DoesNotContain("world-only");
+    }
+
+    [Test]
+    public async Task AddTriggerInCharacterScopeDoesNotAffectWorldTriggers()
+    {
+        var (vm, store, world, character) = await BuildWithCharacterAsync();
+        vm.SetScope(character.Id);
+
+        await vm.AddTriggerAsync(new TriggerRule { Pattern = "char-trigger", Kind = TriggerKind.Substring, Action = TriggerActionKind.Notify, ActionValue = "n" });
+
+        // character has the new trigger
+        await Assert.That(vm.Triggers.Select(t => t.Pattern)).Contains("char-trigger");
+
+        // world scope should NOT have it
+        vm.SetScope(null);
+        await Assert.That(vm.Triggers.Select(t => t.Pattern)).DoesNotContain("char-trigger");
+
+        // persisted
+        await Assert.That(store.UpdateCount).IsGreaterThanOrEqualTo(1);
+    }
+
+    [Test]
+    public async Task UpdateTriggerInCharacterScopeUpdatesCorrectList()
+    {
+        var (vm, store, world, character) = await BuildWithCharacterAsync();
+        var rule = new TriggerRule { Pattern = "old", Kind = TriggerKind.Substring, Action = TriggerActionKind.Send, ActionValue = "x" };
+        character.Triggers.Add(rule);
+        await store.UpdateWorldAsync(world);
+        await vm.LoadAsync(world.Id);
+        vm.SetScope(character.Id);
+
+        var updated = new TriggerRule { Id = rule.Id, Pattern = "new", Kind = TriggerKind.Regex, Action = TriggerActionKind.Highlight, ActionValue = "y" };
+        await vm.UpdateTriggerAsync(updated);
+
+        await Assert.That(vm.Triggers).Count().IsEqualTo(1);
+        await Assert.That(vm.Triggers[0].Pattern).IsEqualTo("new");
+        await Assert.That(store.UpdateCount).IsGreaterThanOrEqualTo(1);
+    }
+
+    [Test]
+    public async Task DeleteTriggerInCharacterScopeDeletesFromCharacter()
+    {
+        var (vm, store, world, character) = await BuildWithCharacterAsync();
+        var rule = new TriggerRule { Pattern = "del-me", Kind = TriggerKind.Substring, Action = TriggerActionKind.Send, ActionValue = "x" };
+        character.Triggers.Add(rule);
+        await store.UpdateWorldAsync(world);
+        await vm.LoadAsync(world.Id);
+        vm.SetScope(character.Id);
+
+        await vm.DeleteTriggerAsync(rule.Id);
+
+        await Assert.That(vm.Triggers).IsEmpty();
+    }
+
+    [Test]
+    public async Task ToggleTriggerInCharacterScopeFlipsEnabled()
+    {
+        var (vm, store, world, character) = await BuildWithCharacterAsync();
+        var rule = new TriggerRule { Pattern = "toggle-me", Kind = TriggerKind.Substring, Action = TriggerActionKind.Send, ActionValue = "x", Enabled = true };
+        character.Triggers.Add(rule);
+        await store.UpdateWorldAsync(world);
+        await vm.LoadAsync(world.Id);
+        vm.SetScope(character.Id);
+
+        await vm.ToggleTriggerAsync(rule.Id);
+
+        await Assert.That(vm.Triggers[0].Enabled).IsFalse();
+        await Assert.That(store.UpdateCount).IsGreaterThanOrEqualTo(1);
+    }
+
+    [Test]
+    public async Task AddAliasInCharacterScopeDoesNotAffectWorldAliases()
+    {
+        var (vm, store, _, character) = await BuildWithCharacterAsync();
+        vm.SetScope(character.Id);
+
+        await vm.AddAliasAsync(new AliasRule { Pattern = "^char$", Expansion = "char-expansion" });
+
+        await Assert.That(vm.Aliases.Select(a => a.Pattern)).Contains("^char$");
+        vm.SetScope(null);
+        await Assert.That(vm.Aliases.Select(a => a.Pattern)).DoesNotContain("^char$");
+    }
+
+    [Test]
+    public async Task CharactersListExposedOnVm()
+    {
+        var (vm, _, world, character) = await BuildWithCharacterAsync();
+
+        await Assert.That(vm.Characters).Count().IsEqualTo(1);
+        await Assert.That(vm.Characters[0].Id).IsEqualTo(character.Id);
+    }
+
+    [Test]
+    public async Task ScopeFallsBackToWorldWhenCharacterNotFound()
+    {
+        var (vm, store, world, character) = await BuildWithCharacterAsync();
+        vm.SetScope(character.Id);
+
+        // Remove character from world and reload
+        world.Characters.Clear();
+        await store.UpdateWorldAsync(world);
+        await vm.LoadAsync(world.Id);
+
+        await Assert.That(vm.CharacterScopeId).IsNull();
+        await Assert.That(vm.ScopeName).IsEqualTo("World");
+    }
 }

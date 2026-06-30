@@ -1,22 +1,48 @@
 @using SharpClient.Core.Presentation
 
-<div class="sc-input-bar">
-    <input class="sc-input"
-           type="text"
-           value="@Vm.Input"
-           @oninput="OnInput"
-           @onkeydown="OnKeyDown"
-           placeholder="Enter command…" />
-    <button class="sc-send-btn"
-            disabled="@(!Vm.CanSend)"
-            @onclick="SendAsync">Send</button>
+<div class="sc-input-area">
+    @if (_showHistory && Vm.History.Count > 0)
+    {
+        <div class="sc-history">
+            @foreach (var cmd in Vm.History)
+            {
+                <button class="sc-history-chip" @onclick="() => Recall(cmd)">@cmd</button>
+            }
+        </div>
+    }
+    <div class="sc-input-bar">
+        <button class="sc-history-btn"
+                disabled="@(Vm.History.Count == 0)"
+                @onclick="ToggleHistory"
+                title="Command history">↑</button>
+        <span class="sc-input-prompt">›</span>
+        <input class="sc-input"
+               type="text"
+               value="@Vm.Input"
+               @oninput="OnInput"
+               @onkeydown="OnKeyDown"
+               placeholder="Enter command…" />
+        <button class="sc-send-btn"
+                disabled="@(!Vm.CanSend)"
+                @onclick="SendAsync">Send</button>
+    </div>
 </div>
 
 @code {
     [Parameter]
     public SessionsViewModel Vm { get; set; } = null!;
 
+    private bool _showHistory;
+
     private void OnInput(ChangeEventArgs e) => Vm.Input = e.Value?.ToString() ?? string.Empty;
+
+    private void ToggleHistory() => _showHistory = !_showHistory;
+
+    private void Recall(string cmd)
+    {
+        Vm.Input = cmd;
+        _showHistory = false;
+    }
 
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
