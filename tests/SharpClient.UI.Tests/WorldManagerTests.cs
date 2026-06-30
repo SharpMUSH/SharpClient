@@ -45,6 +45,33 @@ public sealed class WorldManagerTests
     }
 
     [Test]
+    public async Task FailedConnectRendersDismissibleErrorBanner()
+    {
+        var store = new UiFakeWorldStore();
+        var world = new World { Name = "Sindome", Host = "sindome.org", Port = 5555 };
+        world.Characters.Add(new Character { WorldId = world.Id, Name = "Vesper" });
+        await store.AddWorldAsync(world);
+
+        var launcher = new UiFakeSessionLauncher { ThrowOnLaunch = new InvalidOperationException("connection refused") };
+        var vm = new WorldManagerViewModel(store, new UiFakeSecretStore(), new SessionManager(), launcher);
+        await vm.LoadAsync();
+
+        using var ctx = new BunitContext();
+        var cut = ctx.Render<WorldManager>(p => p.Add(c => c.Vm, vm));
+
+        cut.Find(".sc-world-row").Click();
+        cut.Find(".sc-connect-btn").Click();
+
+        // The failure surfaces as a banner instead of throwing.
+        await Assert.That(cut.FindAll(".sc-wm-error")).IsNotEmpty();
+        await Assert.That(cut.Markup).Contains("connection refused");
+
+        // Dismissing it removes the banner.
+        cut.Find(".sc-wm-error-dismiss").Click();
+        await Assert.That(cut.FindAll(".sc-wm-error")).IsEmpty();
+    }
+
+    [Test]
     public async Task EmptyStateRendersWhenNoWorlds()
     {
         var vm = new WorldManagerViewModel(new UiFakeWorldStore(), new UiFakeSecretStore(), new SessionManager(), new UiFakeSessionLauncher());

@@ -135,6 +135,66 @@ public sealed class WorldManagerViewModelTests
     }
 
     [Test]
+    public async Task ConnectAsyncSurfacesLauncherFailureInsteadOfThrowing()
+    {
+        var (vm, _, _, sessions, launcher) = Build();
+        launcher.ThrowOnLaunch = new InvalidOperationException("connection refused");
+        await vm.AddWorldAsync("Sindome", "sindome.org", 5555);
+        await vm.AddCharacterAsync(vm.Worlds[0], "Vesper", null);
+        var world = vm.Worlds[0];
+        var character = world.Characters.Single();
+        var changed = 0;
+        vm.Changed += () => changed++;
+
+        // Must not throw into the caller (the Blazor circuit).
+        await vm.ConnectAsync(world, character);
+
+        await Assert.That(vm.LastError).IsNotNull();
+        await Assert.That(vm.LastError!).Contains("Sindome");
+        await Assert.That(vm.LastError!).Contains("connection refused");
+        await Assert.That(sessions.Sessions).IsEmpty();
+        await Assert.That(changed).IsGreaterThanOrEqualTo(1);
+    }
+
+    [Test]
+    public async Task ClearErrorRemovesSurfacedErrorAndNotifies()
+    {
+        var (vm, _, _, _, launcher) = Build();
+        launcher.ThrowOnLaunch = new InvalidOperationException("offline");
+        await vm.AddWorldAsync("Sindome", "sindome.org", 5555);
+        await vm.AddCharacterAsync(vm.Worlds[0], "Vesper", null);
+        await vm.ConnectAsync(vm.Worlds[0], vm.Worlds[0].Characters.Single());
+        await Assert.That(vm.LastError).IsNotNull();
+
+        var changed = 0;
+        vm.Changed += () => changed++;
+        vm.ClearError();
+
+        await Assert.That(vm.LastError).IsNull();
+        await Assert.That(changed).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task ConnectAsyncClearsPriorErrorOnSuccess()
+    {
+        var (vm, _, _, sessions, launcher) = Build();
+        launcher.ThrowOnLaunch = new InvalidOperationException("offline");
+        await vm.AddWorldAsync("Sindome", "sindome.org", 5555);
+        await vm.AddCharacterAsync(vm.Worlds[0], "Vesper", null);
+        var world = vm.Worlds[0];
+        var character = world.Characters.Single();
+
+        await vm.ConnectAsync(world, character);
+        await Assert.That(vm.LastError).IsNotNull();
+
+        launcher.ThrowOnLaunch = null;
+        await vm.ConnectAsync(world, character);
+
+        await Assert.That(vm.LastError).IsNull();
+        await Assert.That(sessions.Sessions).Contains(launcher.Session);
+    }
+
+    [Test]
     public async Task UpdateWorldAsyncRenameAndPersists()
     {
         var (vm, store, _, _, _) = Build();
