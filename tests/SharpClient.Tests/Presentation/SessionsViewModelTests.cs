@@ -71,4 +71,45 @@ public sealed class SessionsViewModelTests
 
         await Assert.That(vm.Active).IsEqualTo(a);
     }
+
+    [Test]
+    public async Task ClosedSessionHistoryIsPruned()
+    {
+        var mgr = new SessionManager();
+        var vm = new SessionsViewModel(mgr);
+        var session = new FakeSession { State = ConnectionState.Connected };
+        mgr.Add(session);
+        vm.Input = "look";
+        await vm.SendAsync();
+
+        await Assert.That(vm.TrackedHistoryCount).IsEqualTo(1);
+
+        await mgr.CloseAsync(session);
+
+        await Assert.That(vm.TrackedHistoryCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task OpenSessionHistoryRetainedWhenOtherSessionClosed()
+    {
+        var mgr = new SessionManager();
+        var vm = new SessionsViewModel(mgr);
+        var a = new FakeSession { State = ConnectionState.Connected };
+        var b = new FakeSession { State = ConnectionState.Connected };
+        mgr.Add(a);
+        mgr.Add(b);
+
+        vm.Select(a);
+        vm.Input = "north";
+        await vm.SendAsync();
+
+        vm.Select(b);
+        vm.Input = "look";
+        await vm.SendAsync();
+
+        await mgr.CloseAsync(a);
+
+        vm.Select(b);
+        await Assert.That(vm.History).Contains("look");
+    }
 }

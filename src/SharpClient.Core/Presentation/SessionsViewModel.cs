@@ -1,6 +1,8 @@
 using SharpClient.Core.Connection;
 using SharpClient.Core.Sessions;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("SharpClient.Tests")]
+
 namespace SharpClient.Core.Presentation;
 
 public sealed class SessionsViewModel
@@ -13,8 +15,16 @@ public sealed class SessionsViewModel
     public SessionsViewModel(ISessionManager manager)
     {
         _manager = manager;
-        _manager.Changed += () => Changed?.Invoke();
+        _manager.Changed += () =>
+        {
+            var active = _manager.Sessions;
+            foreach (var key in _histories.Keys.Where(k => !active.Contains(k)).ToList())
+                _histories.Remove(key);
+            Changed?.Invoke();
+        };
     }
+
+    internal int TrackedHistoryCount => _histories.Count;
 
     public IReadOnlyList<ISession> Tabs => _manager.Sessions;
 
