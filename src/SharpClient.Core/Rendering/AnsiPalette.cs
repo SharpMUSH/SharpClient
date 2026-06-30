@@ -2,7 +2,8 @@ namespace SharpClient.Core.Rendering;
 
 public static class AnsiPalette
 {
-    private const string PhosphorDefault = "#c4d1c8";
+    // Shared across the Rendering layer — SegmentStyle references this rather than duplicating.
+    internal const string PhosphorDefault = "#c4d1c8";
 
     private static readonly string[] Base16 =
     [
