@@ -5,7 +5,7 @@ using TelnetNegotiationCore.Interpreters;
 
 namespace SharpClient.Core.Connection;
 
-public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : IAsyncDisposable
+public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelnetConnection
 {
     private TcpClient? _client;
     private TelnetInterpreter? _interpreter;
