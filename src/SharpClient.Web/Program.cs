@@ -14,6 +14,18 @@ builder.Services.AddSingleton<ISessionManager>(sp => sp.GetRequiredService<Sessi
 builder.Services.AddSingleton<SessionsViewModel>(sp =>
     new SessionsViewModel(sp.GetRequiredService<ISessionManager>()));
 
+// World Manager: EF persistence + in-memory secrets + demo launcher.
+builder.Services.AddSingleton<SharpClient.Core.Platform.IAppStorage, WebAppStorage>();
+builder.Services.AddSingleton<SharpClient.Core.Persistence.ISecretStore, WebSecretStore>();
+builder.Services.AddScoped<SharpClient.Data.AppDbContext>();
+builder.Services.AddScoped<SharpClient.Core.Persistence.IWorldStore, SharpClient.Data.WorldStore>();
+builder.Services.AddScoped<ISessionLauncher, DemoSessionLauncher>();
+builder.Services.AddScoped<WorldManagerViewModel>(sp => new WorldManagerViewModel(
+    sp.GetRequiredService<SharpClient.Core.Persistence.IWorldStore>(),
+    sp.GetRequiredService<SharpClient.Core.Persistence.ISecretStore>(),
+    sp.GetRequiredService<ISessionManager>(),
+    sp.GetRequiredService<ISessionLauncher>()));
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())

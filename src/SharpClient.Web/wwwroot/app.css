@@ -280,3 +280,57 @@ body {
     color: var(--faint);
     cursor: not-allowed;
 }
+
+/* ── World Manager ─────────────────────────────────────────────────────── */
+.sc-wm { max-width: 560px; margin: 0 auto; padding: 18px 14px 80px; display: flex; flex-direction: column; gap: 10px; }
+.sc-wm-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.sc-wm-title { font-size: 19px; font-weight: 600; color: #eff3f7; letter-spacing: -.01em; }
+.sc-wm-sub { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 3px; }
+.sc-wm-addbtn { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--acc2); background: var(--acc-soft); border: 1px solid var(--acc-line); border-radius: 9px; padding: 7px 11px; cursor: pointer; }
+
+.sc-wm-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 60px 20px; }
+.sc-wm-empty-title { font-size: 17px; font-weight: 600; color: #e7ecf2; }
+.sc-wm-empty-text { font-size: 13px; color: var(--dim); max-width: 230px; line-height: 1.5; }
+.sc-wm-empty-cta { margin-top: 14px; font-size: 13px; font-weight: 600; color: #0a0c10; background: var(--acc2); border: none; border-radius: 10px; padding: 11px 18px; cursor: pointer; box-shadow: 0 0 22px rgba(155, 126, 212, .35); }
+
+.sc-world { background: var(--panel); border: 1px solid var(--bd); border-radius: 12px; overflow: hidden; }
+.sc-world-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; cursor: pointer; }
+.sc-world-badge { flex: none; width: 30px; height: 30px; border-radius: 8px; background: var(--elev); border: 1px solid var(--bd2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 13px; color: var(--acc2); }
+.sc-world-main { flex: 1; min-width: 0; }
+.sc-world-name { font-weight: 600; font-size: 15px; color: #e7ecf2; }
+.sc-world-addr { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 2px; }
+.sc-world-meta { display: flex; align-items: center; gap: 10px; }
+.sc-world-charcount { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.sc-chev { color: var(--faint); transition: transform .15s ease; }
+.sc-chev-open { transform: rotate(180deg); }
+
+.sc-char-row { display: flex; align-items: center; gap: 11px; padding: 10px 14px; border-top: 1px solid var(--bd); }
+.sc-char-badge { flex: none; width: 26px; height: 26px; border-radius: 7px; background: var(--outbg); border: 1px solid var(--bd2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.sc-char-name { flex: 1; min-width: 0; font-size: 14px; color: #e7ecf2; }
+.sc-connect-btn { flex: none; font-size: 12.5px; font-weight: 600; color: #0a0c10; background: var(--acc2); border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+.sc-icon-btn { flex: none; width: 30px; height: 30px; border-radius: 8px; background: transparent; border: 1px solid var(--bd); color: var(--faint); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.sc-icon-btn-danger:hover { border-color: rgba(224, 108, 117, .5); color: #e06c75; }
+
+.sc-no-chars { padding: 11px 10px; text-align: center; font-size: 12px; color: var(--faint); font-family: var(--mono); border-top: 1px solid var(--bd); }
+.sc-world-actions { display: flex; gap: 8px; padding: 11px 14px; border-top: 1px solid var(--bd); }
+.sc-addchar { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 10px; border-radius: 10px; border: 1px dashed var(--bd2); background: transparent; color: var(--dim); font-family: var(--mono); font-size: 12px; cursor: pointer; }
+.sc-delete-world { flex: none; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(224, 108, 117, .28); background: rgba(224, 108, 117, .07); color: #e06c75; font-family: var(--mono); font-size: 12px; cursor: pointer; }
+
+/* ── Modals ────────────────────────────────────────────────────────────── */
+.sc-modal-overlay { position: fixed; inset: 0; background: rgba(4, 6, 9, .6); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+.sc-modal { width: 100%; max-width: 360px; background: var(--panel); border: 1px solid var(--bd2); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.sc-modal-header { display: flex; align-items: flex-start; justify-content: space-between; }
+.sc-modal-title { font-weight: 600; font-size: 14px; color: #e7ecf2; }
+.sc-modal-sub { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 3px; }
+.sc-modal-close { background: transparent; border: none; color: var(--dim); font-size: 18px; cursor: pointer; }
+.sc-field { display: flex; flex-direction: column; gap: 6px; }
+.sc-field-label { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.sc-field-input { background: var(--outbg); border: 1px solid var(--bd2); border-radius: 9px; padding: 11px 12px; color: var(--tx); font-size: 14px; outline: none; }
+.sc-field-input-secret { color: var(--acc2); font-family: var(--mono); font-size: 13px; }
+.sc-modal-submit { margin-top: 4px; font-size: 14px; font-weight: 600; color: #0a0c10; background: var(--acc2); border: none; border-radius: 10px; padding: 13px; cursor: pointer; }
+.sc-modal-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── Top nav ───────────────────────────────────────────────────────────── */
+.sc-nav { position: fixed; top: 10px; right: 14px; z-index: 40; display: flex; gap: 6px; }
+.sc-nav-link { font-family: var(--mono); font-size: 12px; color: var(--dim); text-decoration: none; background: var(--panel); border: 1px solid var(--bd); border-radius: 8px; padding: 6px 11px; }
+.sc-nav-link:hover { color: var(--acc2); border-color: var(--acc-line); }

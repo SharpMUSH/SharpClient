@@ -1,0 +1,15 @@
+@page "/worlds"
+@rendermode InteractiveServer
+
+@using SharpClient.Core.Presentation
+@using SharpClient.UI.Components
+
+@inject WorldManagerViewModel Vm
+
+<PageTitle>SharpClient · Worlds</PageTitle>
+
+<WorldManager Vm="@Vm" />
+
+@code {
+    protected override async Task OnInitializedAsync() => await Vm.LoadAsync();
+}
