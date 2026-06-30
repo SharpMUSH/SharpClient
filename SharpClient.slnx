@@ -2,9 +2,11 @@
   <Folder Name="/src/">
     <Project Path="src/SharpClient.App/SharpClient.App.csproj" />
     <Project Path="src/SharpClient.Core/SharpClient.Core.csproj" />
+    <Project Path="src/SharpClient.Data/SharpClient.Data.csproj" />
     <Project Path="src/SharpClient.UI/SharpClient.UI.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/SharpClient.Data.Tests/SharpClient.Data.Tests.csproj" />
     <Project Path="tests/SharpClient.Tests/SharpClient.Tests.csproj" />
     <Project Path="tests/SharpClient.UI.Tests/SharpClient.UI.Tests.csproj" />
   </Folder>
