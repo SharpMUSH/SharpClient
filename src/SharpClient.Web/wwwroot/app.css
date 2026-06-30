@@ -1,0 +1,130 @@
+/* ── Design Tokens ─────────────────────────────────────────────── */
+:root {
+    --bg:        #0b0e12;
+    --panel:     #11151b;
+    --elev:      #171c24;
+    --outbg:     #090c10;
+    --tx:        #c4ccd6;
+    --dim:       #7b8694;
+    --faint:     #525b67;
+    --pho:       #c4d1c8;
+    --bd:        rgba(255,255,255,.07);
+    --bd2:       rgba(255,255,255,.13);
+    --acc:       #9b7ed4;
+    --acc2:      #b89fe0;
+    --acc-soft:  rgba(155,126,212,.16);
+    --acc-line:  rgba(155,126,212,.55);
+
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+    --ui:   'Space Grotesk', system-ui, sans-serif;
+}
+
+/* ── Reset / Base ──────────────────────────────────────────────── */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    font-family: var(--ui);
+    background: var(--bg);
+    background: radial-gradient(130% 90% at 50% -15%, #13171f 0%, #0a0c10 58%, #07090c 100%);
+    color: var(--tx);
+    min-height: 100vh;
+}
+
+/* ── Terminal page shell ───────────────────────────────────────── */
+.terminal-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 1.25rem 1.5rem 2rem;
+    gap: 1rem;
+}
+
+.page-title {
+    font-family: var(--ui);
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--dim);
+    border-bottom: 1px solid var(--bd);
+    padding-bottom: .5rem;
+}
+
+/* ── Output container ─────────────────────────────────────────── */
+.output-container {
+    background: var(--outbg);
+    border: 1px solid var(--bd2);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* ── OutputView component classes (.sc-output / .sc-line) ──────── */
+.sc-output {
+    display: block;
+}
+
+.sc-line {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.58;
+    color: var(--pho);
+    white-space: pre-wrap;
+    word-break: break-all;
+    /* preserve height for blank lines */
+    min-height: 1.58em;
+}
+
+/* ── Blazor reconnect / error UI ──────────────────────────────── */
+#blazor-error-ui {
+    background: var(--panel);
+    border-top: 1px solid var(--bd2);
+    color: var(--tx);
+    font-family: var(--ui);
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: none;
+    z-index: 1000;
+}
+
+#blazor-error-ui .reload {
+    color: var(--acc2);
+    text-decoration: underline;
+    cursor: pointer;
+    margin-left: .5rem;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    float: right;
+    color: var(--dim);
+}
+
+.blazor-error-boundary {
+    background: #3a0a0a;
+    border: 1px solid #e06c75;
+    border-radius: 4px;
+    color: #ff8088;
+    padding: 0.75rem 1rem;
+    font-family: var(--mono);
+    font-size: 13px;
+}
+
+.blazor-error-boundary::after {
+    content: "An error has occurred.";
+}

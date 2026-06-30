@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpClient.Core\SharpClient.Core.csproj" />
+    <ProjectReference Include="..\SharpClient.UI\SharpClient.UI.csproj" />
+  </ItemGroup>
+
+</Project>

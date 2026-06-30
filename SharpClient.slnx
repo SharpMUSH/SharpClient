@@ -4,6 +4,7 @@
     <Project Path="src/SharpClient.Core/SharpClient.Core.csproj" />
     <Project Path="src/SharpClient.Data/SharpClient.Data.csproj" />
     <Project Path="src/SharpClient.UI/SharpClient.UI.csproj" />
+    <Project Path="src/SharpClient.Web/SharpClient.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SharpClient.Data.Tests/SharpClient.Data.Tests.csproj" />
