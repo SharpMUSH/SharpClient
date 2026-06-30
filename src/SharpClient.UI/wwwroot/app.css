@@ -79,12 +79,14 @@ body {
 .sc-line {
     font-family: var(--mono);
     font-size: var(--out-fs);
-    line-height: 1.58;
+    /* Tight line-height (~glyph box) so per-segment background colours tile
+       vertically without the output background leaking between lines. */
+    line-height: 1.2;
     color: var(--pho);
     white-space: pre-wrap;
     word-break: break-all;
     /* preserve height for blank lines */
-    min-height: 1.58em;
+    min-height: 1.2em;
 }
 
 /* ── Blazor reconnect / error UI ──────────────────────────────── */

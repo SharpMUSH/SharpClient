@@ -106,7 +106,7 @@
         {
             // Advertise the ACTUAL columns/rows that fit at this size (>= MinColumns).
             var cols = Math.Max(minCols, (int)Math.Floor(widthPx / (fontPx * 0.6)));
-            var rows = heightPx > 0 ? (int)Math.Floor(heightPx / (fontPx * 1.58)) : 24;
+            var rows = heightPx > 0 ? (int)Math.Floor(heightPx / (fontPx * 1.2)) : 24;
             await Vm.Active.SendWindowSizeAsync(cols, rows);
         }
     }
