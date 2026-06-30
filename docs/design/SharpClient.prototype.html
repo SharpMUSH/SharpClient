@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#07090c}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.10);border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.18);background-clip:padding-box}
+::-webkit-scrollbar-track{background:transparent}
+input::placeholder{color:#525b67}
+@keyframes sc-spin{to{transform:rotate(360deg)}}
+@keyframes sc-pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--acc-line)}50%{opacity:.45;box-shadow:0 0 0 4px rgba(229,192,123,0)}}
+@keyframes sc-scan{from{background-position:0 0}to{background-position:0 6px}}
+@keyframes sc-rise{from{transform:translateY(12px)}to{transform:translateY(0)}}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="position:relative;width:100%;min-height:100vh;--acc:#9b7ed4;--acc2:#bda6ee;--acc-soft:rgba(155,126,212,.16);--acc-line:rgba(155,126,212,.55);--bg:#0b0e12;--panel:#11151b;--elev:#171c24;--outbg:#090c10;--bd:rgba(255,255,255,.07);--bd2:rgba(255,255,255,.13);--tx:#c4ccd6;--dim:#7b8694;--faint:#525b67;--pho:#c4d1c8;--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;--ui:'Space Grotesk',system-ui,sans-serif;font-family:var(--ui);color:var(--tx);background:radial-gradient(130% 90% at 50% -15%,#13171f 0%,#0a0c10 58%,#07090c 100%);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;align-items:center;padding:22px 16px 64px;">
+
+  <div style="width:100%;max-width:1180px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:2px 4px 20px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="width:32px;height:32px;border-radius:9px;background:var(--acc-soft);border:1px solid var(--acc-line);display:flex;align-items:center;justify-content:center;color:var(--acc2);font-family:var(--mono);font-weight:700;font-size:17px;box-shadow:0 0 16px rgba(155,126,212,.28);">›</div>
+      <div style="display:flex;flex-direction:column;line-height:1.15;">
+        <span style="font-weight:600;font-size:14px;letter-spacing:.06em;color:#eef2f6;">SHARPCLIENT</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--dim);">MUSH / MUD client · interactive mock</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div style="display:flex;background:var(--panel);border:1px solid var(--bd);border-radius:10px;padding:3px;gap:3px;">
+        <button onClick="{{ setPhone }}" style="{{ phoneBtnStyle }}">Phone</button>
+        <button onClick="{{ setTablet }}" style="{{ tabletBtnStyle }}">Tablet</button>
+      </div>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--faint);">▤ tweak: palette · glow · scanlines</span>
+    </div>
+  </div>
+
+  <div style="{{ stageStyle }}">
+  <div style="{{ frameStyle }}">
+    <div style="{{ screenStyle }}">
+
+      <sc-if value="{{ isPhone }}" hint-placeholder-val="{{ true }}">
+      <div style="height:30px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-family:var(--mono);font-size:11px;color:#9aa4b1;background:linear-gradient(#0c0f14,#0b0e12);border-bottom:1px solid rgba(255,255,255,.04);">
+        <span>{{ statusTime }}</span>
+        <span style="display:flex;align-items:center;gap:9px;"><span style="letter-spacing:1px;color:#c4ccd6;">5G</span><span>▮▮▮</span><span style="color:#8fc16f;">84%</span></span>
+      </div>
+      </sc-if>
+
+      <div style="{{ panesStyle }}">
+
+        <sc-if value="{{ railBackdrop }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ toggleRail }}" style="position:absolute;inset:0;z-index:44;background:rgba(4,6,9,.5);"></div>
+        </sc-if>
+
+        <div style="{{ wmPaneStyle }}">
+          <div style="flex:none;padding:16px 16px 13px;display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--bd);">
+            <div>
+              <div style="font-size:19px;font-weight:600;color:#eff3f7;letter-spacing:-.01em;">Worlds</div>
+              <div style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:3px;">{{ worldCountLabel }}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button onClick="{{ openSettings }}" title="Settings" style="width:34px;height:34px;border-radius:9px;background:var(--elev);border:1px solid var(--bd);color:var(--dim);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;">⚙</button>
+              <button onClick="{{ openAddWorld }}" style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--acc2);background:var(--acc-soft);border:1px solid var(--acc-line);border-radius:9px;padding:7px 11px;cursor:pointer;">+ World</button>
+            </div>
+          </div>
+
+          <sc-if value="{{ emptyWorlds }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 26px;gap:5px;">
+            <div style="width:62px;height:62px;border-radius:16px;border:1px solid var(--bd2);background:var(--elev);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:28px;color:var(--acc2);box-shadow:0 0 26px rgba(155,126,212,.2);margin-bottom:10px;">›_</div>
+            <div style="font-size:17px;font-weight:600;color:#e7ecf2;">No worlds yet</div>
+            <div style="font-size:13px;color:var(--dim);max-width:230px;line-height:1.5;">Add a MUD or MUSH server to connect your first character.</div>
+            <button onClick="{{ openAddWorld }}" style="margin-top:14px;font-family:var(--ui);font-size:13px;font-weight:600;color:#0a0c10;background:var(--acc2);border:none;border-radius:10px;padding:11px 18px;cursor:pointer;box-shadow:0 0 22px rgba(155,126,212,.35);">+ Add your first world</button>
+            <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+              <button onClick="{{ presetSindome }}" style="font-family:var(--mono);font-size:11px;color:var(--tx);background:var(--elev);border:1px dashed var(--bd2);border-radius:8px;padding:8px 11px;cursor:pointer;">sindome.org:5555</button>
+              <button onClick="{{ presetAardwolf }}" style="font-family:var(--mono);font-size:11px;color:var(--tx);background:var(--elev);border:1px dashed var(--bd2);border-radius:8px;padding:8px 11px;cursor:pointer;">aardmud.org:23</button>
+            </div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ hasWorlds }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;overflow-y:auto;min-height:0;padding:11px 12px 20px;display:flex;flex-direction:column;gap:10px;">
+            <sc-for list="{{ worlds }}" as="world" hint-placeholder-count="4">
+            <div style="border:1px solid var(--bd);border-radius:13px;background:var(--elev);overflow:hidden;">
+              <div onClick="{{ world.toggle }}" style="display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer;">
+                <div style="{{ world.monoStyle }}">{{ world.initial }}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="display:flex;align-items:center;gap:8px;"><span style="font-weight:600;font-size:15px;color:#e7ecf2;">{{ world.name }}</span><span style="{{ world.liveBadgeStyle }}">{{ world.liveBadge }}</span></div>
+                  <div style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:2px;">{{ world.address }}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:11px;">
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--faint);">{{ world.charLabel }}</span>
+                  <span style="{{ world.chevStyle }}">⌄</span>
+                </div>
+              </div>
+              <sc-if value="{{ world.expanded }}" hint-placeholder-val="{{ false }}">
+              <div style="border-top:1px solid var(--bd);background:var(--panel);padding:7px;display:flex;flex-direction:column;gap:5px;">
+                <sc-for list="{{ world.chars }}" as="ch" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:10px;background:var(--elev);">
+                  <div onClick="{{ ch.edit }}" title="Edit character" style="flex:1;min-width:0;display:flex;align-items:center;gap:11px;cursor:pointer;">
+                    <div style="{{ ch.avatarStyle }}">{{ ch.initials }}</div>
+                    <div style="flex:1;min-width:0;display:flex;align-items:center;gap:7px;"><span style="font-weight:600;font-size:14px;color:#e3e9ef;">{{ ch.name }}</span><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="var(--faint)" stroke-width="1.6"><path d="M13 4.5l2.5 2.5M4 16l.6-3 8-8 2.4 2.4-8 8-3 .6z" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+                  </div>
+                  <sc-if value="{{ ch.hasSession }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ ch.open }}" style="{{ ch.openStyle }}"><span style="{{ ch.dotStyle }}"></span>{{ ch.openLabel }}</button>
+                  </sc-if>
+                  <sc-if value="{{ ch.noSession }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ ch.connect }}" style="font-family:var(--ui);font-size:12.5px;font-weight:600;color:#0a0c10;background:var(--acc2);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;">Connect</button>
+                  </sc-if>
+                  <button onClick="{{ ch.del }}" title="Delete character" style="flex:none;width:30px;height:30px;border-radius:8px;background:transparent;border:1px solid var(--bd);color:var(--faint);display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="border-color:rgba(224,108,117,.5);color:#e06c75"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12M8 6V4.5h4V6M6.5 6l.6 9.5h5.8l.6-9.5" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+                </div>
+                </sc-for>
+                <sc-if value="{{ world.noChars }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:11px 10px;text-align:center;font-size:12px;color:var(--faint);font-family:var(--mono);">no characters yet</div>
+                </sc-if>
+                <div style="display:flex;gap:6px;">
+                  <div onClick="{{ world.addChar }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 10px;border-radius:10px;border:1px dashed var(--bd2);color:var(--dim);font-family:var(--mono);font-size:12px;cursor:pointer;">+ add character</div>
+                  <button onClick="{{ world.del }}" title="Delete world" style="flex:none;display:flex;align-items:center;gap:6px;padding:9px 12px;border-radius:10px;border:1px solid rgba(224,108,117,.28);background:rgba(224,108,117,.07);color:#e06c75;font-family:var(--mono);font-size:12px;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12M8 6V4.5h4V6M6.5 6l.6 9.5h5.8l.6-9.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>delete</button>
+                </div>
+              </div>
+              </sc-if>
+            </div>
+            </sc-for>
+          </div>
+          </sc-if>
+        </div>
+
+        <div style="{{ sessPaneStyle }}">
+          <sc-if value="{{ hasSessions }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;height:100%;min-height:0;">
+
+            <div style="flex:none;display:flex;align-items:stretch;border-bottom:1px solid var(--bd);background:var(--panel);overflow-x:auto;">
+              <sc-for list="{{ sessions }}" as="s" hint-placeholder-count="4">
+              <div onClick="{{ s.select }}" style="{{ s.tabStyle }}">
+                <span style="{{ s.dotStyle }}"></span>
+                <div style="display:flex;flex-direction:column;line-height:1.2;min-width:0;">
+                  <span style="font-weight:600;font-size:12.5px;color:{{ s.nameColor }};white-space:nowrap;">{{ s.char }}</span>
+                  <span style="font-family:var(--mono);font-size:9.5px;color:var(--faint);white-space:nowrap;">{{ s.world }}</span>
+                </div>
+                <span onClick="{{ s.close }}" style="margin-left:2px;width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:15px;cursor:pointer;" style-hover="background:rgba(255,255,255,.08);color:#e06c75;">×</span>
+              </div>
+              </sc-for>
+              <button onClick="{{ goWorldsForConnect }}" style="flex:none;width:40px;display:flex;align-items:center;justify-content:center;color:var(--dim);background:transparent;border:none;border-left:1px solid var(--bd);font-size:19px;cursor:pointer;">+</button>
+            </div>
+
+            <div style="flex:none;display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--bd);background:linear-gradient(var(--panel),var(--bg));">
+              <sc-if value="{{ isTablet }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ toggleRail }}" title="Toggle Worlds" style="{{ railBtnStyle }}"><svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="2.6" rx="1.3"></rect><rect x="3" y="8.7" width="14" height="2.6" rx="1.3"></rect><rect x="3" y="13.4" width="14" height="2.6" rx="1.3"></rect></svg>Worlds</button>
+              </sc-if>
+              <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;overflow:hidden;">
+                <span style="{{ active.bigDotStyle }}"></span>
+                <span style="font-weight:600;font-size:14px;color:#e7ecf2;white-space:nowrap;">{{ active.char }}</span>
+                <span style="font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap;">@ {{ active.world }}</span>
+                <span style="{{ active.statePillStyle }}">{{ active.stateText }}</span>
+              </div>
+              <button onClick="{{ openSettings }}" title="Settings" style="flex:none;width:32px;height:30px;border-radius:8px;background:var(--elev);border:1px solid var(--bd);color:var(--dim);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;">⚙</button>
+              <button onClick="{{ toggleTriggers }}" title="Triggers & aliases" style="flex:none;width:32px;height:30px;border-radius:8px;background:var(--elev);border:1px solid var(--bd);color:var(--dim);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;cursor:pointer;">⌁</button>
+              <button onClick="{{ toggleProtocol }}" title="Protocol panel" style="{{ protocolBtnStyle }}">{ }</button>
+            </div>
+
+            <div ref="{{ outRef }}" style="flex:1;overflow-y:auto;min-height:0;position:relative;background:radial-gradient(120% 80% at 50% 0%,#0c1014 0%,var(--outbg) 70%);font-family:var(--mono);font-size:13px;line-height:1.58;color:var(--pho);padding:14px 14px 20px;">
+              <sc-if value="{{ scanlines }}" hint-placeholder-val="{{ true }}">
+              <div style="position:absolute;inset:0;pointer-events:none;z-index:2;background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,.22) 3px,rgba(0,0,0,0) 4px);opacity:.5;mix-blend-mode:multiply;"></div>
+              </sc-if>
+
+              <sc-if value="{{ liveMode }}" hint-placeholder-val="{{ true }}">
+              <div style="{{ outTextStyle }}">
+                <sc-for list="{{ feedLines }}" as="line" hint-placeholder-count="18">
+                <div style="white-space:pre-wrap;word-break:break-word;min-height:1.58em;"><sc-for list="{{ line.runs }}" as="run" hint-placeholder-count="3"><span style="{{ run.style }}">{{ run.text }}</span></sc-for></div>
+                </sc-for>
+
+                <div style="margin-top:18px;padding-top:13px;border-top:1px dashed rgba(255,255,255,.09);">
+                  <div style="color:var(--faint);font-size:11px;margin-bottom:9px;">── ANSI palette reference · rendered on this background ──</div>
+                  <div style="color:var(--faint);font-size:10px;margin-bottom:4px;">16-color · foreground</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:1px;margin-bottom:10px;"><sc-for list="{{ palette16 }}" as="c" hint-placeholder-count="16"><span style="color:{{ c.hex }};padding:1px 6px;font-weight:700;">{{ c.tag }}</span></sc-for></div>
+                  <div style="color:var(--faint);font-size:10px;margin-bottom:4px;">16-color · background</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:10px;"><sc-for list="{{ palette16 }}" as="c" hint-placeholder-count="16"><span style="{{ c.bgStyle }}">{{ c.idx }}</span></sc-for></div>
+                  <div style="color:var(--faint);font-size:10px;margin-bottom:4px;">grayscale ramp · 256-color cube sample</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:0;margin-bottom:3px;"><sc-for list="{{ paletteGray }}" as="g" hint-placeholder-count="14"><span style="width:16px;height:14px;background:{{ g.hex }};display:inline-block;"></span></sc-for></div>
+                  <div style="display:flex;flex-wrap:wrap;gap:0;"><sc-for list="{{ paletteCube }}" as="g" hint-placeholder-count="18"><span style="width:16px;height:14px;background:{{ g.hex }};display:inline-block;"></span></sc-for></div>
+                </div>
+              </div>
+              </sc-if>
+
+              <sc-if value="{{ connectingMode }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--dim);">
+                <div style="width:34px;height:34px;border-radius:50%;border:2.5px solid rgba(255,255,255,.12);border-top-color:var(--acc2);animation:sc-spin .8s linear infinite;"></div>
+                <div style="font-size:13px;color:#c4ccd6;">{{ active.connectingText }}</div>
+                <div style="font-family:var(--mono);font-size:11px;color:var(--faint);">negotiating telnet · GMCP · MCCP2</div>
+              </div>
+              </sc-if>
+
+              <sc-if value="{{ reconnectingMode }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ reconStyle }}">
+                <sc-for list="{{ feedLines }}" as="line" hint-placeholder-count="3">
+                <div style="white-space:pre-wrap;"><sc-for list="{{ line.runs }}" as="run" hint-placeholder-count="3"><span style="{{ run.style }}">{{ run.text }}</span></sc-for></div>
+                </sc-for>
+              </div>
+              <div style="margin-top:14px;display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;background:rgba(229,192,123,.10);border:1px solid rgba(229,192,123,.32);color:#e5c07b;font-size:12.5px;">
+                <span style="width:9px;height:9px;border-radius:50%;background:#e5c07b;animation:sc-pulse 1.3s ease-in-out infinite;"></span>
+                {{ active.reconnectText }}
+              </div>
+              </sc-if>
+
+              <sc-if value="{{ errorMode }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:0 30px;text-align:center;">
+                <div style="width:46px;height:46px;border-radius:12px;background:rgba(224,108,117,.12);border:1px solid rgba(224,108,117,.4);display:flex;align-items:center;justify-content:center;color:#ff8088;font-size:22px;">✕</div>
+                <div style="font-size:14px;color:#e7ecf2;font-weight:600;">Connection refused</div>
+                <div style="font-family:var(--mono);font-size:11.5px;color:#e06c75;">ECONNREFUSED · batmud.bat.org:23</div>
+                <div style="font-size:12px;color:var(--dim);max-width:240px;line-height:1.5;">The host actively refused the connection. The server may be down or the port blocked.</div>
+                <button onClick="{{ retry }}" style="margin-top:6px;font-family:var(--ui);font-size:13px;font-weight:600;color:#0a0c10;background:var(--acc2);border:none;border-radius:9px;padding:10px 20px;cursor:pointer;">↻ Retry connection</button>
+              </div>
+              </sc-if>
+            </div>
+
+            <div style="flex:none;border-top:1px solid var(--bd);background:var(--panel);">
+              <sc-if value="{{ historyOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:6px;padding:9px 10px 2px;flex-wrap:wrap;align-items:center;">
+                <span style="font-family:var(--mono);font-size:10px;color:var(--faint);margin-right:2px;">history</span>
+                <sc-for list="{{ history }}" as="h" hint-placeholder-count="3">
+                <button onClick="{{ h.recall }}" style="font-family:var(--mono);font-size:11px;color:var(--tx);background:var(--elev);border:1px solid var(--bd);border-radius:7px;padding:5px 9px;cursor:pointer;">{{ h.cmd }}</button>
+                </sc-for>
+                <sc-if value="{{ noHistory }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--mono);font-size:11px;color:var(--faint);">no commands yet</span></sc-if>
+              </div>
+              </sc-if>
+              <div style="display:flex;align-items:center;gap:8px;padding:9px 10px;">
+                <button onClick="{{ toggleHistory }}" title="Command history" style="{{ historyBtnStyle }}">↑</button>
+                <div style="flex:1;display:flex;align-items:center;background:var(--outbg);border:1px solid {{ inputBorder }};border-radius:11px;padding:0 8px 0 12px;">
+                  <span style="color:var(--acc2);font-family:var(--mono);font-size:14px;margin-right:7px;">›</span>
+                  <input value="{{ input }}" onChange="{{ onInput }}" onKeyDown="{{ onKey }}" placeholder="{{ inputPlaceholder }}" disabled="{{ inputDisabled }}" style="flex:1;background:transparent;border:none;outline:none;color:var(--tx);font-family:var(--mono);font-size:13px;padding:11px 0;min-width:0;" />
+                </div>
+                <button onClick="{{ send }}" disabled="{{ inputDisabled }}" style="{{ sendStyle }}">Send</button>
+              </div>
+            </div>
+
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ noSessions }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;gap:7px;">
+            <div style="width:58px;height:58px;border-radius:15px;border:1px solid var(--bd2);background:var(--elev);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:24px;color:var(--dim);">›_</div>
+            <div style="font-size:16px;font-weight:600;color:#e7ecf2;margin-top:6px;">No active sessions</div>
+            <div style="font-size:13px;color:var(--dim);max-width:220px;line-height:1.5;">Connect a character from Worlds to open a session here.</div>
+            <button onClick="{{ goWorlds }}" style="margin-top:12px;font-family:var(--ui);font-size:13px;font-weight:600;color:var(--acc2);background:var(--acc-soft);border:1px solid var(--acc-line);border-radius:9px;padding:10px 18px;cursor:pointer;">Go to Worlds</button>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ protocolOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;justify-content:flex-end;">
+            <div onClick="{{ toggleProtocol }}" style="position:absolute;inset:0;background:rgba(4,6,9,.6);"></div>
+            <div style="position:relative;max-height:64%;background:var(--panel);border-top:1px solid var(--bd2);border-radius:18px 18px 0 0;display:flex;flex-direction:column;box-shadow:0 -24px 60px rgba(0,0,0,.55);animation:sc-rise .22s ease;">
+              <div style="display:flex;align-items:center;justify-content:center;padding:8px 0 4px;"><div style="width:38px;height:4px;border-radius:3px;background:var(--bd2);"></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 16px 12px;border-bottom:1px solid var(--bd);">
+                <div style="display:flex;align-items:center;gap:9px;"><span style="font-weight:600;font-size:14px;color:#e7ecf2;">Protocol</span><span style="font-family:var(--mono);font-size:10px;color:var(--acc2);background:var(--acc-soft);border:1px solid var(--acc-line);border-radius:5px;padding:2px 6px;">telnet negotiation</span></div>
+                <button onClick="{{ toggleProtocol }}" style="background:transparent;border:none;color:var(--dim);font-size:18px;cursor:pointer;">×</button>
+              </div>
+              <div style="flex:1;overflow-y:auto;min-height:0;padding:8px 14px 18px;font-family:var(--mono);font-size:12px;">
+                <sc-for list="{{ telnetRows }}" as="r" hint-placeholder-count="6">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,.05);">
+                  <span style="color:var(--dim);white-space:nowrap;">{{ r.k }}</span>
+                  <span style="{{ r.vStyle }}">{{ r.v }}</span>
+                </div>
+                </sc-for>
+                <div onClick="{{ toggleGmcp }}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 2px;cursor:pointer;">
+                  <span style="color:#c678dd;">▸ GMCP packages (12)</span>
+                  <span style="color:var(--faint);">{{ gmcpToggleLabel }}</span>
+                </div>
+                <sc-if value="{{ gmcpOpen }}" hint-placeholder-val="{{ true }}">
+                <pre style="margin:2px 0 0;padding:12px;background:var(--outbg);border:1px solid var(--bd);border-radius:9px;color:#6fd3df;font-size:11.5px;line-height:1.6;overflow-x:auto;white-space:pre;">{{ gmcpJson }}</pre>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ triggerOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;z-index:41;display:flex;flex-direction:column;justify-content:flex-end;">
+            <div onClick="{{ toggleTriggers }}" style="position:absolute;inset:0;background:rgba(4,6,9,.6);"></div>
+            <div style="position:relative;max-height:78%;background:var(--panel);border-top:1px solid var(--bd2);border-radius:18px 18px 0 0;display:flex;flex-direction:column;box-shadow:0 -24px 60px rgba(0,0,0,.55);animation:sc-rise .22s ease;">
+              <div style="display:flex;align-items:center;justify-content:center;padding:8px 0 4px;"><div style="width:38px;height:4px;border-radius:3px;background:var(--bd2);"></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 16px 12px;border-bottom:1px solid var(--bd);">
+                <div style="display:flex;flex-direction:column;gap:3px;">
+                  <span style="font-weight:600;font-size:14px;color:#e7ecf2;">Triggers &amp; Aliases</span>
+                  <span style="font-family:var(--mono);font-size:10px;color:var(--dim);">scope · World: Sindome ▸ Char: Vesper</span>
+                </div>
+                <button onClick="{{ toggleTriggers }}" style="background:transparent;border:none;color:var(--dim);font-size:18px;cursor:pointer;">×</button>
+              </div>
+              <div style="flex:1;overflow-y:auto;min-height:0;padding:10px 14px;display:flex;flex-direction:column;gap:8px;">
+                <sc-for list="{{ triggers }}" as="t" hint-placeholder-count="4">
+                <div style="border:1px solid var(--bd);border-radius:11px;background:var(--elev);padding:11px 12px;display:flex;align-items:center;gap:10px;">
+                  <span style="{{ t.kindStyle }}">{{ t.kind }}</span>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-family:var(--mono);font-size:12px;color:#e3e9ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.pattern }}</div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:4px;"><span style="color:var(--faint);font-family:var(--mono);font-size:11px;">→</span><span style="{{ t.actionStyle }}">{{ t.action }}</span><span style="font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.actionVal }}</span></div>
+                  </div>
+                  <div style="{{ t.switchStyle }}"><div style="{{ t.knobStyle }}"></div></div>
+                </div>
+                </sc-for>
+                <div style="border:1px dashed var(--bd2);border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:9px;margin-top:4px;">
+                  <div style="font-family:var(--mono);font-size:11px;color:var(--dim);">new rule</div>
+                  <div style="display:flex;gap:7px;flex-wrap:wrap;">
+                    <span style="font-family:var(--mono);font-size:11px;color:var(--acc2);background:var(--acc-soft);border:1px solid var(--acc-line);border-radius:6px;padding:6px 9px;">regex ▾</span>
+                    <div style="flex:1;min-width:120px;background:var(--outbg);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:11px;color:var(--faint);">^(\w+) shouts</div>
+                  </div>
+                  <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-family:var(--mono);font-size:11px;color:var(--dim);">→</span>
+                    <span style="font-family:var(--mono);font-size:11px;color:#8fc16f;background:rgba(143,193,111,.12);border:1px solid rgba(143,193,111,.3);border-radius:6px;padding:6px 9px;">highlight ▾</span>
+                    <button onClick="{{ addTrigger }}" style="margin-left:auto;font-family:var(--ui);font-size:12px;font-weight:600;color:#0a0c10;background:var(--acc2);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;">Add rule</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+
+        </div>
+      </div>
+
+      <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;justify-content:flex-end;">
+        <div onClick="{{ closeSettings }}" style="position:absolute;inset:0;background:rgba(4,6,9,.6);"></div>
+        <div style="position:relative;max-height:84%;background:var(--panel);border-top:1px solid var(--bd2);border-radius:18px 18px 0 0;display:flex;flex-direction:column;box-shadow:0 -24px 60px rgba(0,0,0,.55);animation:sc-rise .22s ease;">
+          <div style="display:flex;align-items:center;justify-content:center;padding:8px 0 4px;"><div style="width:38px;height:4px;border-radius:3px;background:var(--bd2);"></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 16px 12px;border-bottom:1px solid var(--bd);">
+            <div style="display:flex;flex-direction:column;gap:3px;"><span style="font-weight:600;font-size:14px;color:#e7ecf2;">Settings</span><span style="font-family:var(--mono);font-size:10px;color:var(--dim);">global · applies to every session</span></div>
+            <button onClick="{{ closeSettings }}" style="background:transparent;border:none;color:var(--dim);font-size:18px;cursor:pointer;">×</button>
+          </div>
+          <div style="flex:1;overflow-y:auto;min-height:0;padding:16px;display:flex;flex-direction:column;gap:22px;">
+            <div>
+              <div style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:10px;">output font</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <sc-for list="{{ fontOptions }}" as="f" hint-placeholder-count="4">
+                <button onClick="{{ f.select }}" style="{{ f.style }}">{{ f.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;"><span style="font-family:var(--mono);font-size:11px;color:var(--dim);">minimum width</span><span style="font-family:var(--mono);font-size:12px;color:var(--acc2);">{{ minColsLabel }}</span></div>
+              <input type="range" min="60" max="120" step="1" value="{{ minCols }}" onChange="{{ onMinCols }}" style="width:100%;accent-color:var(--acc2);" />
+              <div style="font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:7px;">{{ fitNote }}</div>
+            </div>
+            <div>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;"><span style="font-family:var(--mono);font-size:11px;color:var(--dim);">max text size</span><span style="font-family:var(--mono);font-size:12px;color:var(--acc2);">{{ fontCapLabel }}</span></div>
+              <input type="range" min="10" max="18" step="1" value="{{ fontCap }}" onChange="{{ onFontCap }}" style="width:100%;accent-color:var(--acc2);" />
+            </div>
+            <div>
+              <div style="font-family:var(--mono);font-size:10px;color:var(--faint);margin-bottom:6px;">column ruler · preview at current size</div>
+              <div style="{{ settingsPreviewStyle }}">{{ settingsPreview }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ addWorldOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:51;display:flex;flex-direction:column;justify-content:flex-end;">
+        <div onClick="{{ closeAddWorld }}" style="position:absolute;inset:0;background:rgba(4,6,9,.6);"></div>
+        <div style="position:relative;background:var(--panel);border-top:1px solid var(--bd2);border-radius:18px 18px 0 0;display:flex;flex-direction:column;box-shadow:0 -24px 60px rgba(0,0,0,.55);animation:sc-rise .22s ease;">
+          <div style="display:flex;align-items:center;justify-content:center;padding:8px 0 4px;"><div style="width:38px;height:4px;border-radius:3px;background:var(--bd2);"></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 16px 12px;border-bottom:1px solid var(--bd);">
+            <div style="display:flex;flex-direction:column;gap:3px;"><span style="font-weight:600;font-size:14px;color:#e7ecf2;">Add World</span><span style="font-family:var(--mono);font-size:10px;color:var(--dim);">a MUSH / MUD server</span></div>
+            <button onClick="{{ closeAddWorld }}" style="background:transparent;border:none;color:var(--dim);font-size:18px;cursor:pointer;">×</button>
+          </div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:13px;">
+            <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-family:var(--mono);font-size:11px;color:var(--dim);">world name</span><input value="{{ nwName }}" onChange="{{ onNwName }}" placeholder="e.g. Sindome" style="background:var(--outbg);border:1px solid var(--bd2);border-radius:9px;padding:11px 12px;color:var(--tx);font-family:var(--ui);font-size:14px;outline:none;" /></label>
+            <div style="display:flex;gap:10px;">
+              <label style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0;"><span style="font-family:var(--mono);font-size:11px;color:var(--dim);">host</span><input value="{{ nwHost }}" onChange="{{ onNwHost }}" placeholder="host.org" style="background:var(--outbg);border:1px solid var(--bd2);border-radius:9px;padding:11px 12px;color:var(--tx);font-family:var(--mono);font-size:13px;outline:none;min-width:0;" /></label>
+              <label style="width:92px;display:flex;flex-direction:column;gap:6px;"><span style="font-family:var(--mono);font-size:11px;color:var(--dim);">port</span><input value="{{ nwPort }}" onChange="{{ onNwPort }}" placeholder="23" style="background:var(--outbg);border:1px solid var(--bd2);border-radius:9px;padding:11px 12px;color:var(--tx);font-family:var(--mono);font-size:13px;outline:none;width:100%;" /></label>
+            </div>
+            <button onClick="{{ submitWorld }}" style="margin-top:4px;font-family:var(--ui);font-size:14px;font-weight:600;color:#0a0c10;background:var(--acc2);border:none;border-radius:10px;padding:13px;cursor:pointer;box-shadow:0 0 22px rgba(155,126,212,.3);">Add world</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ addCharOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:52;display:flex;flex-direction:column;justify-content:flex-end;">
+        <div onClick="{{ closeAddChar }}" style="position:absolute;inset:0;background:rgba(4,6,9,.6);"></div>
+        <div style="position:relative;background:var(--panel);border-top:1px solid var(--bd2);border-radius:18px 18px 0 0;display:flex;flex-direction:column;box-shadow:0 -24px 60px rgba(0,0,0,.55);animation:sc-rise .22s ease;">
+          <div style="display:flex;align-items:center;justify-content:center;padding:8px 0 4px;"><div style="width:38px;height:4px;border-radius:3px;background:var(--bd2);"></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 16px 12px;border-bottom:1px solid var(--bd);">
+            <div style="display:flex;flex-direction:column;gap:3px;"><span style="font-weight:600;font-size:14px;color:#e7ecf2;">{{ charSheetTitle }}</span><span style="font-family:var(--mono);font-size:10px;color:var(--dim);">on {{ addCharWorld }}</span></div>
+            <button onClick="{{ closeAddChar }}" style="background:transparent;border:none;color:var(--dim);font-size:18px;cursor:pointer;">×</button>
+          </div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:13px;">
+            <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-family:var(--mono);font-size:11px;color:var(--dim);">character name</span><input value="{{ ncName }}" onChange="{{ onNcName }}" placeholder="e.g. Vesper" style="background:var(--outbg);border:1px solid var(--bd2);border-radius:9px;padding:11px 12px;color:var(--tx);font-family:var(--ui);font-size:14px;outline:none;" /></label>
+            <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-family:var(--mono);font-size:11px;color:var(--dim);">connect string <span style="color:var(--faint);">· auto-sent on connect</span></span><input value="{{ ncConn }}" onChange="{{ onNcConn }}" placeholder="connect Vesper yourpassword" style="background:var(--outbg);border:1px solid var(--bd2);border-radius:9px;padding:11px 12px;color:var(--acc2);font-family:var(--mono);font-size:13px;outline:none;" /></label>
+            <button onClick="{{ submitChar }}" style="margin-top:4px;font-family:var(--ui);font-size:14px;font-weight:600;color:#0a0c10;background:var(--acc2);border:none;border-radius:10px;padding:13px;cursor:pointer;box-shadow:0 0 22px rgba(155,126,212,.3);">{{ charSubmitLabel }}</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:55;display:flex;align-items:center;justify-content:center;padding:26px;">
+        <div onClick="{{ cancelConfirm }}" style="position:absolute;inset:0;background:rgba(4,6,9,.66);"></div>
+        <div style="position:relative;width:100%;max-width:300px;background:var(--elev);border:1px solid var(--bd2);border-radius:16px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.6);animation:sc-rise .18s ease;">
+          <div style="display:flex;align-items:center;gap:11px;margin-bottom:11px;">
+            <div style="width:36px;height:36px;border-radius:9px;flex:none;background:rgba(224,108,117,.12);border:1px solid rgba(224,108,117,.4);display:flex;align-items:center;justify-content:center;color:#ff8088;"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12M8 6V4.5h4V6M6.5 6l.6 9.5h5.8l.6-9.5" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+            <div style="font-weight:600;font-size:15px;color:#e7ecf2;">{{ confirmTitle }}</div>
+          </div>
+          <div style="font-size:13px;color:var(--dim);line-height:1.5;margin-bottom:17px;">{{ confirmMsg }}</div>
+          <div style="display:flex;gap:9px;">
+            <button onClick="{{ cancelConfirm }}" style="flex:1;font-family:var(--ui);font-size:13px;font-weight:600;color:var(--tx);background:var(--panel);border:1px solid var(--bd2);border-radius:9px;padding:11px;cursor:pointer;">Cancel</button>
+            <button onClick="{{ confirmDelete }}" style="flex:1;font-family:var(--ui);font-size:13px;font-weight:600;color:#fff;background:#c0414b;border:none;border-radius:9px;padding:11px;cursor:pointer;">Delete</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isPhone }}" hint-placeholder-val="{{ true }}">
+      <div style="height:58px;flex:none;display:flex;border-top:1px solid var(--bd);background:var(--panel);">
+        <button onClick="{{ goWorlds }}" style="{{ navWorldsStyle }}">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="3" rx="1.5"></rect><rect x="3" y="8.5" width="14" height="3" rx="1.5"></rect><rect x="3" y="13" width="14" height="3" rx="1.5"></rect></svg>
+          <span style="font-size:10.5px;font-weight:600;">Worlds</span>
+        </button>
+        <button onClick="{{ goSession }}" style="{{ navSessStyle }}">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="4" width="15" height="12" rx="2.5"></rect><path d="M6 8.5l2.6 1.8L6 12.1" stroke-linecap="round" stroke-linejoin="round"></path><line x1="10.5" y1="12.4" x2="14" y2="12.4" stroke-linecap="round"></line></svg>
+          <span style="font-size:10.5px;font-weight:600;">Session</span>
+        </button>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;left:50%;bottom:74px;transform:translateX(-50%);z-index:60;font-family:var(--mono);font-size:12px;color:#e7ecf2;background:rgba(23,28,36,.96);border:1px solid var(--bd2);border-radius:10px;padding:10px 15px;box-shadow:0 8px 30px rgba(0,0,0,.5);animation:sc-rise .2s ease;white-space:nowrap;">{{ toast }}</div>
+      </sc-if>
+
+    </div>
+  </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:920},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#9b7ed4&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Phosphor&quot;,&quot;options&quot;:[&quot;#9b7ed4&quot;,&quot;#39d98a&quot;,&quot;#4a90d9&quot;,&quot;#c08a3e&quot;,&quot;#56b6c2&quot;]},&quot;textGlow&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Phosphor&quot;},&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Phosphor&quot;},&quot;emptyWorlds&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;World Manager&quot;}}">
+class Component extends DCLogic {
+  state = {
+    device: 'phone', screen: 'session', activeId: 's1', expanded: 'w1',
+    input: '', historyOpen: false, protocolOpen: false, gmcpOpen: true,
+    triggerOpen: false, toast: null, settingsOpen: false, addWorldOpen: false, addCharOpen: false, charMode: 'add', addCharWorldId: null, charOrig: null, nc: { name: '', connectString: '' }, confirm: { open: false, kind: null, worldId: null, name: null }, outW: 0, vw: 0, vh: 0, railOpen: false,
+    settings: { font: 'jet', minCols: 78, fontCap: 14 },
+    nw: { name: '', host: '', port: '' },
+    histories: {}, appended: {},
+    sessions: [
+      { id: 's1', char: 'Vesper', world: 'Sindome', wid: 'w1', state: 'live' },
+      { id: 's2', char: 'Thorne', world: 'GrapevineMUD', wid: 'w3', state: 'connecting' },
+      { id: 's3', char: 'Kael', world: 'Aardwolf', wid: 'w2', state: 'reconnecting' },
+      { id: 's4', char: 'Doran', world: 'BatMUD', wid: 'w4', state: 'error' },
+    ],
+    worlds: [
+      { id: 'w1', name: 'Sindome', host: 'sindome.org', port: 5555, color: '#c678dd',
+        chars: [ { name: 'Vesper', sid: 's1', connectString: 'connect Vesper ********' }, { name: 'Kestrel', connectString: 'connect Kestrel ********' } ] },
+      { id: 'w2', name: 'Aardwolf', host: 'aardmud.org', port: 23, color: '#8fc16f',
+        chars: [ { name: 'Kael', title: 'Lvl 41 Warrior', sid: 's3' }, { name: 'Mira', title: 'Lvl 12 Mage' } ] },
+      { id: 'w3', name: 'GrapevineMUD', host: 'grapevine.haus', port: 4000, color: '#61afef',
+        chars: [ { name: 'Thorne', title: 'Wanderer', sid: 's2' } ] },
+      { id: 'w4', name: 'BatMUD', host: 'batmud.bat.org', port: 23, color: '#e5c07b',
+        chars: [ { name: 'Doran', title: 'Reaver', sid: 's4' } ] },
+      { id: 'w5', name: 'Threshold RPG', host: 'threshold-rpg.com', port: 3333, color: '#56b6c2',
+        chars: [] },
+    ],
+  };
+
+  P = ['#3a3f4b','#e06c75','#8fc16f','#e5c07b','#61afef','#c678dd','#56b6c2','#abb2bf','#5c6672','#ff8088','#b5e890','#ffd596','#7cc4ff','#e29bf0','#6fd3df','#e8edf2'];
+  PHO = '#c4d1c8'; OUTBG = '#090c10';
+  FONTS = [
+    { id:'jet', label:'JetBrains Mono', css:"'JetBrains Mono',ui-monospace,monospace" },
+    { id:'plex', label:'IBM Plex Mono', css:"'IBM Plex Mono',ui-monospace,monospace" },
+    { id:'space', label:'Space Mono', css:"'Space Mono',ui-monospace,monospace" },
+    { id:'courier', label:'Courier', css:"'Courier New',Courier,monospace" },
+  ];
+
+  componentDidMount() { this.applyVars(); this.scrollOut(); this.measure(); window.addEventListener('resize', this.measure); }
+  componentWillUnmount() { window.removeEventListener('resize', this.measure); }
+  measure = () => { this.setState({ vw: window.innerWidth, vh: window.innerHeight }); };
+  componentDidUpdate() { this.applyVars(); if (this._wantScroll) { this._wantScroll = false; this.scrollOut(); } }
+  applyVars() {
+    const el = this._root; if (!el) return;
+    const a = this.props.accent || '#9b7ed4';
+    el.style.setProperty('--acc', a);
+    el.style.setProperty('--acc2', this.lighten(a, .22));
+    el.style.setProperty('--acc-soft', this.hexA(a, .16));
+    el.style.setProperty('--acc-line', this.hexA(a, .55));
+  }
+  scrollOut() { const o = this._out; if (o) requestAnimationFrame(() => { o.scrollTop = o.scrollHeight; }); }
+
+  hexA(h, a) { const n = parseInt(h.slice(1), 16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+  lighten(h, amt) { const n = parseInt(h.slice(1), 16); const f = c => Math.round(c + (255 - c) * amt); const r=f(n>>16&255),g=f(n>>8&255),b=f(n&255); return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+  lum(h) { const n = parseInt(h.slice(1), 16); return (n>>16&255)*.299 + (n>>8&255)*.587 + (n&255)*.114; }
+
+  toast(msg) { clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: null }), 1900); }
+
+  // ---- feeds ----
+  feeds() {
+    return {
+      s1: [
+        [{t:'✓ Connected to Sindome ',c:2,b:1},{t:'(sindome.org:5555)',c:2}],
+        [{t:'  telnet: GMCP · MCCP2 · NAWS · CHARSET=UTF-8 negotiated',c:8}],
+        [{t:''}],
+        [{t:'Red Sector — The Drome, Main Floor',c:14,b:1}],
+        [{t:'Synth-smoke hangs over the bar. Cracked neon stutters '},{t:'red',c:1},{t:' and '},{t:'electric blue',c:12},{t:' across'}],
+        [{t:'the faces of a dozen '},{t:'Mixers',c:5},{t:' nursing cheap '},{t:'Stim-U',c:13,b:1},{t:'. A '},{t:'ripperdoc',c:3},{t:' works a booth in back.'}],
+        [{t:'Exits: ',c:3,b:1},{t:'north(n)  east(e)  out(o)',c:6}],
+        [{t:''}],
+        [{t:'[',c:8},{t:'Public',c:13,b:1},{t:'] ',c:8},{t:'Lazarus',c:14},{t:': anyone running a clean '},{t:'SIC',c:11,b:1},{t:' chip? paying well.'}],
+        [{t:'[',c:8},{t:'Public',c:13,b:1},{t:'] ',c:8},{t:'Mute',c:14},{t:': try the '},{t:'Green',c:2,b:1},{t:' market, ask for Dengar.'}],
+        [{t:''}],
+        [{t:'Saedii',c:9,b:1},{t:' steps out of the crowd, mono-blade already in hand.',c:7}],
+        [{t:'Saedii',c:9,b:1},{t:' lunges — you '},{t:'dodge',c:10,b:1},{t:' left, the edge scrapes your '},{t:'armorweave',c:11},{t:'.'}],
+        [{t:' damage ',inv:1,c:1},{t:' ['},{t:'█████████',c:2},{t:'░░░░',c:8},{t:'] '},{t:'HP 68%',c:10}],
+        [{t:'* you are ',c:8},{t:'bleeding',c:1,u:1},{t:' (-2/tick)',c:8}],
+        [{t:''}],
+        [{t:'Type ',c:8},{t:' HELP ',inv:1},{t:' or ',c:8},{t:'WHO',c:14,u:1},{t:' · vitals streaming to status bar',c:8}],
+        [{t:''}],
+        [{t:'HP:',c:15,b:1},{t:'112',c:2},{t:'/180  ',c:8},{t:'SP:',c:15,b:1},{t:'40',c:4},{t:'/40  ',c:8},{t:'$:',c:15,b:1},{t:'1,204',c:11},{t:'  '},{t:'›',c:5,b:1}],
+      ],
+      s3: [
+        [{t:'Aylor Town Square',c:14,b:1}],
+        [{t:'A fountain bubbles beneath the '},{t:'midday',c:11},{t:' sun. Merchants haggle over '},{t:'potions',c:5},{t:'.'}],
+        [{t:'The cleric '},{t:'Brother Anselm',c:10},{t:' offers healing for 50 '},{t:'gold',c:3},{t:'.'}],
+      ],
+    };
+  }
+
+  rawLines(sid) {
+    const base = this.feeds()[sid] || [];
+    const app = this.state.appended[sid] || [];
+    return base.concat(app);
+  }
+
+  runStyle(run) {
+    const def = this.PHO;
+    let fg, bg = 'transparent';
+    if (run.inv) { fg = this.OUTBG; bg = (run.c==null) ? def : this.P[run.c]; }
+    else { fg = (run.c==null) ? def : this.P[run.c]; if (run.bg!=null) bg = this.P[run.bg]; }
+    const s = { color: fg };
+    if (bg !== 'transparent') { s.background = bg; s.padding = '0 2px'; }
+    if (run.b) s.fontWeight = 700;
+    if (run.u) s.textDecoration = 'underline';
+    return s;
+  }
+
+  processFeed(sid) {
+    return this.rawLines(sid).map((line, i) => ({
+      key: i,
+      runs: (line.length ? line : [{t:''}]).map((r, j) => ({ key: j, text: r.t === '' ? '\u00a0' : r.t, style: this.runStyle(r) })),
+    }));
+  }
+
+  palette16() {
+    const tags = ['blk','red','grn','yel','blu','mag','cyn','wht','BLK','RED','GRN','YEL','BLU','MAG','CYN','WHT'];
+    return this.P.map((hex, i) => ({
+      idx: String(i), hex, tag: tags[i],
+      bgStyle: { background: hex, color: this.lum(hex) > 140 ? '#0a0c10' : '#e8edf2', padding: '1px 6px', fontWeight: 700, borderRadius: '2px' },
+    }));
+  }
+  paletteGray() { const a=[]; for (let i=0;i<14;i++){ const v=Math.round(8+i*17); const h='#'+[v,v,v].map(x=>x.toString(16).padStart(2,'0')).join(''); a.push({key:i,hex:h}); } return a; }
+  paletteCube() { return ['#5f0000','#870087','#5f5f00','#005f5f','#005faf','#0087ff','#5f00af','#875fff','#00af5f','#5fd75f','#afff00','#ffaf00','#ff8700','#ff5f5f','#ff00af','#00ffd7','#5fafff','#d7d700'].map((h,i)=>({key:i,hex:h})); }
+
+  // ---- handlers ----
+  setDevice(d) { return () => this.setState({ device: d }); }
+  goWorlds = () => this.setState({ screen: 'worlds', railOpen: true });
+  goSession = () => this.setState({ screen: 'session', railOpen: false });
+  goWorldsForConnect = () => this.setState({ screen: 'worlds', railOpen: true });
+  toggleRail = () => this.setState(s => ({ railOpen: !s.railOpen }));
+  toggleExpand(id) { return () => this.setState(s => ({ expanded: s.expanded === id ? null : id })); }
+  toggleHistory = () => this.setState(s => ({ historyOpen: !s.historyOpen }));
+  toggleProtocol = () => this.setState(s => ({ protocolOpen: !s.protocolOpen, triggerOpen: false, settingsOpen: false, addWorldOpen: false, addCharOpen: false }));
+  toggleGmcp = () => this.setState(s => ({ gmcpOpen: !s.gmcpOpen }));
+  toggleTriggers = () => this.setState(s => ({ triggerOpen: !s.triggerOpen, protocolOpen: false, settingsOpen: false, addWorldOpen: false, addCharOpen: false }));
+  selectSession(id) { return () => { this.setState({ activeId: id, railOpen: false }); this._wantScroll = true; }; }
+  closeSession(id) { return (e) => { if (e) e.stopPropagation(); this.setState(s => { const ss = s.sessions.filter(x => x.id !== id); const activeId = s.activeId === id ? (ss[0] ? ss[0].id : null) : s.activeId; return { sessions: ss, activeId }; }); }; }
+  connectChar(world, ch) {
+    return () => {
+      const existing = this.state.sessions.find(x => x.wid === world.id && x.char === ch.name);
+      if (existing) { this.setState({ activeId: existing.id, screen: 'session', railOpen: false }); this._wantScroll = true; return; }
+      const id = 'n' + Date.now();
+      const lines = [[{ t: '✓ Connected to ' + world.name + ' (' + world.host + ':' + world.port + ')', c: 2, b: 1 }]];
+      if (ch.connectString) lines.push([{ t: '» ', c: 8 }, { t: ch.connectString, c: 8 }]);
+      this.setState(s => ({ sessions: s.sessions.concat([{ id, char: ch.name, world: world.name, wid: world.id, state: 'live', generic: true }]), appended: { ...s.appended, [id]: lines }, activeId: id, screen: 'session', railOpen: false, expanded: s.expanded }));
+      this._wantScroll = true;
+      this.toast(ch.connectString ? 'Connected ' + ch.name + ' · sent connect string' : 'Connecting ' + ch.name + ' → ' + world.name + '…');
+    };
+  }
+  retry = () => { this.setState(s => ({ sessions: s.sessions.map(x => x.id === s.activeId ? { ...x, state: 'connecting' } : x) })); setTimeout(() => this.setState(s => ({ sessions: s.sessions.map(x => x.id === s.activeId ? { ...x, state: 'error' } : x) })), 1600); };
+  onInput = (e) => this.setState({ input: e.target.value });
+  onKey = (e) => { if (e.key === 'Enter') this.send(); };
+  recall(cmd) { return () => this.setState({ input: cmd, historyOpen: false }); }
+  send = () => {
+    const cmd = this.state.input.trim(); const sid = this.state.activeId; if (!cmd || !sid) return;
+    const act = this.state.sessions.find(x => x.id === sid); if (!act || act.state !== 'live') return;
+    const echo = [{t:'› ',c:8},{t:cmd,c:15,b:1}];
+    let resp;
+    const low = cmd.toLowerCase();
+    if (low === 'look' || low === 'l') resp = [{t:'You scan the room — ',c:null},{t:'nothing new',c:8},{t:' catches your eye.'}];
+    else if (low.startsWith('say ')) resp = [{t:'You say, ',c:null},{t:'"'+cmd.slice(4)+'"',c:10}];
+    else if (low === 'who') resp = [{t:'14 mortals',c:14},{t:' and ',c:8},{t:'2 staff',c:5},{t:' online.'}];
+    else resp = [{t:'You '},{t:cmd,c:6},{t:'.',c:8}];
+    this.setState(s => {
+      const app = { ...s.appended }; app[sid] = (app[sid] || []).concat([echo, resp]);
+      const hist = { ...s.histories }; hist[sid] = [cmd].concat((hist[sid] || []).filter(c => c !== cmd)).slice(0, 6);
+      return { appended: app, histories: hist, input: '' };
+    });
+    this._wantScroll = true;
+  };
+  openSettings = () => this.setState({ settingsOpen: true, addWorldOpen: false, addCharOpen: false, protocolOpen: false, triggerOpen: false });
+  closeSettings = () => this.setState({ settingsOpen: false });
+  setFont(id) { return () => this.setState(s => ({ settings: { ...s.settings, font: id } })); }
+  onMinCols = (e) => { const v = +e.target.value; this.setState(s => ({ settings: { ...s.settings, minCols: v } })); };
+  onFontCap = (e) => { const v = +e.target.value; this.setState(s => ({ settings: { ...s.settings, fontCap: v } })); };
+  openAddWorld = (prefill) => this.setState({ addWorldOpen: true, settingsOpen: false, addCharOpen: false, protocolOpen: false, triggerOpen: false, nw: (prefill && prefill.name != null) ? prefill : { name: '', host: '', port: '' } });
+  closeAddWorld = () => this.setState({ addWorldOpen: false });
+  onNw(field) { return (e) => { const v = e.target.value; this.setState(s => ({ nw: { ...s.nw, [field]: v } })); }; }
+  submitWorld = () => {
+    const nw = this.state.nw;
+    if (!nw.name.trim() || !nw.host.trim()) { this.toast('name + host required'); return; }
+    const colors = ['#c678dd','#8fc16f','#61afef','#e5c07b','#56b6c2','#e29bf0'];
+    const id = 'w' + Date.now();
+    this.setState(s => ({
+      worlds: s.worlds.concat([{ id, name: nw.name.trim(), host: nw.host.trim(), port: +nw.port || 23, color: colors[s.worlds.length % colors.length], chars: [] }]),
+      expanded: id, addWorldOpen: false, screen: 'worlds',
+    }));
+    this.toast('World added · ' + nw.name.trim());
+  };
+  openAddChar(world) { return () => this.setState({ addCharOpen: true, charMode: 'add', addCharWorldId: world.id, charOrig: null, nc: { name: '', connectString: '' }, settingsOpen: false, addWorldOpen: false, protocolOpen: false, triggerOpen: false }); }
+  openEditChar(world, ch) { return () => this.setState({ addCharOpen: true, charMode: 'edit', addCharWorldId: world.id, charOrig: ch.name, nc: { name: ch.name, connectString: ch.connectString || '' }, settingsOpen: false, addWorldOpen: false, protocolOpen: false, triggerOpen: false }); }
+  closeAddChar = () => this.setState({ addCharOpen: false });
+  onNc(field) { return (e) => { const v = e.target.value; this.setState(s => ({ nc: { ...s.nc, [field]: v } })); }; }
+  submitChar = () => {
+    const nc = this.state.nc, wid = this.state.addCharWorldId, mode = this.state.charMode, orig = this.state.charOrig;
+    if (!nc.name.trim()) { this.toast('character name required'); return; }
+    const name = nc.name.trim(), cs = nc.connectString.trim();
+    this.setState(s => ({
+      worlds: s.worlds.map(w => {
+        if (w.id !== wid) return w;
+        if (mode === 'edit') return { ...w, chars: w.chars.map(c => c.name === orig ? { ...c, name, connectString: cs } : c) };
+        return { ...w, chars: w.chars.concat([{ name, connectString: cs }]) };
+      }),
+      addCharOpen: false, expanded: wid,
+    }));
+    this.toast(mode === 'edit' ? 'Saved ' + name : 'Character added · ' + name);
+  };
+  requestDeleteChar(wid, name) { return (e) => { if (e) e.stopPropagation(); this.setState({ confirm: { open: true, kind: 'char', worldId: wid, name } }); }; }
+  requestDeleteWorld(wid) { return (e) => { if (e) e.stopPropagation(); const wd = this.state.worlds.find(x => x.id === wid); this.setState({ confirm: { open: true, kind: 'world', worldId: wid, name: wd ? wd.name : 'world' } }); }; }
+  cancelConfirm = () => this.setState({ confirm: { open: false, kind: null, worldId: null, name: null } });
+  confirmDelete = () => { const c = this.state.confirm; if (c.kind === 'char') this._deleteChar(c.worldId, c.name); else if (c.kind === 'world') this._deleteWorld(c.worldId); this.setState({ confirm: { open: false, kind: null, worldId: null, name: null } }); };
+  _deleteChar(wid, name) { this.setState(s => {
+    const w = s.worlds.find(x => x.id === wid); const ch = w && w.chars.find(c => c.name === name);
+    let sessions = s.sessions, activeId = s.activeId;
+    if (ch && ch.sid) { sessions = s.sessions.filter(x => x.id !== ch.sid); if (activeId === ch.sid) activeId = sessions[0] ? sessions[0].id : null; }
+    return { worlds: s.worlds.map(x => x.id === wid ? { ...x, chars: x.chars.filter(c => c.name !== name) } : x), sessions, activeId };
+  }); this.toast('Removed ' + name); }
+  _deleteWorld(wid) { const wd = this.state.worlds.find(x => x.id === wid); this.setState(s => {
+    const w = s.worlds.find(x => x.id === wid); const sids = (w ? w.chars : []).map(c => c.sid).filter(Boolean);
+    const sessions = s.sessions.filter(x => !sids.includes(x.id)); let activeId = s.activeId; if (sids.includes(activeId)) activeId = sessions[0] ? sessions[0].id : null;
+    return { worlds: s.worlds.filter(x => x.id !== wid), sessions, activeId, expanded: s.expanded === wid ? null : s.expanded };
+  }); this.toast('Deleted ' + (wd ? wd.name : 'world')); }
+  addTrigger = () => this.toast('Rule added (mock)');
+
+  active() { return this.state.sessions.find(x => x.id === this.state.activeId) || null; }
+
+  stateMeta(st) {
+    const m = {
+      live:         { dot:'#8fc16f', text:'LIVE',         pillBg:'rgba(143,193,111,.14)', pillBd:'rgba(143,193,111,.4)', pillFg:'#b5e890', glow:1 },
+      connecting:   { dot:'#e5c07b', text:'CONNECTING',   pillBg:'rgba(229,192,123,.14)', pillBd:'rgba(229,192,123,.4)', pillFg:'#ffd596', pulse:1 },
+      reconnecting: { dot:'#e5c07b', text:'RECONNECTING', pillBg:'rgba(229,192,123,.14)', pillBd:'rgba(229,192,123,.4)', pillFg:'#ffd596', pulse:1 },
+      disconnected: { dot:'#5c6672', text:'DISCONNECTED', pillBg:'rgba(124,134,148,.14)', pillBd:'rgba(124,134,148,.4)', pillFg:'#9aa4b1' },
+      error:        { dot:'#e06c75', text:'ERROR',        pillBg:'rgba(224,108,117,.14)', pillBd:'rgba(224,108,117,.42)', pillFg:'#ff8088' },
+    };
+    return m[st] || m.disconnected;
+  }
+
+  renderVals() {
+    const s = this.state;
+    const set = s.settings;
+    const isPhone = s.device === 'phone', isTablet = s.device === 'tablet';
+    const acc = this.props.accent || '#9b7ed4';
+    const accL = this.lighten(acc, .22);
+    const scanlines = this.props.scanlines !== false;
+    const glow = this.props.textGlow !== false;
+    const emptyWorlds = this.props.emptyWorlds === true;
+
+    const segOn = { fontFamily:'var(--ui)', fontSize:'12px', fontWeight:600, color:'#0a0c10', background:'var(--acc2)', border:'none', borderRadius:'7px', padding:'7px 15px', cursor:'pointer' };
+    const segOff = { fontFamily:'var(--ui)', fontSize:'12px', fontWeight:600, color:'var(--dim)', background:'transparent', border:'none', borderRadius:'7px', padding:'7px 15px', cursor:'pointer' };
+
+    // frame + panes
+    const frameW = isPhone ? 393 : 1140, frameH = isPhone ? 852 : 724;
+    const availH = (s.vh || 760) - 112, availW = (s.vw || 1100) - 28;
+    let scale = Math.min(1, availH / frameH, availW / frameW); scale = Math.max(0.4, scale);
+    const stageStyle = { width: Math.round(frameW * scale) + 'px', height: Math.round(frameH * scale) + 'px', position: 'relative', flex: 'none' };
+    const frameStyle = { width: frameW + 'px', height: frameH + 'px', borderRadius: (isPhone ? 46 : 26) + 'px', padding: '5px', background: 'linear-gradient(160deg,#23262d,#0d0f13)', boxShadow: '0 40px 90px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.04)', transform: 'scale(' + scale + ')', transformOrigin: 'top center', flex: 'none' };
+    const screenStyle = { position:'relative', width:'100%', height:'100%', borderRadius: isPhone ? '42px' : '22px', overflow:'hidden', background:'var(--bg)', display:'flex', flexDirection:'column' };
+
+    const showWM = isTablet || s.screen === 'worlds';
+    const showSess = isTablet || s.screen === 'session';
+    const panesStyle = { position:'relative', flex:1, minHeight:0, display:'flex' };
+    const wmPaneStyle = isTablet
+      ? { position:'absolute', top:0, left:0, bottom:0, width:'358px', zIndex:45, display: s.railOpen ? 'flex' : 'none', flexDirection:'column', minHeight:0, background:'var(--panel)', borderRight:'1px solid var(--bd2)', boxShadow:'0 22px 60px rgba(0,0,0,.55)' }
+      : { position:'absolute', inset:0, display: showWM ? 'flex' : 'none', flexDirection:'column', minHeight:0, background:'var(--panel)' };
+    const sessPaneStyle = isTablet
+      ? { flex:1, display:'flex', flexDirection:'column', minWidth:0, minHeight:0, background:'var(--bg)' }
+      : { position:'absolute', inset:0, display: showSess ? 'flex' : 'none', flexDirection:'column', minHeight:0, background:'var(--bg)' };
+
+    // worlds
+    const worlds = emptyWorlds ? [] : s.worlds.map(w => {
+      const expanded = s.expanded === w.id;
+      const liveCount = w.chars.filter(c => { const ss = s.sessions.find(x => x.id === c.sid); return ss && ss.state === 'live'; }).length;
+      const chars = w.chars.map(c => {
+        const ss = c.sid ? s.sessions.find(x => x.id === c.sid) : null;
+        const meta = ss ? this.stateMeta(ss.state) : null;
+        return {
+          key: c.name, name: c.name, title: c.title, initials: c.name.slice(0,2).toUpperCase(),
+          avatarStyle: { width:'34px', height:'34px', borderRadius:'8px', background:this.hexA(w.color,.16), border:'1px solid var(--bd2)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--mono)', fontWeight:700, fontSize:'12px', color:w.color, flex:'none' },
+          hasSession: !!ss, noSession: !ss,
+          open: ss ? this.selectSession(ss.id) : null,
+          connect: this.connectChar(w, c),
+          edit: this.openEditChar(w, c),
+          del: this.requestDeleteChar(w.id, c.name),
+          openLabel: ss ? this.stateMeta(ss.state).text : '',
+          openStyle: ss ? { display:'flex', alignItems:'center', gap:'6px', fontFamily:'var(--mono)', fontSize:'11px', fontWeight:500, color:meta.pillFg, background:meta.pillBg, border:'1px solid '+meta.pillBd, borderRadius:'8px', padding:'7px 11px', cursor:'pointer' } : {},
+          dotStyle: ss ? { width:'7px', height:'7px', borderRadius:'50%', background:meta.dot, flex:'none', animation: meta.pulse ? 'sc-pulse 1.3s ease-in-out infinite' : 'none' } : {},
+        };
+      });
+      return {
+        key: w.id, name: w.name, address: w.host + ':' + w.port, initial: w.name[0],
+        monoStyle: { width:'38px', height:'38px', borderRadius:'9px', background:'var(--panel)', border:'1px solid var(--bd2)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--mono)', fontWeight:700, fontSize:'15px', color:w.color, flex:'none' },
+        charLabel: w.chars.length + (w.chars.length === 1 ? ' char' : ' chars'),
+        toggle: this.toggleExpand(w.id), expanded, chars, noChars: w.chars.length === 0, addChar: this.openAddChar(w), del: this.requestDeleteWorld(w.id),
+        chevStyle: { color:'var(--faint)', fontSize:'14px', transition:'transform .2s', transform: expanded ? 'rotate(180deg)' : 'none', display:'inline-block' },
+        liveBadge: liveCount ? 'live' : '', liveBadgeStyle: liveCount ? { fontFamily:'var(--mono)', fontSize:'9px', fontWeight:700, color:'#b5e890', background:'rgba(143,193,111,.14)', border:'1px solid rgba(143,193,111,.35)', borderRadius:'4px', padding:'1px 5px', letterSpacing:'.05em' } : { display:'none' },
+      };
+    });
+
+    // sessions / tabs
+    const sessions = s.sessions.map(sess => {
+      const isActive = sess.id === s.activeId; const meta = this.stateMeta(sess.state);
+      return {
+        key: sess.id, char: sess.char, world: sess.world, nameColor: isActive ? '#eef2f6' : '#aeb6c0',
+        select: this.selectSession(sess.id), close: this.closeSession(sess.id),
+        tabStyle: { display:'flex', alignItems:'center', gap:'8px', flex:'none', minWidth:'132px', maxWidth:'176px', padding:'10px 11px', cursor:'pointer', borderRight:'1px solid var(--bd)', borderBottom: isActive ? '2px solid var(--acc2)' : '2px solid transparent', background: isActive ? 'linear-gradient(var(--elev),var(--bg))' : 'transparent' },
+        dotStyle: { width:'8px', height:'8px', borderRadius:'50%', flex:'none', background:meta.dot, boxShadow: meta.glow ? '0 0 7px '+meta.dot : 'none', animation: meta.pulse ? 'sc-pulse 1.3s ease-in-out infinite' : 'none' },
+      };
+    });
+
+    const act = this.active();
+    const meta = act ? this.stateMeta(act.state) : this.stateMeta('disconnected');
+    const active = act ? {
+      char: act.char, world: act.world,
+      bigDotStyle: { width:'9px', height:'9px', borderRadius:'50%', flex:'none', background:meta.dot, boxShadow: meta.glow ? '0 0 8px '+meta.dot : 'none', animation: meta.pulse ? 'sc-pulse 1.3s ease-in-out infinite' : 'none' },
+      statePillStyle: { fontFamily:'var(--mono)', fontSize:'9.5px', fontWeight:700, letterSpacing:'.06em', color:meta.pillFg, background:meta.pillBg, border:'1px solid '+meta.pillBd, borderRadius:'5px', padding:'2px 7px', flex:'none' },
+      stateText: meta.text,
+      connectingText: 'Connecting to ' + act.world.toLowerCase().replace(/\s/g,'') + '…',
+      reconnectText: 'Connection lost — reconnecting (attempt 2/5)…',
+    } : { char:'', world:'', bigDotStyle:{}, statePillStyle:{display:'none'}, stateText:'', connectingText:'', reconnectText:'' };
+
+    const liveMode = !!act && act.state === 'live';
+    const connectingMode = !!act && act.state === 'connecting';
+    const reconnectingMode = !!act && act.state === 'reconnecting';
+    const errorMode = !!act && act.state === 'error';
+
+    const feedLines = act ? this.processFeed(act.id) : [];
+
+    // input
+    const inputDisabled = !liveMode;
+    const inputPlaceholder = liveMode ? 'type a command…' : (act ? act.state + '…' : 'no session');
+    const hist = (act && s.histories[act.id]) || [];
+    const history = hist.map((c, i) => ({ key: i, cmd: c, recall: this.recall(c) }));
+
+    // protocol
+    const vOk = { color:'#b5e890' }, vInfo = { color:'#7cc4ff' }, vMute = { color:'var(--faint)' };
+    const telnetRows = [
+      { key:0, k:'IAC DO TTYPE', v:'WILL · "SharpClient/1.0"', vStyle:vOk },
+      { key:1, k:'IAC WILL NAWS', v:'80 × 24', vStyle:vInfo },
+      { key:2, k:'MCCP2 (compress2)', v:'enabled', vStyle:vOk },
+      { key:3, k:'CHARSET', v:'UTF-8', vStyle:vOk },
+      { key:4, k:'IAC WILL ECHO', v:'server echo OFF', vStyle:vInfo },
+      { key:5, k:'MSDP', v:'not offered', vStyle:vMute },
+      { key:6, k:'MSSP', v:'received · server stats', vStyle:vInfo },
+    ];
+    const gmcpJson = '{\n  "Char.Vitals": { "hp": 112, "maxhp": 180, "sp": 40, "maxsp": 40 },\n  "Char.Status": { "name": "Vesper", "level": 14, "$": 1204 },\n  "Room.Info": {\n    "name": "Red Sector — The Drome",\n    "exits": ["n", "e", "o"]\n  }\n}';
+
+    // triggers
+    const trigDefs = [
+      { kind:'regex', kc:'#c678dd', pattern:'^(\\w+) tells you', action:'notify', ac:'#7cc4ff', actionVal:'push: "%1 paged you"', on:true },
+      { kind:'substr', kc:'#56b6c2', pattern:'HP:', action:'highlight', ac:'#8fc16f', actionVal:'prompt → green', on:true },
+      { kind:'regex', kc:'#c678dd', pattern:'(\\d+) gold', action:'highlight', ac:'#e5c07b', actionVal:'amount → yellow', on:true },
+      { kind:'alias', kc:'#e5c07b', pattern:'^k (.+)$', action:'send', ac:'#ff8088', actionVal:'kill %1', on:false },
+      { kind:'substr', kc:'#56b6c2', pattern:'Saedii', action:'highlight', ac:'#e06c75', actionVal:'bold red + notify', on:true },
+    ];
+    const triggers = trigDefs.map((t, i) => ({
+      key:i, kind:t.kind, pattern:t.pattern, action:t.action, actionVal:t.actionVal,
+      kindStyle: { fontFamily:'var(--mono)', fontSize:'10px', fontWeight:700, color:t.kc, background:this.hexA(t.kc,.13), border:'1px solid '+this.hexA(t.kc,.3), borderRadius:'5px', padding:'4px 7px', flex:'none', minWidth:'48px', textAlign:'center' },
+      actionStyle: { fontFamily:'var(--mono)', fontSize:'11px', fontWeight:600, color:t.ac },
+      switchStyle: { width:'34px', height:'19px', borderRadius:'10px', flex:'none', background: t.on ? this.hexA(accL,.9) : 'var(--bd2)', position:'relative', transition:'background .2s', cursor:'pointer' },
+      knobStyle: { position:'absolute', top:'2px', left: t.on ? '17px' : '2px', width:'15px', height:'15px', borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.4)' },
+    }));
+
+    const fontCss = (this.FONTS.find(f => f.id === set.font) || this.FONTS[0]).css;
+    const innerW = Math.max(180, (s.outW || 360) - 28);
+    let fs = innerW / (set.minCols * 0.6);
+    fs = Math.max(6.5, Math.min(set.fontCap, fs));
+    const fsStr = fs.toFixed(1) + 'px';
+    const outTextStyle = Object.assign({ fontFamily: fontCss, fontSize: fsStr, lineHeight: 1.58 }, glow ? { textShadow: '0 0 6px rgba(150,210,170,.28)' } : {});
+    const reconStyle = Object.assign({}, outTextStyle, { opacity: .42, filter: 'saturate(.6)' });
+    const fontOptions = this.FONTS.map(f => ({
+      key: f.id, label: f.label, select: this.setFont(f.id),
+      style: { fontFamily: f.css, fontSize: '12px', color: set.font === f.id ? '#0a0c10' : 'var(--tx)', background: set.font === f.id ? 'var(--acc2)' : 'var(--elev)', border: '1px solid ' + (set.font === f.id ? 'var(--acc-line)' : 'var(--bd2)'), borderRadius: '8px', padding: '9px 12px', cursor: 'pointer' },
+    }));
+    let ruler = '';
+    for (let i = 0; i < set.minCols; i++) ruler += (i % 10 === 0) ? String((i / 10) % 10) : (i % 5 === 0 ? '+' : '·');
+    const settingsPreviewStyle = { background: 'var(--outbg)', border: '1px solid var(--bd)', borderRadius: '9px', padding: '12px', color: 'var(--pho)', whiteSpace: 'pre', overflowX: 'auto', fontFamily: fontCss, fontSize: fsStr };
+
+    return {
+      rootRef: (el) => { this._root = el; if (el) this.applyVars(); },
+      outRef: (el) => { this._out = el; if (el && !el._ro) { const ro = new ResizeObserver(() => { const w = el.clientWidth; if (w && Math.abs(w - (this.state.outW || 0)) > 1) this.setState({ outW: w }); }); ro.observe(el); el._ro = ro; } },
+      isPhone, isTablet,
+      setPhone: this.setDevice('phone'), setTablet: this.setDevice('tablet'),
+      phoneBtnStyle: isPhone ? segOn : segOff, tabletBtnStyle: isTablet ? segOn : segOff,
+      statusTime: '21:47',
+      frameStyle, stageStyle, screenStyle, panesStyle, wmPaneStyle, sessPaneStyle,
+
+      worldCountLabel: emptyWorlds ? '0 worlds' : (s.worlds.length + ' worlds · ' + s.worlds.reduce((n,w)=>n+w.chars.length,0) + ' characters'),
+      worlds, emptyWorlds, hasWorlds: !emptyWorlds,
+      toggleRail: this.toggleRail, railBackdrop: isTablet && s.railOpen,
+      railBtnStyle: { display:'flex', alignItems:'center', gap:'6px', flex:'none', height:'30px', padding:'0 11px', borderRadius:'8px', background: s.railOpen ? 'var(--acc-soft)' : 'var(--elev)', border:'1px solid ' + (s.railOpen ? 'var(--acc-line)' : 'var(--bd)'), color: s.railOpen ? 'var(--acc2)' : 'var(--tx)', fontFamily:'var(--ui)', fontSize:'12.5px', fontWeight:600, cursor:'pointer' },
+      openSettings: this.openSettings, closeSettings: this.closeSettings, settingsOpen: s.settingsOpen,
+      openAddWorld: () => this.openAddWorld(), closeAddWorld: this.closeAddWorld, addWorldOpen: s.addWorldOpen,
+      presetSindome: () => this.openAddWorld({ name: 'Sindome', host: 'sindome.org', port: '5555' }),
+      presetAardwolf: () => this.openAddWorld({ name: 'Aardwolf', host: 'aardmud.org', port: '23' }),
+      fontOptions, minCols: set.minCols, minColsLabel: set.minCols + ' cols', onMinCols: this.onMinCols,
+      fontCap: set.fontCap, fontCapLabel: set.fontCap + 'px', onFontCap: this.onFontCap,
+      fitNote: 'fits \u2265' + set.minCols + ' columns \u00b7 ' + fsStr + ' on this screen',
+      settingsPreview: ruler, settingsPreviewStyle, outTextStyle, reconStyle,
+      nwName: s.nw.name, nwHost: s.nw.host, nwPort: s.nw.port,
+      onNwName: this.onNw('name'), onNwHost: this.onNw('host'), onNwPort: this.onNw('port'), submitWorld: this.submitWorld,
+      addCharOpen: s.addCharOpen, closeAddChar: this.closeAddChar, submitChar: this.submitChar,
+      addCharWorld: (s.worlds.find(w => w.id === s.addCharWorldId) || {}).name || '',
+      charSheetTitle: s.charMode === 'edit' ? 'Edit Character' : 'Add Character',
+      charSubmitLabel: s.charMode === 'edit' ? 'Save character' : 'Add character',
+      ncName: s.nc.name, ncConn: s.nc.connectString, onNcName: this.onNc('name'), onNcConn: this.onNc('connectString'),
+      confirmOpen: s.confirm.open, cancelConfirm: this.cancelConfirm, confirmDelete: this.confirmDelete,
+      confirmTitle: s.confirm.kind === 'world' ? 'Delete world?' : 'Delete character?',
+      confirmMsg: s.confirm.kind === 'world' ? ('Remove \u201c' + s.confirm.name + '\u201d and all its characters? Any open sessions will be closed.') : ('Remove \u201c' + s.confirm.name + '\u201d? Any open session will be closed.'),
+
+      sessions, hasSessions: s.sessions.length > 0, noSessions: s.sessions.length === 0,
+      goWorldsForConnect: this.goWorldsForConnect, goWorlds: this.goWorlds, goSession: this.goSession,
+      active, liveMode, connectingMode, reconnectingMode, errorMode, feedLines, retry: this.retry,
+      toggleTriggers: this.toggleTriggers, toggleProtocol: this.toggleProtocol,
+      protocolBtnStyle: { flex:'none', width:'32px', height:'30px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', background: s.protocolOpen ? 'var(--acc-soft)' : 'var(--elev)', border:'1px solid '+(s.protocolOpen ? 'var(--acc-line)' : 'var(--bd)'), color: s.protocolOpen ? 'var(--acc2)' : 'var(--dim)', fontFamily:'var(--mono)', fontSize:'13px', cursor:'pointer' },
+
+      scanlines, glowStyle: glow ? { textShadow:'0 0 6px rgba(150,210,170,.28)' } : {},
+      palette16: this.palette16(), paletteGray: this.paletteGray(), paletteCube: this.paletteCube(),
+
+      input: s.input, onInput: this.onInput, onKey: this.onKey, send: this.send,
+      inputDisabled, inputPlaceholder, inputBorder: inputDisabled ? 'var(--bd)' : 'var(--bd2)',
+      sendStyle: { flex:'none', fontFamily:'var(--ui)', fontSize:'12.5px', fontWeight:600, color: inputDisabled ? 'var(--faint)' : '#0a0c10', background: inputDisabled ? 'var(--elev)' : 'var(--acc2)', border: inputDisabled ? '1px solid var(--bd)' : 'none', borderRadius:'10px', padding:'10px 16px', cursor: inputDisabled ? 'not-allowed' : 'pointer' },
+      historyOpen: s.historyOpen, toggleHistory: this.toggleHistory, history, noHistory: history.length === 0,
+      historyBtnStyle: { flex:'none', width:'34px', height:'40px', borderRadius:'9px', background: s.historyOpen ? 'var(--acc-soft)' : 'var(--elev)', border:'1px solid '+(s.historyOpen ? 'var(--acc-line)' : 'var(--bd)'), color: s.historyOpen ? 'var(--acc2)' : 'var(--dim)', fontFamily:'var(--mono)', fontSize:'14px', cursor:'pointer' },
+
+      protocolOpen: s.protocolOpen, telnetRows, toggleGmcp: this.toggleGmcp, gmcpOpen: s.gmcpOpen, gmcpToggleLabel: s.gmcpOpen ? 'hide' : 'show', gmcpJson,
+      triggerOpen: s.triggerOpen, triggers, addTrigger: this.addTrigger,
+
+      navWorldsStyle: { flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'4px', background:'transparent', border:'none', borderTop:'2px solid '+(showWM && s.screen==='worlds' ? 'var(--acc2)' : 'transparent'), color: s.screen==='worlds' ? 'var(--acc2)' : 'var(--dim)', cursor:'pointer', fontFamily:'var(--ui)' },
+      navSessStyle: { flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'4px', background:'transparent', border:'none', borderTop:'2px solid '+(s.screen==='session' ? 'var(--acc2)' : 'transparent'), color: s.screen==='session' ? 'var(--acc2)' : 'var(--dim)', cursor:'pointer', fontFamily:'var(--ui)' },
+
+      toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>
