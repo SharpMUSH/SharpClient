@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using Plugin.LocalNotification;
+using Plugin.LocalNotification.Core.Models.AndroidOption;
 using SharpClient.App.Services;
 using SharpClient.Core.Connection;
 using SharpClient.Core.Platform;
@@ -20,6 +22,17 @@ public static class MauiProgram
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+            })
+            .UseLocalNotification(config =>
+            {
+                config.AddAndroid(android =>
+                    android.AddChannel(new AndroidNotificationChannelRequest
+                    {
+                        Id = MauiNotifier.AlertChannelId,
+                        Name = "Alerts",
+                        Description = "Trigger and activity alerts from MUSH sessions.",
+                        Importance = AndroidImportance.High,
+                    }));
             });
 
         builder.Services.AddMauiBlazorWebView();
@@ -40,6 +53,13 @@ public static class MauiProgram
         builder.Services.AddSingleton<ITelnetConnectionFactory, TelnetConnectionFactory>();
 
         // ── Platform services ─────────────────────────────────────────────
+#if ANDROID
+        builder.Services.AddSingleton<IConnectionKeepAlive, AndroidConnectionKeepAlive>();
+#else
+        builder.Services.AddSingleton<IConnectionKeepAlive, NoopConnectionKeepAlive>();
+#endif
+        builder.Services.AddSingleton<ConnectionKeepAliveCoordinator>();
+
         builder.Services.AddSingleton<IAppStorage, MauiAppStorage>();
         builder.Services.AddSingleton<ISecretStore, MauiSecretStore>();
         builder.Services.AddSingleton<INotifier, MauiNotifier>();
@@ -81,6 +101,12 @@ public static class MauiProgram
         builder.Services.AddSingleton<ITriggerEngine, TriggerEngine>();
         builder.Services.AddSingleton<IAliasEngine, AliasEngine>();
 
-        return builder.Build();
+        var app = builder.Build();
+
+        // Eagerly resolve the coordinator so it begins observing session/connection activity at
+        // startup (DI singletons are otherwise lazily constructed on first request).
+        app.Services.GetRequiredService<ConnectionKeepAliveCoordinator>();
+
+        return app;
     }
 }

@@ -6,9 +6,9 @@ namespace SharpClient.Core.Connection;
 /// Other platforms may use a background timer or OS-level socket keep-alive.
 /// </summary>
 /// <remarks>
-/// Not registered in DI yet — integration with the session lifecycle, SO_KEEPALIVE, and telnet-NOP
-/// keepalive is deferred to the post-stream-1 connectivity pass.
-/// See docs/superpowers/plans/2026-06-30-android-connectivity.md for the full strategy.
+/// Registered in DI in the App head (Android: a foreground service proxy; other platforms: a no-op)
+/// and driven by ConnectionKeepAliveCoordinator off the session lifecycle. Socket-level SO_KEEPALIVE
+/// and telnet-NOP keepalive remain owned by the Core connection layer.
 /// </remarks>
 public interface IConnectionKeepAlive
 {

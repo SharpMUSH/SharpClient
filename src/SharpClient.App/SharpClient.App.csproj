@@ -93,6 +93,7 @@
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
+        <PackageReference Include="Plugin.LocalNotification" Version="14.1.1" />
         <!-- TNC is the NuGet package (not a local project reference). It must be listed
              directly so its types (ITelnetInterpreterFactory, AddTelnetClient) are
              visible under net10.0-android; transitive exposure from SharpClient.Core
