@@ -1,5 +1,7 @@
+@using SharpClient.Core.Connection
 @using SharpClient.Core.Domain
 @using SharpClient.Core.Presentation
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
 @implements IDisposable
 
 <div class="sc-wm">
@@ -24,11 +26,18 @@
         @foreach (var world in Vm.Worlds)
         {
             var isOpen = _expanded.Contains(world.Id);
+            var isLive = Vm.IsWorldLive(world);
             <div class="sc-world">
                 <div class="sc-world-row" @onclick="() => ToggleExpand(world.Id)">
-                    <div class="sc-world-badge">@Initial(world.Name)</div>
+                    <div class="sc-world-badge" style="background:@WorldBadgeColor(world.Id)">@Initial(world.Name)</div>
                     <div class="sc-world-main">
-                        <div class="sc-world-name">@world.Name</div>
+                        <div class="sc-world-name">
+                            @world.Name
+                            @if (isLive)
+                            {
+                                <span class="sc-live-badge" title="Session active">live</span>
+                            }
+                        </div>
                         <div class="sc-world-addr">@world.Host:@world.Port</div>
                     </div>
                     <div class="sc-world-meta">
@@ -50,10 +59,26 @@
                     {
                         @foreach (var character in world.Characters)
                         {
+                            var activeSession = Vm.ActiveSessionFor(character);
                             <div class="sc-char-row">
                                 <div class="sc-char-badge">@Initial(character.Name)</div>
                                 <div class="sc-char-name">@character.Name</div>
-                                <button type="button" class="sc-connect-btn" @onclick="() => ConnectAsync(world, character)">Connect</button>
+                                @if (activeSession is not null)
+                                {
+                                    <button type="button" class="sc-connect-btn sc-open-btn"
+                                            @onclick="() => OpenSession(character)"
+                                            title="Switch to active session">
+                                        Open
+                                    </button>
+                                    <span class="sc-state-pill" style="background:@StateColor(activeSession.State)"
+                                          title="@activeSession.State">
+                                        @activeSession.State
+                                    </span>
+                                }
+                                else
+                                {
+                                    <button type="button" class="sc-connect-btn" @onclick="() => ConnectAsync(world, character)">Connect</button>
+                                }
                                 <button type="button" class="sc-icon-btn" title="Edit character" @onclick="() => OpenEditCharacter(world, character)">✎</button>
                                 <button type="button" class="sc-icon-btn sc-icon-btn-danger" title="Delete character" @onclick="() => DeleteCharacterAsync(world, character)">🗑</button>
                             </div>
@@ -119,6 +144,24 @@
         return $"{count} char{(count == 1 ? "" : "s")}";
     }
 
+    // Derives a deterministic hue from the world's Guid for the badge background colour.
+    private static string WorldBadgeColor(Guid worldId)
+    {
+        var hue = Math.Abs(worldId.GetHashCode()) % 360;
+        return $"hsl({hue},45%,38%)";
+    }
+
+    // Maps connection state to the same palette used in SessionTabs.
+    private static string StateColor(ConnectionState state) => state switch
+    {
+        ConnectionState.Connected => "#8fc16f",
+        ConnectionState.Connecting => "#e5c07b",
+        ConnectionState.Reconnecting => "#e5c07b",
+        ConnectionState.Disconnected => "#5c6672",
+        ConnectionState.Error => "#e06c75",
+        _ => "#5c6672",
+    };
+
     private void ToggleExpand(Guid worldId)
     {
         if (!_expanded.Remove(worldId))
@@ -175,6 +218,12 @@
         await Vm.ConnectAsync(world, character);
 
     private async Task OpenRulesAsync(Guid worldId) => await OnOpenRules.InvokeAsync(worldId);
+
+    private void OpenSession(Character character)
+    {
+        Vm.ActivateSession(character);
+        Nav.NavigateTo("/session");
+    }
 
     public void Dispose() => Vm.Changed -= OnVmChanged;
 }

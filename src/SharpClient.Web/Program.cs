@@ -1,7 +1,10 @@
 using SharpClient.Core.Connection;
+using SharpClient.Core.Persistence;
 using SharpClient.Core.Platform;
 using SharpClient.Core.Presentation;
 using SharpClient.Core.Sessions;
+using SharpClient.Core.Triggers;
+using SharpClient.Data;
 using SharpClient.Web;
 using SharpClient.Web.Components;
 
@@ -20,7 +23,14 @@ builder.Services.AddSingleton<SettingsViewModel>(sp =>
     new SettingsViewModel(sp.GetRequiredService<IPreferences>()));
 
 builder.Services.AddSingleton<IAppStorage, WebAppStorage>();
-builder.Services.AddSingleton<SharpClient.Core.Persistence.ISecretStore, WebSecretStore>();
+builder.Services.AddSingleton<ISecretStore, WebSecretStore>();
+
+// ── Trigger / alias engines (stateless singletons) ─────────────────────────
+builder.Services.AddSingleton<ITriggerEngine, TriggerEngine>();
+builder.Services.AddSingleton<IAliasEngine, AliasEngine>();
+
+// ── Platform notifier ──────────────────────────────────────────────────────
+builder.Services.AddSingleton<INotifier, WebNotifier>();
 
 // ── Session management ─────────────────────────────────────────────────────
 builder.Services.AddSingleton<SessionManager>();
@@ -31,26 +41,29 @@ builder.Services.AddSingleton<ProtocolPanelViewModel>(sp =>
     new ProtocolPanelViewModel(sp.GetRequiredService<ISessionManager>()));
 
 // ── Data / persistence ─────────────────────────────────────────────────────
-builder.Services.AddScoped<SharpClient.Data.AppDbContext>();
-builder.Services.AddScoped<SharpClient.Core.Persistence.IWorldStore, SharpClient.Data.WorldStore>();
+builder.Services.AddScoped<AppDbContext>();
+builder.Services.AddScoped<IWorldStore, WorldStore>();
+builder.Services.AddScoped<ISessionHistory, SessionHistory>();
 
 // ── Session launcher (real telnet) ─────────────────────────────────────────
 builder.Services.AddScoped<ISessionLauncher, TelnetSessionLauncher>();
 
 // ── View models ────────────────────────────────────────────────────────────
 builder.Services.AddScoped<WorldManagerViewModel>(sp => new WorldManagerViewModel(
-    sp.GetRequiredService<SharpClient.Core.Persistence.IWorldStore>(),
-    sp.GetRequiredService<SharpClient.Core.Persistence.ISecretStore>(),
+    sp.GetRequiredService<IWorldStore>(),
+    sp.GetRequiredService<ISecretStore>(),
     sp.GetRequiredService<ISessionManager>(),
     sp.GetRequiredService<ISessionLauncher>()));
 builder.Services.AddScoped<TriggerAliasEditorViewModel>(sp =>
     new TriggerAliasEditorViewModel(
-        sp.GetRequiredService<SharpClient.Core.Persistence.IWorldStore>()));
+        sp.GetRequiredService<IWorldStore>()));
 
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
+{
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
+}
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseAntiforgery();

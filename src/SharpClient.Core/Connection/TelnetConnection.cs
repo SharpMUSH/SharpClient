@@ -48,7 +48,7 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
             _client?.Dispose();
             _client = null;
             _interpreter = null;
-            SetState(ConnectionState.Disconnected);
+            SetState(ConnectionState.Error);
             throw;
         }
     }
@@ -62,6 +62,16 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
 
         var bytes = _interpreter.CurrentEncoding.GetBytes(line + "\r\n");
         await _interpreter.SendAsync(bytes);
+    }
+
+    public async Task SendNawsAsync(int width, int height)
+    {
+        if (_interpreter is null)
+        {
+            return;
+        }
+
+        await _interpreter.SendNAWS((short)width, (short)height);
     }
 
     public async Task DisconnectAsync()

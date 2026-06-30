@@ -17,4 +17,6 @@ public interface ITelnetConnection : IAsyncDisposable
     public Task SendAsync(string line);
 
     public Task DisconnectAsync();
+
+    public Task SendNawsAsync(int width, int height);
 }
