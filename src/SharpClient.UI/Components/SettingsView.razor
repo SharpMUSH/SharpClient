@@ -1,4 +1,6 @@
 @using SharpClient.Core.Presentation
+@using SharpClient.Core.Diagnostics
+@inject ILogExporter LogExporter
 @implements IDisposable
 
 <div class="sc-settings">
@@ -80,15 +82,52 @@
                    @onchange="e => Vm.Scanlines = (bool)e.Value!" />
         </div>
     </div>
+
+    @if (LogExporter.IsAvailable)
+    {
+        <div class="sc-settings-section">
+            <div class="sc-settings-section-header">Diagnostics</div>
+            <div class="sc-setting">
+                <span class="sc-setting-label">Crash &amp; error log</span>
+                <button type="button" class="sc-rules-btn" @onclick="ExportLogAsync">
+                    @(_exporting ? "Opening…" : "Export log")
+                </button>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
     [Parameter]
     public SettingsViewModel Vm { get; set; } = null!;
 
+    private bool _exporting;
+
     protected override void OnInitialized() => Vm.Changed += OnChanged;
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task ExportLogAsync()
+    {
+        if (_exporting)
+        {
+            return;
+        }
+
+        _exporting = true;
+        try
+        {
+            await LogExporter.ShareAsync();
+        }
+        catch
+        {
+            // Sharing is best-effort; never let a failed share crash the settings screen.
+        }
+        finally
+        {
+            _exporting = false;
+        }
+    }
 
     public void Dispose() => Vm.Changed -= OnChanged;
 }

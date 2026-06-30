@@ -1,4 +1,5 @@
 using SharpClient.Core.Connection;
+using SharpClient.Core.Diagnostics;
 using SharpClient.Core.Persistence;
 using SharpClient.Core.Platform;
 using SharpClient.Core.Presentation;
@@ -31,6 +32,11 @@ builder.Services.AddSingleton<IAliasEngine, AliasEngine>();
 
 // ── Platform notifier ──────────────────────────────────────────────────────
 builder.Services.AddSingleton<INotifier, WebNotifier>();
+
+// ── Diagnostics ─────────────────────────────────────────────────────────────
+// The Web preview has no persistent file log; the no-op exporter keeps SettingsView's
+// ILogExporter injection satisfiable and hides the export affordance (IsAvailable == false).
+builder.Services.AddSingleton<ILogExporter, NoopLogExporter>();
 
 // ── Session management ─────────────────────────────────────────────────────
 builder.Services.AddSingleton<SessionManager>();

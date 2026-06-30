@@ -3,6 +3,7 @@ using Plugin.LocalNotification;
 using Plugin.LocalNotification.Core.Models.AndroidOption;
 using SharpClient.App.Services;
 using SharpClient.Core.Connection;
+using SharpClient.Core.Diagnostics;
 using SharpClient.Core.Platform;
 using SharpClient.Core.Persistence;
 using SharpClient.Core.Presentation;
@@ -36,6 +37,31 @@ public static class MauiProgram
             });
 
         builder.Services.AddMauiBlazorWebView();
+
+        // ── Crash / diagnostics file logging ──────────────────────────────
+        // A single FileLogStore is the sink for both ILogger output (via FileLoggerProvider — this
+        // captures Blazor's own Error-level log for an unhandled component exception, the "An
+        // unhandled error has occurred" case) and the global unhandled-exception hooks below. The
+        // log lives under the app's private data dir and is exported via MauiLogExporter (Settings →
+        // Diagnostics → Export log) so the user can hand the stack trace back for diagnosis.
+        var logStore = new FileLogStore();
+        builder.Services.AddSingleton(logStore);
+        builder.Services.AddSingleton<ILogExporter>(_ => new MauiLogExporter(logStore));
+        builder.Logging.AddProvider(new FileLoggerProvider(logStore));
+
+        logStore.Append("Information", "App", "SharpClient starting; file logging active.");
+
+        // AndroidEnvironment.UnhandledExceptionRaiser is the reliable catch-all for managed
+        // exceptions on .NET-Android (it fires for background/network-thread crashes that
+        // AppDomain.UnhandledException can miss); it is wired in MainActivity, which can reach the
+        // store through DI. The two hooks below cover the remaining CLR paths.
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            logStore.WriteException("AppDomain.UnhandledException", e.ExceptionObject as Exception);
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            logStore.WriteException("TaskScheduler.UnobservedTaskException", e.Exception);
+            e.SetObserved();
+        };
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
