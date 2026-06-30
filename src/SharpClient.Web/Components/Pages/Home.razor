@@ -5,7 +5,8 @@
 @using SharpClient.UI.Components
 
 @inject SessionsViewModel Vm
+@inject ProtocolPanelViewModel ProtocolVm
 
 <PageTitle>SharpClient</PageTitle>
 
-<SessionScreen Vm="@Vm" />
+<SessionScreen Vm="@Vm" ProtocolVm="@ProtocolVm" />

@@ -13,6 +13,8 @@ builder.Services.AddSingleton<SessionManager>();
 builder.Services.AddSingleton<ISessionManager>(sp => sp.GetRequiredService<SessionManager>());
 builder.Services.AddSingleton<SessionsViewModel>(sp =>
     new SessionsViewModel(sp.GetRequiredService<ISessionManager>()));
+builder.Services.AddSingleton<ProtocolPanelViewModel>(sp =>
+    new ProtocolPanelViewModel(sp.GetRequiredService<ISessionManager>()));
 
 // World Manager: EF persistence + in-memory secrets + demo launcher.
 builder.Services.AddSingleton<SharpClient.Core.Platform.IAppStorage, WebAppStorage>();

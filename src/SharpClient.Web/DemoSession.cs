@@ -40,5 +40,20 @@ public sealed class DemoSession : CoreSession
         _scrollback.Add(scrollbackLine);
     }
 
+    public IReadOnlyList<NegotiationEvent> NegotiationLog =>
+    [
+        new NegotiationEvent("TTYPE", "SharpClient/1.0"),
+        new NegotiationEvent("NAWS", "80x24"),
+        new NegotiationEvent("MCCP2", "compression enabled"),
+        new NegotiationEvent("CHARSET", "UTF-8"),
+        new NegotiationEvent("MSSP", "NAME=Sindome PLAYERS=48"),
+    ];
+
+    public IReadOnlyList<GmcpMessage> GmcpLog =>
+    [
+        new GmcpMessage("Char.Vitals", """{"hp":320,"maxhp":320,"mp":140,"maxmp":200,"sp":75,"maxsp":100}"""),
+        new GmcpMessage("Room.Info", """{"name":"Gate Tunnel","exits":["north","west"],"area":"Red Sector"}"""),
+    ];
+
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
