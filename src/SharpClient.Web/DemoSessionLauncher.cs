@@ -22,7 +22,7 @@ public sealed class DemoSessionLauncher : ISessionLauncher
             State = ConnectionState.Connected,
         };
 
-        session.AppendLine($"[1m[32m✓ Connected to {world.Name}[0m ([90m{world.Host}:{world.Port}[0m)");
+        session.AppendLine($"\u001b[1m\u001b[32m✓ Connected to {world.Name}\u001b[0m (\u001b[90m{world.Host}:{world.Port}\u001b[0m)");
 
         if (character.ConnectSecretKey is { } key)
         {
@@ -30,11 +30,11 @@ public sealed class DemoSessionLauncher : ISessionLauncher
             if (!string.IsNullOrWhiteSpace(connect))
             {
                 // Auto-send the connect string on connect (masked in the demo feed).
-                session.AppendLine("[90m» sent connect string[0m");
+                session.AppendLine("\u001b[90m» sent connect string\u001b[0m");
             }
         }
 
-        session.AppendLine($"[90mWelcome, {character.Name}. Type [4mhelp[0m to begin.[0m");
+        session.AppendLine($"\u001b[90mWelcome, {character.Name}. Type \u001b[4mhelp\u001b[0m to begin.\u001b[0m");
         return session;
     }
 }

@@ -50,24 +50,24 @@ var vesper = new DemoSession
     WorldName = "Sindome",
     State = ConnectionState.Connected,
 };
-vesper.AppendLine("[1mRED SECTOR — THE DROME[0m");
+vesper.AppendLine("\u001b[1mRED SECTOR — THE DROME\u001b[0m");
 vesper.AppendLine("A vast underground arena carved from volcanic basalt, lit by chemical torches.");
 vesper.AppendLine("");
-vesper.AppendLine("[31mThe walls are slick with condensation and old blood.[0m");
-vesper.AppendLine("[92mServer:[0m  Sindome v3.4.1  [92m[online][0m");
-vesper.AppendLine("[38;5;208mWARNING:[0m  Low-visibility zone — torches flicker at zone boundary.");
-vesper.AppendLine("[1m[36mThe Arena Master[0m steps from the shadows and surveys the pit.");
-vesper.AppendLine("[33mGold[0m glints against [34mblue[0m steel; the crowd roars.");
-vesper.AppendLine("[93m[SYSTEM][0m  Connection established.  Type [4mhelp[0m to begin.");
-vesper.AppendLine("[35mA resonant chime echoes through the stone passages.[0m");
+vesper.AppendLine("\u001b[31mThe walls are slick with condensation and old blood.\u001b[0m");
+vesper.AppendLine("\u001b[92mServer:\u001b[0m  Sindome v3.4.1  \u001b[92m[online]\u001b[0m");
+vesper.AppendLine("\u001b[38;5;208mWARNING:\u001b[0m  Low-visibility zone — torches flicker at zone boundary.");
+vesper.AppendLine("\u001b[1m\u001b[36mThe Arena Master\u001b[0m steps from the shadows and surveys the pit.");
+vesper.AppendLine("\u001b[33mGold\u001b[0m glints against \u001b[34mblue\u001b[0m steel; the crowd roars.");
+vesper.AppendLine("\u001b[93m[SYSTEM]\u001b[0m  Connection established.  Type \u001b[4mhelp\u001b[0m to begin.");
+vesper.AppendLine("\u001b[35mA resonant chime echoes through the stone passages.\u001b[0m");
 vesper.AppendLine("");
-vesper.AppendLine("[38;5;118mHP: 320/320  [38;5;208mMP: 140/200  [38;5;87mSP:  75/100[0m");
+vesper.AppendLine("\u001b[38;5;118mHP: 320/320  \u001b[38;5;208mMP: 140/200  \u001b[38;5;87mSP:  75/100\u001b[0m");
 vesper.AppendLine("You are in the Gate Tunnel.  Exits: [north] [west]");
 vesper.AppendLine("");
-vesper.AppendLine("[1m[97m[ Combat Log ][0m");
-vesper.AppendLine("[91mDrakar strikes you for 42 points of damage![0m");
-vesper.AppendLine("[92mYou strike Drakar for 31 points of damage.[0m");
-vesper.AppendLine("[7m ROUNDTIME: 3s [0m");
+vesper.AppendLine("\u001b[1m\u001b[97m[ Combat Log ]\u001b[0m");
+vesper.AppendLine("\u001b[91mDrakar strikes you for 42 points of damage!\u001b[0m");
+vesper.AppendLine("\u001b[92mYou strike Drakar for 31 points of damage.\u001b[0m");
+vesper.AppendLine("\u001b[7m ROUNDTIME: 3s \u001b[0m");
 
 var thorne = new DemoSession
 {
@@ -75,8 +75,8 @@ var thorne = new DemoSession
     WorldName = "GrapevineMUD",
     State = ConnectionState.Connecting,
 };
-thorne.AppendLine("[93m[SYSTEM][0m  Connecting to GrapevineMUD…");
-thorne.AppendLine("[90mEstablishing secure channel…[0m");
+thorne.AppendLine("\u001b[93m[SYSTEM]\u001b[0m  Connecting to GrapevineMUD…");
+thorne.AppendLine("\u001b[90mEstablishing secure channel…\u001b[0m");
 
 var doran = new DemoSession
 {
@@ -84,8 +84,8 @@ var doran = new DemoSession
     WorldName = "BatMUD",
     State = ConnectionState.Error,
 };
-doran.AppendLine("[91m[ERROR][0m  Connection lost: remote host closed the connection.");
-doran.AppendLine("[90mLast seen: BatMUD Gate, south of Market Square.[0m");
+doran.AppendLine("\u001b[91m[ERROR]\u001b[0m  Connection lost: remote host closed the connection.");
+doran.AppendLine("\u001b[90mLast seen: BatMUD Gate, south of Market Square.\u001b[0m");
 
 mgr.Add(vesper);
 mgr.Add(thorne);

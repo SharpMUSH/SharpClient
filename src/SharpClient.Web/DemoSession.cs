@@ -28,7 +28,7 @@ public sealed class DemoSession : CoreSession
 
     public Task SendAsync(string line)
     {
-        var echo = new ScrollbackLine(AnsiParser.Parse($"[90m> {line}[0m"));
+        var echo = new ScrollbackLine(AnsiParser.Parse($"\u001b[90m> {line}\u001b[0m"));
         _scrollback.Add(echo);
         LineAppended?.Invoke(echo);
         return Task.CompletedTask;
