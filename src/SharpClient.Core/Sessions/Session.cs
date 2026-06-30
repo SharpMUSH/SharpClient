@@ -8,6 +8,9 @@ public sealed record ScrollbackLine(IReadOnlyList<StyledSegment> Segments);
 public sealed class Session : ISession
 {
     private readonly ITelnetConnection _connection;
+
+    // NOTE: not thread-safe; LineReceived/protocol events may fire off the network thread —
+    // UI consumers must marshal. TODO: guard if accessed concurrently.
     private readonly List<ScrollbackLine> _scrollback = [];
     private readonly List<NegotiationEvent> _negotiationLog = [];
     private readonly List<GmcpMessage> _gmcpLog = [];
