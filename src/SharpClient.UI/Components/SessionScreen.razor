@@ -1,0 +1,38 @@
+@using SharpClient.Core.Presentation
+@using SharpClient.Core.Sessions
+
+@implements IDisposable
+
+<div class="sc-session-screen">
+    <SessionTabs Vm="Vm" />
+    <div class="sc-output-area">
+        @if (Vm.Active is null)
+        {
+            <div class="sc-empty-state">
+                <p>No active session. Open a session to get started.</p>
+            </div>
+        }
+        else
+        {
+            <OutputView Lines="Vm.Active.Scrollback" />
+        }
+    </div>
+    <InputBar Vm="Vm" />
+</div>
+
+@code {
+    [Parameter]
+    public SessionsViewModel Vm { get; set; } = null!;
+
+    protected override void OnInitialized()
+    {
+        Vm.Changed += OnVmChanged;
+    }
+
+    private void OnVmChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Vm.Changed -= OnVmChanged;
+    }
+}
