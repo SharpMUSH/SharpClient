@@ -1,5 +1,8 @@
-﻿@page "/"
+@page "/"
 
-<h1>Hello, world!</h1>
+@inject SessionsViewModel Vm
+@inject ProtocolPanelViewModel ProtocolVm
 
-Welcome to your new app.
+<PageTitle>SharpClient</PageTitle>
+
+<SessionScreen Vm="@Vm" ProtocolVm="@ProtocolVm" />

@@ -1,0 +1,180 @@
+@using SharpClient.Core.Domain
+@using SharpClient.Core.Presentation
+@implements IDisposable
+
+<div class="sc-wm">
+    <div class="sc-wm-header">
+        <div class="sc-wm-titles">
+            <div class="sc-wm-title">Worlds</div>
+            <div class="sc-wm-sub">@WorldCountLabel</div>
+        </div>
+        <button type="button" class="sc-wm-addbtn" @onclick="OpenAddWorld">+ World</button>
+    </div>
+
+    @if (!Vm.HasWorlds)
+    {
+        <div class="sc-wm-empty">
+            <div class="sc-wm-empty-title">No worlds yet</div>
+            <div class="sc-wm-empty-text">Add a MUD or MUSH server to connect your first character.</div>
+            <button type="button" class="sc-wm-empty-cta" @onclick="OpenAddWorld">+ Add your first world</button>
+        </div>
+    }
+    else
+    {
+        @foreach (var world in Vm.Worlds)
+        {
+            var isOpen = _expanded.Contains(world.Id);
+            <div class="sc-world">
+                <div class="sc-world-row" @onclick="() => ToggleExpand(world.Id)">
+                    <div class="sc-world-badge">@Initial(world.Name)</div>
+                    <div class="sc-world-main">
+                        <div class="sc-world-name">@world.Name</div>
+                        <div class="sc-world-addr">@world.Host:@world.Port</div>
+                    </div>
+                    <div class="sc-world-meta">
+                        <span class="sc-world-charcount">@CharLabel(world)</span>
+                        <button type="button" class="sc-icon-btn" title="Edit world"
+                                @onclick:stopPropagation="true"
+                                @onclick="() => OpenEditWorld(world)">✎</button>
+                        <span class="sc-chev @(isOpen ? "sc-chev-open" : "")">⌄</span>
+                    </div>
+                </div>
+
+                @if (isOpen)
+                {
+                    @if (world.Characters.Count == 0)
+                    {
+                        <div class="sc-no-chars">no characters yet</div>
+                    }
+                    else
+                    {
+                        @foreach (var character in world.Characters)
+                        {
+                            <div class="sc-char-row">
+                                <div class="sc-char-badge">@Initial(character.Name)</div>
+                                <div class="sc-char-name">@character.Name</div>
+                                <button type="button" class="sc-connect-btn" @onclick="() => ConnectAsync(world, character)">Connect</button>
+                                <button type="button" class="sc-icon-btn" title="Edit character" @onclick="() => OpenEditCharacter(world, character)">✎</button>
+                                <button type="button" class="sc-icon-btn sc-icon-btn-danger" title="Delete character" @onclick="() => DeleteCharacterAsync(world, character)">🗑</button>
+                            </div>
+                        }
+                    }
+
+                    <div class="sc-world-actions">
+                        <button type="button" class="sc-addchar" @onclick="() => OpenAddCharacter(world)">+ add character</button>
+                        @if (OnOpenRules.HasDelegate)
+                        {
+                            <button type="button" class="sc-rules-btn" @onclick="() => OpenRulesAsync(world.Id)">rules</button>
+                        }
+                        <button type="button" class="sc-delete-world" @onclick="() => DeleteWorldAsync(world)">delete</button>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@if (_worldEditorOpen)
+{
+    <WorldEditor Vm="Vm" World="_editingWorld" OnClose="CloseWorldEditor" />
+}
+@if (_charEditorOpen && _charWorld is not null)
+{
+    <CharacterEditor Vm="Vm" World="_charWorld" Character="_editingCharacter" OnClose="CloseCharacterEditor" />
+}
+
+@code {
+    [Parameter] public WorldManagerViewModel Vm { get; set; } = null!;
+    [Parameter] public EventCallback<Guid> OnOpenRules { get; set; }
+
+    private readonly HashSet<Guid> _expanded = [];
+
+    private bool _worldEditorOpen;
+    private World? _editingWorld;
+
+    private bool _charEditorOpen;
+    private World? _charWorld;
+    private Character? _editingCharacter;
+
+    protected override void OnInitialized() => Vm.Changed += OnVmChanged;
+
+    private void OnVmChanged() => InvokeAsync(StateHasChanged);
+
+    private string WorldCountLabel
+    {
+        get
+        {
+            var worlds = Vm.Worlds.Count;
+            var chars = Vm.Worlds.Sum(w => w.Characters.Count);
+            return $"{worlds} world{(worlds == 1 ? "" : "s")} · {chars} character{(chars == 1 ? "" : "s")}";
+        }
+    }
+
+    private static string Initial(string name) =>
+        string.IsNullOrEmpty(name) ? "?" : name[..1].ToUpperInvariant();
+
+    private static string CharLabel(World world)
+    {
+        var count = world.Characters.Count;
+        return $"{count} char{(count == 1 ? "" : "s")}";
+    }
+
+    private void ToggleExpand(Guid worldId)
+    {
+        if (!_expanded.Remove(worldId))
+        {
+            _expanded.Add(worldId);
+        }
+    }
+
+    private void OpenAddWorld()
+    {
+        _editingWorld = null;
+        _worldEditorOpen = true;
+    }
+
+    private void OpenEditWorld(World world)
+    {
+        _editingWorld = world;
+        _worldEditorOpen = true;
+    }
+
+    private void CloseWorldEditor()
+    {
+        _worldEditorOpen = false;
+        _editingWorld = null;
+    }
+
+    private void OpenAddCharacter(World world)
+    {
+        _charWorld = world;
+        _editingCharacter = null;
+        _charEditorOpen = true;
+    }
+
+    private void OpenEditCharacter(World world, Character character)
+    {
+        _charWorld = world;
+        _editingCharacter = character;
+        _charEditorOpen = true;
+    }
+
+    private void CloseCharacterEditor()
+    {
+        _charEditorOpen = false;
+        _charWorld = null;
+        _editingCharacter = null;
+    }
+
+    private async Task DeleteWorldAsync(World world) => await Vm.DeleteWorldAsync(world.Id);
+
+    private async Task DeleteCharacterAsync(World world, Character character) =>
+        await Vm.DeleteCharacterAsync(world, character);
+
+    private async Task ConnectAsync(World world, Character character) =>
+        await Vm.ConnectAsync(world, character);
+
+    private async Task OpenRulesAsync(Guid worldId) => await OnOpenRules.InvokeAsync(worldId);
+
+    public void Dispose() => Vm.Changed -= OnVmChanged;
+}

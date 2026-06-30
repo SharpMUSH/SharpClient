@@ -59,6 +59,18 @@ Rejected alternatives: ANSI→HTML string via `MarkupString` (escaping/injection
 and `xterm.js` JS interop (adds a JS dependency and splits trigger/selection logic
 across the JS↔C# boundary).
 
+### Visual design (folded in)
+
+The approved visual design lives in `docs/design/` — an interactive prototype
+(`SharpClient.prototype.html`), the 24 rendered states (`screenshots/`), and the
+implementation-facing **`design-tokens.md`** (colour tokens, typography, the
+16-colour ANSI palette tuned for the output background, the
+`StyledSegment` → span render contract, the connection-state palette, and the
+full screen/component inventory). The "Phosphor" modern-terminal direction
+(dark chrome, swappable accent, optional glow/scanlines) is the basis for the
+`SharpClient.UI` styles. All UI is authored as **Razor + CSS** in the RCL,
+hosted in the `BlazorWebView` — the prototype's HTML/CSS maps directly.
+
 ## 4. Data model
 
 - **World** — a MUSH definition: `Name`, `Host`, `Port`, world-level defaults
@@ -70,12 +82,35 @@ across the JS↔C# boundary).
   opens a Session; multiple Sessions are the tabs. A given Character has at most one
   live Session at a time; different Characters each get their own tab.
 
-### Persistence
+### Connection states (extended for the design)
 
-- Worlds + Characters serialized to `worlds.json` in `FileSystem.AppDataDirectory`.
-- **Secrets** (passwords in connect strings) stored via MAUI `SecureStorage`, keyed
-  by Character — never written to `worlds.json` in plaintext.
-- Per-Character session logs written under app data (`logs/<world>/<character>/…`).
+The UI surfaces five states, so `ConnectionState` is extended beyond Phase 1's
+`Disconnected | Connecting | Connected` to:
+**`Disconnected | Connecting | Connected | Reconnecting | Error`**
+(the design renders `Connected` as "LIVE"). `TelnetConnection` and `Session` both
+raise a `StateChanged` event (Phase 1 shipped it on `TelnetConnection`; `Session`
+forwarding is a Phase-2 addition the UI binds to for tab dots/pills).
+
+### Persistence — backing store (decided)
+
+The modern .NET stack, chosen because we want **searchable session history**:
+
+- **SQLite via EF Core** (`Microsoft.EntityFrameworkCore.Sqlite`) is the primary
+  structured store — `Worlds`, `Characters`, `Triggers`, `Aliases` as related
+  tables with migrations. The DB file lives in `FileSystem.AppDataDirectory`.
+- **Searchable session history** uses a **SQLite FTS5** virtual table over stored
+  session lines (full-text search across sessions, persisted across restarts).
+  EF Core doesn't model FTS5 natively, so the history layer uses a keyless entity
+  + raw SQL via `Microsoft.Data.Sqlite`.
+- **Secrets** (passwords in connect strings) stay in MAUI `SecureStorage`
+  (Android Keystore), keyed by Character — **never** in the SQLite DB.
+- **App preferences** (output font, min columns, max font size, accent,
+  glow/scanlines) in MAUI `Preferences`.
+- All of this sits **behind interfaces** (`IWorldStore` → EF Core impl,
+  `ISessionHistory` → FTS5 impl, `ISecretStore` → SecureStorage). Core stays
+  MAUI-free. **Tests** run EF Core SQLite against an in-memory/temp-file
+  connection — fast, deterministic, no device — preserving interface-based
+  testing.
 
 ## 5. Components (each a focused, independently testable unit)
 
@@ -85,11 +120,32 @@ across the JS↔C# boundary).
 | `AnsiParser` | Pure: raw line → `List<StyledSegment>` (fg/bg/bold/underline/inverse, incl. xterm-256). No I/O. | — |
 | `TriggerEngine` | Apply declarative trigger rules to incoming lines → actions (highlight/send/notify). | `AnsiParser` model |
 | `AliasEngine` | Expand input patterns → text with `$1…$n` args before send. | — |
-| `WorldStore` | CRUD Worlds with nested Characters; JSON persistence + SecureStorage for secrets. | MAUI storage |
+| `WorldStore` | CRUD Worlds with nested Characters via EF Core SQLite; secrets via `ISecretStore`. | EF Core SQLite |
+| `SessionHistory` | Persist session lines + full-text search via SQLite FTS5. | `Microsoft.Data.Sqlite` |
 | `SessionLogger` | Append per-Character session output (raw + cleaned) to a log file. | file I/O |
 | `Session` | Tie one Character (+ its World) to a live `TelnetConnection` + logger + trigger engine + scrollback buffer of parsed lines. The unit the UI binds to. | above units |
 | `SessionManager` | Hold open Sessions (tabs); track the active one. | `Session` |
-| Razor UI | `WorldManager` (CRUD Worlds/Characters, Connect), `SessionTabs`, `OutputView` (virtualized segments), `InputBar` (history + alias expansion), `ProtocolPanel` (live GMCP/MSDP/NAWS), trigger/alias editor. | services above |
+| Razor UI | `WorldManager` (CRUD Worlds/Characters, Connect), `SessionTabs`, `OutputView` (virtualized segments), `InputBar` (history + alias expansion), `ProtocolPanel` (live GMCP/MSDP/NAWS), trigger/alias editor. | view models |
+
+### 5.1 Interface-based architecture (for testability)
+
+Every unit with I/O, platform dependency, or cross-unit collaboration is defined
+**behind an interface**; consumers depend on the interface, not the concrete.
+This is what makes both the background components and the UI unit-testable with
+fakes, no device required:
+
+- **Core service interfaces:** `ITelnetConnection`, `ISession`, `ISessionManager`,
+  `IWorldStore`, `ITriggerEngine`, `IAliasEngine`, `ISessionLogger`. `AnsiParser`
+  stays a pure static (no interface needed).
+- **Platform abstractions** (implemented by the MAUI app, faked in tests):
+  `ISecretStore` (MAUI `SecureStorage`), `IAppStorage` (app-data file paths /
+  read-write), `INotifier` (local notifications/toasts), `IConnectivity`. Core and
+  UI never reference `Microsoft.Maui.*` directly — only these interfaces.
+- **Presentation:** UI logic lives in **view models** (`WorldManagerViewModel`,
+  `SessionViewModel`, `SessionsViewModel`, `ProtocolPanelViewModel`,
+  `TriggerEditorViewModel`, `SettingsViewModel`) that depend only on the
+  interfaces above. Razor components are thin and bind to a view model. The MAUI
+  app composes everything via DI, supplying the platform implementations.
 
 ## 6. Telnet negotiation surfacing
 
@@ -108,14 +164,29 @@ terminal size derived from the output view dimensions.
 - Rules exist at **world** and **character** scope; character rules merge over world
   rules (character wins on conflict).
 
-## 8. Testing
+## 8. Testing — interface-based, TDD
 
-- **`SharpClient.Tests`** using **TUnit** (not xUnit).
-- Covered: `AnsiParser` (SGR incl. xterm-256, malformed sequences), `TriggerEngine`
-  and `AliasEngine` (match/expand/merge precedence), `WorldStore` (round-trip,
-  secret separation), and trigger/alias world↔character merge logic.
-- `TelnetConnection` exercised against a loopback echo server / TNC's negotiation
-  patterns.
+- **`SharpClient.Tests`** (background/logic) using **TUnit** (not xUnit).
+- **Interface-based testing:** tests target the interfaces from §5.1. Collaborators
+  are replaced by hand-written **fakes** implementing those interfaces (e.g.
+  `FakeWorldStore`, `FakeSecretStore`, `FakeAppStorage`, `FakeTelnetConnection`,
+  `FakeNotifier`) — no mocking framework required. This keeps tests fast,
+  deterministic, and device-free.
+- **Background coverage:** `AnsiParser` (SGR incl. xterm-256, malformed, truecolor
+  degradation), `TriggerEngine` / `AliasEngine` (match/expand/merge precedence),
+  `WorldStore` (round-trip, secret separation via `ISecretStore`), `SessionLogger`
+  (via `IAppStorage`), `SessionManager` (tab lifecycle), state transitions
+  (`Connecting → Connected/Error/Reconnecting`). `TelnetConnection` is exercised
+  against an in-process loopback TCP server.
+- **UI coverage** (`SharpClient.UI.Tests`): **view models** are plain unit tests
+  against the §5.1 interfaces with fakes. **Razor components** are rendered and
+  asserted with **bUnit** (renders the RCL components against fake view
+  models/services; verifies output spans carry the right styles from the render
+  contract, tab state pills, empty states, button wiring). bUnit runs on plain
+  .NET — no MAUI workload or device needed.
+- The render contract in `docs/design/design-tokens.md` is itself tested: a
+  `SegmentStyle` mapper (`StyledSegment → css`) has unit tests for default
+  phosphor fg, indexed fg/bg, inverse swap, bold, underline.
 
 ## 9. Build / environment notes
 
@@ -127,15 +198,24 @@ terminal size derived from the output view dimensions.
 
 ## 10. Suggested phasing (single spec, phased plan)
 
-1. **Core pipeline** — `TelnetConnection` + `AnsiParser` + minimal `Session`,
-   connect/send/receive to a real MUSH, plain text.
-2. **UI shell + color** — `OutputView` (virtualized, colored), `InputBar` with
-   history, `SessionTabs`, `SessionManager`.
-3. **Worlds & Characters** — `WorldStore`, `WorldManager`, SecureStorage secrets,
-   Connect flow + login automation.
-4. **Negotiation + Protocol Panel** — GMCP/MSDP/NAWS surfacing.
-5. **Triggers/aliases + logging** — declarative engines, editor UI, `SessionLogger`.
+1. **Core pipeline** ✅ *done* — `TelnetConnection` + `AnsiParser` + minimal
+   `Session`, connect/send/receive to a real MUSH (PR #1).
+2. **UI foundation** ✅ *done* — Core interfaces (`ITelnetConnection`/`ISession`/
+   `ISessionManager`); `AnsiPalette` + `SegmentStyle` render contract;
+   `SessionManager`; `SessionsViewModel`; `Reconnecting`/`Error` +
+   `Session.StateChanged`; bUnit-tested `OutputView`. All interface-based.
+3. **Session shell + Web preview host** — `SharpClient.Web` (Blazor Server over
+   the RCL with in-memory fakes, for native-on-Linux visual testing without the
+   Android SDK); `SessionTabs`, `InputBar`, the session screen wiring
+   `SessionsViewModel`; design-token CSS; phone-nav / tablet-rail shell.
+4. **Worlds & Characters** — `WorldStore` over **EF Core SQLite**, `ISecretStore`
+   (SecureStorage) secrets, `Preferences` for app settings, `WorldManager` UI,
+   Connect flow + login automation. `SessionHistory` (SQLite FTS5) for searchable
+   history.
+5. **Negotiation + Protocol Panel** — GMCP/MSDP/NAWS surfacing + the panel.
+6. **Triggers/aliases + logging** — declarative engines, editor UI; session
+   lines persisted to `SessionHistory` (replaces flat log files).
 
-Visual/interaction design (overall direction, color system coexisting with raw
-ANSI, typography, tab UX, component states) is handled separately via the
-frontend-design brief and folds into phases 2–5.
+The visual design is now **folded in** (§3 "Visual design", `docs/design/`):
+the "Phosphor" direction, colour/typography tokens, the ANSI palette, the
+render contract, and the five-state connection palette drive phases 2–5.

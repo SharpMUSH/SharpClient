@@ -1,0 +1,12 @@
+@page "/"
+@rendermode InteractiveServer
+
+@using SharpClient.Core.Presentation
+@using SharpClient.UI.Components
+
+@inject SessionsViewModel Vm
+@inject ProtocolPanelViewModel ProtocolVm
+
+<PageTitle>SharpClient</PageTitle>
+
+<SessionScreen Vm="@Vm" ProtocolVm="@ProtocolVm" />

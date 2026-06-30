@@ -1,0 +1,11 @@
+@page "/worlds"
+
+@inject WorldManagerViewModel Vm
+
+<PageTitle>SharpClient &middot; Worlds</PageTitle>
+
+<WorldManager Vm="@Vm" />
+
+@code {
+    protected override async Task OnInitializedAsync() => await Vm.LoadAsync();
+}

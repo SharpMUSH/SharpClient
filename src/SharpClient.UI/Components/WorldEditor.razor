@@ -1,0 +1,77 @@
+@using SharpClient.Core.Domain
+@using SharpClient.Core.Presentation
+
+<div class="sc-modal-overlay" @onclick="OnClose">
+    <div class="sc-modal" @onclick:stopPropagation="true">
+        <div class="sc-modal-header">
+            <div>
+                <div class="sc-modal-title">@(_isEdit ? "Edit World" : "Add World")</div>
+                <div class="sc-modal-sub">a MUSH / MUD server</div>
+            </div>
+            <button type="button" class="sc-modal-close" @onclick="OnClose">×</button>
+        </div>
+
+        <label class="sc-field">
+            <span class="sc-field-label">world name</span>
+            <input class="sc-field-input" @bind="_name" @bind:event="oninput" placeholder="e.g. Sindome" />
+        </label>
+        <label class="sc-field">
+            <span class="sc-field-label">host</span>
+            <input class="sc-field-input" @bind="_host" @bind:event="oninput" placeholder="e.g. sindome.org" />
+        </label>
+        <label class="sc-field">
+            <span class="sc-field-label">port</span>
+            <input class="sc-field-input" type="number" @bind="_port" @bind:event="oninput" placeholder="23" />
+        </label>
+
+        <button type="button" class="sc-modal-submit" disabled="@(!CanSubmit)" @onclick="SubmitAsync">
+            @(_isEdit ? "Save world" : "Add world")
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public WorldManagerViewModel Vm { get; set; } = null!;
+    [Parameter] public World? World { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool _isEdit;
+    private string _name = string.Empty;
+    private string _host = string.Empty;
+    private int _port = 23;
+
+    private bool CanSubmit => !string.IsNullOrWhiteSpace(_name) && !string.IsNullOrWhiteSpace(_host);
+
+    protected override void OnParametersSet()
+    {
+        _isEdit = World is not null;
+        if (World is not null)
+        {
+            _name = World.Name;
+            _host = World.Host;
+            _port = World.Port;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (!CanSubmit)
+        {
+            return;
+        }
+
+        if (World is null)
+        {
+            await Vm.AddWorldAsync(_name.Trim(), _host.Trim(), _port);
+        }
+        else
+        {
+            World.Name = _name.Trim();
+            World.Host = _host.Trim();
+            World.Port = _port;
+            await Vm.UpdateWorldAsync(World);
+        }
+
+        await OnClose.InvokeAsync();
+    }
+}
