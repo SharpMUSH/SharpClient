@@ -36,3 +36,56 @@ jobs:
 
       - name: Data / persistence tests
         run: dotnet run --project tests/SharpClient.Data.Tests/SharpClient.Data.Tests.csproj -c Release
+
+  android-build:
+    name: Android head build
+    runs-on: ubuntu-latest
+    # Compile the MAUI Android head (src/SharpClient.App) for net10.0-android on
+    # every PR so Android-only regressions (manifest, platform services,
+    # TNC-on-Android, etc.) are caught before merge. This job needs JDK 17 + the
+    # Android SDK + the maui-android workload, unlike the plain net10.0 test job.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # .NET for Android (net10.0-android) requires JDK 17 specifically.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up .NET (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Restore the workload pinned by the repo (maui-android). Using
+      # `workload restore` keeps versions consistent with the project's
+      # workload manifest rather than pulling whatever `install` resolves.
+      - name: Install MAUI Android workload
+        run: dotnet workload restore src/SharpClient.App/SharpClient.App.csproj
+
+      # Acquire any missing Android SDK platform/build-tools for the target API
+      # into the runner's pre-installed SDK (ANDROID_SDK_ROOT) and accept licenses,
+      # so the subsequent build does not fail on a missing SDK component.
+      - name: Install Android SDK dependencies
+        run: >
+          dotnet build src/SharpClient.App/SharpClient.App.csproj
+          -f net10.0-android
+          -t:InstallAndroidDependencies
+          -p:AcceptAndroidSdkLicenses=True
+          -p:JavaSdkDirectory="$JAVA_HOME"
+          -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
+
+      # Release config also gates the build via TreatWarningsAsErrors. This only
+      # compiles the app (no signing / packaging) — release packaging lives in
+      # release-apk.yml.
+      - name: Build Android head (Release)
+        run: >
+          dotnet build src/SharpClient.App/SharpClient.App.csproj
+          -c Release
+          -f net10.0-android
+          -p:JavaSdkDirectory="$JAVA_HOME"
+          -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
+          -p:AcceptAndroidSdkLicenses=True
