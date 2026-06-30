@@ -19,8 +19,11 @@ public sealed class Session : ISession
     private readonly INotifier? _notifier;
     private readonly ISessionHistory? _history;
 
-    // NOTE: not thread-safe; LineReceived/protocol events may fire off the network thread —
-    // UI consumers must marshal. TODO: guard if accessed concurrently.
+    // LineReceived fires off the network read thread while Blazor enumerates Scrollback on the
+    // render thread — appending mid-enumeration throws "Collection was modified" and kills the UI.
+    // _scrollbackLock guards every read and write of _scrollback; the Scrollback getter hands out an
+    // immutable snapshot so callers can enumerate freely without holding the lock.
+    private readonly object _scrollbackLock = new();
     private readonly List<ScrollbackLine> _scrollback = [];
     private readonly List<NegotiationEvent> _negotiationLog = [];
     private readonly List<GmcpMessage> _gmcpLog = [];
@@ -58,7 +61,16 @@ public sealed class Session : ISession
         _connection.MxpEnabled += OnMxpEnabled;
     }
 
-    public IReadOnlyList<ScrollbackLine> Scrollback => _scrollback;
+    public IReadOnlyList<ScrollbackLine> Scrollback
+    {
+        get
+        {
+            lock (_scrollbackLock)
+            {
+                return _scrollback.ToArray();
+            }
+        }
+    }
 
     public IReadOnlyList<NegotiationEvent> NegotiationLog => _negotiationLog;
 
@@ -98,7 +110,11 @@ public sealed class Session : ISession
         // Local echo: MUSH/MUD servers normally don't echo your commands back, so
         // show what was typed in the scrollback (dim, prefixed) for visibility.
         var echo = new ScrollbackLine([new StyledSegment("> " + line, EchoStyle)]);
-        _scrollback.Add(echo);
+        lock (_scrollbackLock)
+        {
+            _scrollback.Add(echo);
+        }
+
         LineAppended?.Invoke(echo);
 
         await _connection.SendAsync(expanded);
@@ -156,7 +172,11 @@ public sealed class Session : ISession
         }
 
         var line = new ScrollbackLine(segments);
-        _scrollback.Add(line);
+        lock (_scrollbackLock)
+        {
+            _scrollback.Add(line);
+        }
+
         LineAppended?.Invoke(line);
 
         foreach (var cmd in sendCommands)

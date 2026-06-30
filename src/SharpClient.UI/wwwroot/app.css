@@ -140,6 +140,172 @@ body {
     background: var(--bg);
 }
 
+/* ── Session header (tabs + state pill + protocol toggle) ──────── */
+.sc-session-header {
+    display: flex;
+    align-items: stretch;
+    background: var(--panel);
+    border-bottom: 1px solid var(--bd2);
+    flex-shrink: 0;
+}
+
+/* SessionTabs already paints its own bottom border; let the header own it instead
+   so the two don't double up. */
+.sc-session-header .sc-tab-bar {
+    flex: 1;
+    min-width: 0;
+    border-bottom: none;
+}
+
+.sc-session-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+    flex-shrink: 0;
+}
+
+.sc-state-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--ui);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: .03em;
+    color: var(--dim);
+    background: var(--elev);
+    border: 1px solid var(--bd2);
+    border-radius: 999px;
+    padding: 3px 9px 3px 7px;
+    white-space: nowrap;
+}
+
+.sc-state-pill-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: currentColor;
+}
+
+.sc-state-connected    { color: #8fc16f; border-color: rgba(143,193,111,.4); }
+.sc-state-connecting,
+.sc-state-reconnecting { color: #e5c07b; border-color: rgba(229,192,123,.4); }
+.sc-state-error        { color: #e06c75; border-color: rgba(224,108,117,.45); }
+.sc-state-disconnected { color: var(--faint); }
+
+.sc-protocol-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid var(--bd2);
+    color: var(--dim);
+    cursor: pointer;
+    transition: color .12s, border-color .12s, background .12s;
+}
+
+.sc-protocol-toggle svg {
+    width: 17px;
+    height: 17px;
+    display: block;
+}
+
+.sc-protocol-toggle:hover {
+    color: var(--tx);
+    border-color: var(--acc-line);
+}
+
+.sc-protocol-toggle-active {
+    color: var(--acc2);
+    border-color: var(--acc-line);
+    background: var(--acc-soft);
+}
+
+/* ── Protocol panel (negotiation + GMCP inspector) ─────────────── */
+.sc-protocol-panel {
+    flex-shrink: 0;
+    max-height: 40%;
+    overflow-y: auto;
+    background: var(--panel);
+    border-top: 1px solid var(--bd2);
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.sc-negotiation-log,
+.sc-gmcp-log {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.sc-protocol-section-title {
+    font-family: var(--ui);
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--dim);
+    margin-bottom: 2px;
+}
+
+.sc-protocol-empty {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--faint);
+}
+
+.sc-negotiation-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.sc-negotiation-key {
+    flex-shrink: 0;
+    color: var(--acc2);
+    min-width: 70px;
+}
+
+.sc-negotiation-detail {
+    color: var(--dim);
+    word-break: break-all;
+}
+
+.sc-gmcp-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-left: 2px solid var(--acc-line);
+    padding-left: 8px;
+}
+
+.sc-gmcp-package {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--acc2);
+}
+
+.sc-gmcp-json {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--tx);
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0;
+}
+
 /* ── Tab Bar ───────────────────────────────────────────────────── */
 .sc-tab-bar {
     display: flex;
@@ -418,7 +584,10 @@ body {
     display: flex;
     background: var(--panel);
     border-top: 1px solid var(--bd);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* Bottom system bar / gesture inset. env() on new WebViews, native --sc-safe-bottom fallback
+       on old ones (see WebViewInsetsBridge). When the keyboard is up the shell has already shrunk
+       by --sc-keyboard-height, so the nav rides just above the keyboard. */
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--sc-safe-bottom, 0px));
 }
 .sc-nav-link {
     flex: 1;
@@ -440,6 +609,29 @@ body {
 .sc-nav-link svg { width: 21px; height: 21px; display: block; }
 .sc-nav-link:hover { color: var(--dim); }
 .sc-nav-link.active { color: var(--acc2); border-top-color: var(--acc2); }
+
+/* ── History Search ─────────────────────────────────────────────────────── */
+.sc-history-search { max-width: 640px; margin: 0 auto; padding: 18px 14px 24px; display: flex; flex-direction: column; gap: 14px; }
+.sc-history-search-header { display: flex; flex-direction: column; gap: 3px; }
+.sc-history-search-title { font-size: 19px; font-weight: 600; color: #eff3f7; letter-spacing: -.01em; }
+.sc-history-search-sub { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+
+.sc-history-search-bar { display: flex; align-items: center; gap: 8px; }
+.sc-history-search-input { flex: 1; min-width: 0; background: var(--outbg); border: 1px solid var(--bd2); border-radius: 9px; color: var(--tx); font-family: var(--mono); font-size: 13px; padding: 10px 12px; outline: none; }
+.sc-history-search-input:focus { border-color: var(--acc-line); }
+.sc-history-search-input::placeholder { color: var(--faint); }
+.sc-history-search-btn { flex: none; font-family: var(--ui); font-size: 13px; font-weight: 600; color: #0a0c10; background: var(--acc2); border: none; border-radius: 9px; padding: 10px 16px; cursor: pointer; }
+.sc-history-search-btn:disabled { opacity: .5; cursor: not-allowed; }
+.sc-history-clear-btn { flex: none; width: 36px; height: 36px; border-radius: 9px; background: transparent; border: 1px solid var(--bd2); color: var(--dim); font-size: 16px; line-height: 1; cursor: pointer; }
+.sc-history-clear-btn:hover { color: var(--tx); border-color: var(--acc-line); }
+
+.sc-history-status { font-family: var(--mono); font-size: 12px; color: var(--faint); padding: 8px 2px; }
+.sc-history-count { font-family: var(--mono); font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+
+.sc-history-results { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.sc-history-result { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--panel); border: 1px solid var(--bd); }
+.sc-history-result-char { font-family: var(--ui); font-size: 10.5px; font-weight: 600; color: var(--acc2); letter-spacing: .02em; }
+.sc-history-result-line { font-family: var(--mono); font-size: 12px; color: var(--pho); white-space: pre-wrap; word-break: break-all; }
 
 /* ── Trigger & Alias Editor ─────────────────────────────────────────────── */
 .sc-rule-editor { max-width: 640px; margin: 0 auto; padding: 18px 14px 24px; display: flex; flex-direction: column; gap: 16px; }
@@ -468,7 +660,22 @@ body {
 .sc-shell {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    /* Height = visual viewport minus the soft-keyboard height.
+       --sc-app-height : visual-viewport height from sc-interop.js (works on web + Android System
+                         WebView >= 139, where visualViewport tracks the IME). Falls back to 100dvh.
+       --sc-keyboard-height : IME height pushed natively by WebViewInsetsBridge (Android). This is
+                         the ONLY reliable keyboard signal on older WebViews (< 139) where
+                         visualViewport does NOT shrink for the keyboard, so subtract it explicitly
+                         to keep the input bar above the keyboard. Defaults to 0 on web/desktop. */
+    height: calc(100dvh - var(--sc-keyboard-height, 0px));
+    height: calc(var(--sc-app-height, 100vh) - var(--sc-keyboard-height, 0px));
+    /* targetSDK 35+ forces edge-to-edge: content draws under the status bar / display cutout.
+       On a new-enough WebView, env(safe-area-inset-*) resolves these. On older Android System
+       WebView (< 136/144) env() is 0, so WebViewInsetsBridge pushes the real inset px into
+       --sc-safe-* natively; max() takes whichever is correct on the running WebView. */
+    padding-top: max(env(safe-area-inset-top, 0px), var(--sc-safe-top, 0px));
+    padding-left: max(env(safe-area-inset-left, 0px), var(--sc-safe-left, 0px));
+    padding-right: max(env(safe-area-inset-right, 0px), var(--sc-safe-right, 0px));
 }
 
 .sc-content {

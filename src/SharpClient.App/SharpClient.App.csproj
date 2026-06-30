@@ -98,7 +98,11 @@
              directly so its types (ITelnetInterpreterFactory, AddTelnetClient) are
              visible under net10.0-android; transitive exposure from SharpClient.Core
              does not flow through for the MAUI Android TFM. -->
-        <PackageReference Include="TelnetNegotiationCore" Version="2.5.0" />
+        <!-- 2.5.1 fixes the missing FSharp.Core nuspec dependency, so FSharp.Core now flows in
+             transitively (and is packaged into the APK) without an explicit reference here. The F#
+             MSDP assembly no longer crashes negotiation with "Could not load file or assembly
+             'FSharp.Core'". -->
+        <PackageReference Include="TelnetNegotiationCore" Version="2.5.1" />
     </ItemGroup>
 
     <ItemGroup>

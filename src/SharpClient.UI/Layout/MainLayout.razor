@@ -1,7 +1,9 @@
 @inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.JSInterop
 @using SharpClient.Core.Presentation
 @inject SettingsViewModel SettingsVm
+@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="sc-shell @(SettingsVm.Glow ? "sc-glow" : "") @(SettingsVm.Scanlines ? "sc-scanlines" : "")"
@@ -28,6 +30,13 @@
             </svg>
             <span>Session</span>
         </NavLink>
+        <NavLink class="sc-nav-link" href="/history" Match="NavLinkMatch.Prefix">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <circle cx="9" cy="9" r="5.5" stroke-linecap="round" />
+                <line x1="13.2" y1="13.2" x2="17" y2="17" stroke-linecap="round" />
+            </svg>
+            <span>History</span>
+        </NavLink>
         <NavLink class="sc-nav-link" href="/settings" Match="NavLinkMatch.Prefix">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
                 <circle cx="10" cy="10" r="3" />
@@ -46,7 +55,21 @@
 </div>
 
 @code {
+    private IJSObjectReference? _interop;
+
     protected override void OnInitialized() => SettingsVm.Changed += OnChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Bind .sc-shell height to the visual viewport so the soft keyboard doesn't hide the
+            // input bar. Shared across the Android (BlazorWebView) and Web (Blazor Server) hosts.
+            _interop = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/SharpClient.UI/sc-interop.js");
+            await _interop.InvokeVoidAsync("syncViewport");
+        }
+    }
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 

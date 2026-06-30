@@ -75,6 +75,34 @@ export function attachAutoScroll(element) {
 }
 
 /**
+ * Tracks the visual viewport and publishes its height to the --sc-app-height CSS variable on
+ * <html>. The shell (.sc-shell) sizes itself to this variable, so when the Android soft keyboard
+ * opens — which shrinks the visual viewport without changing 100vh — the layout shrinks too and the
+ * input bar stays visible above the keyboard. Idempotent: only the first call wires the listeners.
+ */
+let _viewportSynced = false;
+export function syncViewport() {
+    if (_viewportSynced) {
+        return;
+    }
+    _viewportSynced = true;
+
+    const vv = window.visualViewport;
+    const apply = () => {
+        const h = vv ? vv.height : window.innerHeight;
+        document.documentElement.style.setProperty('--sc-app-height', h + 'px');
+    };
+
+    apply();
+    if (vv) {
+        vv.addEventListener('resize', apply);
+        vv.addEventListener('scroll', apply);
+    }
+    window.addEventListener('resize', apply);
+    window.addEventListener('orientationchange', apply);
+}
+
+/**
  * Stops observing the element (called on component dispose).
  * @param {HTMLElement} element
  */

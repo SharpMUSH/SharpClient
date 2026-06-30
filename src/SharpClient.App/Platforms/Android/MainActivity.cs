@@ -1,6 +1,7 @@
 using Android.App;
 using Android.Content.PM;
 using Android.OS;
+using Android.Views;
 
 namespace SharpClient.App;
 
@@ -12,6 +13,13 @@ public class MainActivity : MauiAppCompatActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+
+        // adjustResize is the prerequisite for keyboard handling. On Android 15+ edge-to-edge it no
+        // longer resizes the window by itself (the system expects us to consume the IME inset), which
+        // WebViewInsetsBridge does via setOnApplyWindowInsetsListener(Type.ime()); we still set it so
+        // pre-15 devices resize normally.
+        Window?.SetSoftInputMode(SoftInput.AdjustResize);
+
         RequestPostNotificationsIfNeeded();
     }
 
