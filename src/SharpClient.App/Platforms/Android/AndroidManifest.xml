@@ -76,19 +76,27 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!--
-        Foreground-service permissions (all three are required when using connectedDevice):
+        Foreground-service permissions required when using connectedDevice:
 
         FOREGROUND_SERVICE         — required for any foreground service (all API levels).
         FOREGROUND_SERVICE_CONNECTED_DEVICE
                                    — required from Android 14 (API 34) when
                                      foregroundServiceType="connectedDevice" is declared.
-                                     The OS throws SecurityException in startForeground() if absent.
+        CHANGE_NETWORK_STATE       — from Android 15 (API 35+), starting a connectedDevice
+                                     foreground service ALSO requires at least one "companion"
+                                     permission from a fixed set (BLUETOOTH_*, CHANGE_NETWORK_STATE,
+                                     CHANGE_WIFI_STATE, NFC, ...). Without one, startForeground()
+                                     throws SecurityException and the app crashes. We declare
+                                     CHANGE_NETWORK_STATE because the keep-alive service registers a
+                                     ConnectivityManager.NetworkCallback and acts on network state;
+                                     it is a normal (auto-granted) permission, no runtime prompt.
         POST_NOTIFICATIONS         — required from Android 13 (API 33) to post the mandatory
                                      persistent notification that a foreground service must show.
                                      On API < 33 this permission is silently ignored.
     -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!--
