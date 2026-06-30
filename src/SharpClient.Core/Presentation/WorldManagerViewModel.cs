@@ -52,6 +52,17 @@ public sealed class WorldManagerViewModel
 
     public async Task DeleteWorldAsync(Guid worldId, CancellationToken cancellationToken = default)
     {
+        var world = _worlds.FirstOrDefault(w => w.Id == worldId);
+        if (world is not null)
+        {
+            foreach (var character in world.Characters)
+            {
+                if (character.ConnectSecretKey is { } key)
+                {
+                    await _secrets.RemoveAsync(key);
+                }
+            }
+        }
         await _store.DeleteWorldAsync(worldId, cancellationToken);
         await LoadAsync(cancellationToken);
     }

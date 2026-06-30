@@ -33,6 +33,9 @@
                     </div>
                     <div class="sc-world-meta">
                         <span class="sc-world-charcount">@CharLabel(world)</span>
+                        <button type="button" class="sc-icon-btn" title="Edit world"
+                                @onclick:stopPropagation="true"
+                                @onclick="() => OpenEditWorld(world)">✎</button>
                         <span class="sc-chev @(isOpen ? "sc-chev-open" : "")">⌄</span>
                     </div>
                 </div>
@@ -127,6 +130,12 @@
     private void OpenAddWorld()
     {
         _editingWorld = null;
+        _worldEditorOpen = true;
+    }
+
+    private void OpenEditWorld(World world)
+    {
+        _editingWorld = world;
         _worldEditorOpen = true;
     }
 
