@@ -4,7 +4,7 @@ namespace SharpClient.Core.Rendering;
 
 public static class AnsiParser
 {
-    private const char Escape = '';
+    private const char Escape = '\e';
 
     public static IReadOnlyList<StyledSegment> Parse(string line)
     {
@@ -139,10 +139,29 @@ public static class AnsiParser
     private static bool TryReadExtended(string[] codes, ref int i, out AnsiColor colour)
     {
         colour = AnsiColor.Default;
-        if (i + 2 < codes.Length && codes[i + 1] == "5" && int.TryParse(codes[i + 2], out var n))
+        if (i + 1 >= codes.Length)
         {
-            colour = AnsiColor.Indexed(n);
-            i += 2;
+            return false;
+        }
+
+        if (codes[i + 1] == "5")
+        {
+            if (i + 2 < codes.Length && int.TryParse(codes[i + 2], out var n))
+            {
+                colour = AnsiColor.Indexed(n);
+                i += 2;
+                return true;
+            }
+
+            return false;
+        }
+
+        if (codes[i + 1] == "2")
+        {
+            // Truecolor (24-bit): consume "2" + R + G + B components.
+            // Phase-1 scope: graceful degradation — colour stays AnsiColor.Default.
+            var remaining = codes.Length - 1 - i;
+            i += Math.Min(4, remaining);
             return true;
         }
 

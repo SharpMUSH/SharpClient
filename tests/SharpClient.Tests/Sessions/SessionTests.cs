@@ -8,12 +8,25 @@ namespace SharpClient.Tests.Sessions;
 
 public sealed class SessionTests
 {
-    private static ITelnetInterpreterFactory CreateFactory()
+    private ServiceProvider? _serviceProvider;
+
+    private ITelnetInterpreterFactory CreateFactory()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddTelnetClient();
-        return services.BuildServiceProvider().GetRequiredService<ITelnetInterpreterFactory>();
+        _serviceProvider = services.BuildServiceProvider();
+        return _serviceProvider.GetRequiredService<ITelnetInterpreterFactory>();
+    }
+
+    [After(Test)]
+    public async Task TearDown()
+    {
+        if (_serviceProvider is not null)
+        {
+            await _serviceProvider.DisposeAsync();
+            _serviceProvider = null;
+        }
     }
 
     [Test]
@@ -30,7 +43,7 @@ public sealed class SessionTests
         await session.ConnectAsync("127.0.0.1", server.Port);
         await accept;
 
-        await server.SendLineAsync("[31mAlert[0m");
+        await server.SendLineAsync("\e[31mAlert\e[0m");
 
         var line = await appended.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await Assert.That(line.Segments.Count).IsEqualTo(1);

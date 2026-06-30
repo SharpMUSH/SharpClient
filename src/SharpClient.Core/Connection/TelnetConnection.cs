@@ -19,6 +19,11 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : IAsync
 
     public async Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default)
     {
+        if (_client is not null)
+        {
+            await DisconnectAsync();
+        }
+
         SetState(ConnectionState.Connecting);
         try
         {
@@ -35,6 +40,9 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : IAsync
         }
         catch
         {
+            _client?.Dispose();
+            _client = null;
+            _interpreter = null;
             SetState(ConnectionState.Disconnected);
             throw;
         }
@@ -61,6 +69,19 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : IAsync
 
         _client?.Dispose();
         _client = null;
+
+        if (_readTask is not null)
+        {
+            try
+            {
+                await _readTask;
+            }
+            catch (OperationCanceledException) { }
+            catch (System.IO.IOException) { }
+            catch (ObjectDisposedException) { }
+            _readTask = null;
+        }
+
         SetState(ConnectionState.Disconnected);
     }
 

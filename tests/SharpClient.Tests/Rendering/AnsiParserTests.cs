@@ -36,7 +36,7 @@ public sealed class AnsiParserTests
     [Test]
     public async Task RedForegroundAppliesToFollowingText()
     {
-        var segments = AnsiParser.Parse("[31mred[0m normal");
+        var segments = AnsiParser.Parse("\e[31mred\e[0m normal");
 
         await Assert.That(segments.Count).IsEqualTo(2);
         await Assert.That(segments[0].Text).IsEqualTo("red");
@@ -48,7 +48,7 @@ public sealed class AnsiParserTests
     [Test]
     public async Task BrightForegroundMapsToHighIndex()
     {
-        var segments = AnsiParser.Parse("[92mbright");
+        var segments = AnsiParser.Parse("\e[92mbright");
 
         await Assert.That(segments[0].Style.Foreground).IsEqualTo(AnsiColor.Indexed(10));
     }
@@ -56,7 +56,7 @@ public sealed class AnsiParserTests
     [Test]
     public async Task Xterm256ForegroundIsParsed()
     {
-        var segments = AnsiParser.Parse("[38;5;208morange");
+        var segments = AnsiParser.Parse("\e[38;5;208morange");
 
         await Assert.That(segments[0].Style.Foreground).IsEqualTo(AnsiColor.Indexed(208));
     }
@@ -64,7 +64,7 @@ public sealed class AnsiParserTests
     [Test]
     public async Task BoldAndUnderlineCombine()
     {
-        var segments = AnsiParser.Parse("[1;4mhi");
+        var segments = AnsiParser.Parse("\e[1;4mhi");
 
         await Assert.That(segments[0].Style.Bold).IsTrue();
         await Assert.That(segments[0].Style.Underline).IsTrue();
@@ -73,7 +73,7 @@ public sealed class AnsiParserTests
     [Test]
     public async Task NonSgrCsiIsStripped()
     {
-        var segments = AnsiParser.Parse("a[2Kb");
+        var segments = AnsiParser.Parse("a\e[2Kb");
 
         await Assert.That(segments.Count).IsEqualTo(1);
         await Assert.That(segments[0].Text).IsEqualTo("ab");
@@ -85,5 +85,24 @@ public sealed class AnsiParserTests
         var segments = AnsiParser.Parse(string.Empty);
 
         await Assert.That(segments.Count).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task TruecolorForegroundDoesNotCorruptBackground()
+    {
+        var segments = AnsiParser.Parse("\e[38;2;40;40;40mX");
+
+        await Assert.That(segments[0].Style.Background).IsEqualTo(AnsiColor.Default);
+        await Assert.That(segments[0].Style.Foreground).IsEqualTo(AnsiColor.Default);
+    }
+
+    [Test]
+    public async Task TruecolorBackgroundIsConsumed()
+    {
+        var segments = AnsiParser.Parse("\e[48;2;10;20;30mX");
+
+        await Assert.That(segments[0].Style.Foreground).IsEqualTo(AnsiColor.Default);
+        await Assert.That(segments[0].Style.Background).IsEqualTo(AnsiColor.Default);
+        await Assert.That(segments[0].Text).IsEqualTo("X");
     }
 }

@@ -6,12 +6,25 @@ namespace SharpClient.Tests.Connection;
 
 public sealed class TelnetConnectionTests
 {
-    private static ITelnetInterpreterFactory CreateFactory()
+    private ServiceProvider? _serviceProvider;
+
+    private ITelnetInterpreterFactory CreateFactory()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddTelnetClient();
-        return services.BuildServiceProvider().GetRequiredService<ITelnetInterpreterFactory>();
+        _serviceProvider = services.BuildServiceProvider();
+        return _serviceProvider.GetRequiredService<ITelnetInterpreterFactory>();
+    }
+
+    [After(Test)]
+    public async Task TearDown()
+    {
+        if (_serviceProvider is not null)
+        {
+            await _serviceProvider.DisposeAsync();
+            _serviceProvider = null;
+        }
     }
 
     [Test]

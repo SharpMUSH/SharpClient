@@ -5,3 +5,4 @@ obj/
 
 # Machine-specific tool paths (Android SDK / JDK)
 Directory.Local.props
+.superpowers/
