@@ -1,0 +1,20 @@
+@page "/worlds/{WorldId:guid}/rules"
+@rendermode InteractiveServer
+
+@using SharpClient.Core.Presentation
+@using SharpClient.UI.Components
+
+@inject TriggerAliasEditorViewModel Vm
+
+<PageTitle>SharpClient · Rules</PageTitle>
+
+<div class="terminal-page">
+    <div class="page-title">Triggers &amp; Aliases</div>
+    <TriggerEditor Vm="@Vm" />
+</div>
+
+@code {
+    [Parameter] public Guid WorldId { get; set; }
+
+    protected override async Task OnInitializedAsync() => await Vm.LoadAsync(WorldId);
+}

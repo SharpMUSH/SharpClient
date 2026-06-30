@@ -5,11 +5,15 @@
 @using SharpClient.UI.Components
 
 @inject WorldManagerViewModel Vm
+@inject NavigationManager Nav
 
 <PageTitle>SharpClient · Worlds</PageTitle>
 
-<WorldManager Vm="@Vm" />
+<WorldManager Vm="@Vm" OnOpenRules="NavigateToRules" />
 
 @code {
     protected override async Task OnInitializedAsync() => await Vm.LoadAsync();
+
+    private void NavigateToRules(Guid worldId) =>
+        Nav.NavigateTo($"/worlds/{worldId}/rules");
 }

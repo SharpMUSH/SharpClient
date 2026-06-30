@@ -59,6 +59,10 @@
 
                     <div class="sc-world-actions">
                         <button type="button" class="sc-addchar" @onclick="() => OpenAddCharacter(world)">+ add character</button>
+                        @if (OnOpenRules.HasDelegate)
+                        {
+                            <button type="button" class="sc-rules-btn" @onclick="() => OpenRulesAsync(world.Id)">rules</button>
+                        }
                         <button type="button" class="sc-delete-world" @onclick="() => DeleteWorldAsync(world)">delete</button>
                     </div>
                 }
@@ -78,6 +82,7 @@
 
 @code {
     [Parameter] public WorldManagerViewModel Vm { get; set; } = null!;
+    [Parameter] public EventCallback<Guid> OnOpenRules { get; set; }
 
     private readonly HashSet<Guid> _expanded = [];
 
@@ -159,6 +164,8 @@
 
     private async Task ConnectAsync(World world, Character character) =>
         await Vm.ConnectAsync(world, character);
+
+    private async Task OpenRulesAsync(Guid worldId) => await OnOpenRules.InvokeAsync(worldId);
 
     public void Dispose() => Vm.Changed -= OnVmChanged;
 }

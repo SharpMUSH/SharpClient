@@ -27,6 +27,8 @@ builder.Services.AddScoped<WorldManagerViewModel>(sp => new WorldManagerViewMode
     sp.GetRequiredService<SharpClient.Core.Persistence.ISecretStore>(),
     sp.GetRequiredService<ISessionManager>(),
     sp.GetRequiredService<ISessionLauncher>()));
+builder.Services.AddScoped<TriggerAliasEditorViewModel>(sp => new TriggerAliasEditorViewModel(
+    sp.GetRequiredService<SharpClient.Core.Persistence.IWorldStore>()));
 
 var app = builder.Build();
 
