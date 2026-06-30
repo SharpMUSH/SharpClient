@@ -40,13 +40,21 @@ public sealed class TelnetSessionLauncher : ISessionLauncher
 
         await session.ConnectAsync(world.Host, world.Port, cancellationToken);
 
-        if (character.ConnectSecretKey is { } key)
+        try
         {
-            var secret = await _secrets.GetAsync(key);
-            if (!string.IsNullOrWhiteSpace(secret))
+            if (character.ConnectSecretKey is { } key)
             {
-                await session.SendAsync(secret);
+                var secret = await _secrets.GetAsync(key);
+                if (!string.IsNullOrWhiteSpace(secret))
+                {
+                    await session.SendAsync(secret);
+                }
             }
+        }
+        catch
+        {
+            await session.DisposeAsync();
+            throw;
         }
 
         return session;
