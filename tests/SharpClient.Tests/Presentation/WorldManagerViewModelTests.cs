@@ -133,4 +133,57 @@ public sealed class WorldManagerViewModelTests
         await Assert.That(launcher.LastCharacter).IsEqualTo(character);
         await Assert.That(sessions.Sessions).Contains(launcher.Session);
     }
+
+    [Test]
+    public async Task UpdateWorldAsyncRenameAndPersists()
+    {
+        var (vm, store, _, _, _) = Build();
+        await vm.AddWorldAsync("OldName", "mud.org", 4000);
+        var world = vm.Worlds[0];
+        var priorUpdateCount = store.UpdateCount;
+
+        world.Name = "NewName";
+        await vm.UpdateWorldAsync(world);
+
+        await Assert.That(store.UpdateCount).IsGreaterThan(priorUpdateCount);
+        await Assert.That(vm.Worlds[0].Name).IsEqualTo("NewName");
+    }
+
+    [Test]
+    public async Task UpdateCharacterAsyncReusesExistingSecretKeyAndUpdatesValue()
+    {
+        var (vm, _, secrets, _, _) = Build();
+        await vm.AddWorldAsync("Sindome", "sindome.org", 5555);
+        await vm.AddCharacterAsync(vm.Worlds[0], "Vesper", "connect Vesper oldpass");
+        var character = vm.Worlds[0].Characters.Single();
+        var originalKey = character.ConnectSecretKey;
+
+        await Assert.That(originalKey).IsNotNull();
+
+        await vm.UpdateCharacterAsync(vm.Worlds[0], character, "Vesper", "connect Vesper newpass");
+        var updatedCharacter = vm.Worlds[0].Characters.Single();
+
+        // Key must be reused — not regenerated.
+        await Assert.That(updatedCharacter.ConnectSecretKey).IsEqualTo(originalKey);
+        // The secret value is updated at that key.
+        await Assert.That(await secrets.GetAsync(originalKey!)).IsEqualTo("connect Vesper newpass");
+    }
+
+    [Test]
+    public async Task DeleteWorldAsyncRemovesSecretsForAllCharacters()
+    {
+        var (vm, _, secrets, _, _) = Build();
+        await vm.AddWorldAsync("Sindome", "sindome.org", 5555);
+        await vm.AddCharacterAsync(vm.Worlds[0], "Vesper", "connect Vesper pw1");
+        await vm.AddCharacterAsync(vm.Worlds[0], "Ghost",  "connect Ghost pw2");
+        var world = vm.Worlds[0];
+        var key1 = world.Characters[0].ConnectSecretKey!;
+        var key2 = world.Characters[1].ConnectSecretKey!;
+
+        await vm.DeleteWorldAsync(world.Id);
+
+        await Assert.That(vm.Worlds).IsEmpty();
+        await Assert.That(await secrets.GetAsync(key1)).IsNull();
+        await Assert.That(await secrets.GetAsync(key2)).IsNull();
+    }
 }

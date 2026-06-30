@@ -183,6 +183,24 @@ public sealed class TriggerAliasEditorViewModelTests
     }
 
     [Test]
+    public async Task UpdateAliasAsyncReplacesAliasInPlace()
+    {
+        var (vm, store, world) = await BuildAsync();
+        var alias = new AliasRule { Pattern = "^old$", Expansion = "old-expansion" };
+        world.Aliases.Add(alias);
+        await store.UpdateWorldAsync(world);
+        await vm.LoadAsync(world.Id);
+
+        var updated = new AliasRule { Id = alias.Id, Pattern = "^new$", Expansion = "new-expansion" };
+        await vm.UpdateAliasAsync(updated);
+
+        await Assert.That(vm.Aliases).Count().IsEqualTo(1);
+        await Assert.That(vm.Aliases[0].Pattern).IsEqualTo("^new$");
+        await Assert.That(vm.Aliases[0].Expansion).IsEqualTo("new-expansion");
+        await Assert.That(store.UpdateCount).IsGreaterThanOrEqualTo(1);
+    }
+
+    [Test]
     public async Task TriggersEmptyWhenWorldNotLoaded()
     {
         var store = new FakeWorldStore();
