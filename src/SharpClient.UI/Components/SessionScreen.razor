@@ -4,7 +4,13 @@
 @implements IDisposable
 
 <div class="sc-session-screen">
-    <SessionTabs Vm="Vm" />
+    <div class="sc-session-header">
+        <SessionTabs Vm="Vm" />
+        @if (ProtocolVm is not null)
+        {
+            <button class="sc-protocol-toggle" @onclick="ToggleProtocol" title="Toggle protocol panel">{ }</button>
+        }
+    </div>
     <div class="sc-output-area">
         @if (Vm.Active is null)
         {
@@ -17,6 +23,10 @@
             <OutputView Lines="Vm.Active.Scrollback" />
         }
     </div>
+    @if (_showProtocol && ProtocolVm is not null)
+    {
+        <ProtocolPanel Vm="ProtocolVm" />
+    }
     <InputBar Vm="Vm" />
 </div>
 
@@ -24,12 +34,19 @@
     [Parameter]
     public SessionsViewModel Vm { get; set; } = null!;
 
+    [Parameter]
+    public ProtocolPanelViewModel? ProtocolVm { get; set; }
+
+    private bool _showProtocol;
+
     protected override void OnInitialized()
     {
         Vm.Changed += OnVmChanged;
     }
 
     private void OnVmChanged() => InvokeAsync(StateHasChanged);
+
+    private void ToggleProtocol() => _showProtocol = !_showProtocol;
 
     public void Dispose()
     {

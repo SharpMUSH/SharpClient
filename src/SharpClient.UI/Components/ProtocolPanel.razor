@@ -1,0 +1,59 @@
+@using SharpClient.Core.Connection
+@using SharpClient.Core.Presentation
+
+@implements IDisposable
+
+<div class="sc-protocol-panel">
+    <section class="sc-negotiation-log">
+        <h4 class="sc-protocol-section-title">Negotiation</h4>
+        @if (Vm.NegotiationLog.Count == 0)
+        {
+            <p class="sc-protocol-empty">No negotiation events.</p>
+        }
+        else
+        {
+            @foreach (var ev in Vm.NegotiationLog)
+            {
+                <div class="sc-negotiation-row">
+                    <span class="sc-negotiation-key">@ev.Key</span>
+                    <span class="sc-negotiation-detail">@ev.Detail</span>
+                </div>
+            }
+        }
+    </section>
+
+    <section class="sc-gmcp-log">
+        <h4 class="sc-protocol-section-title">GMCP</h4>
+        @if (Vm.GmcpLog.Count == 0)
+        {
+            <p class="sc-protocol-empty">No GMCP packages.</p>
+        }
+        else
+        {
+            @foreach (var msg in Vm.GmcpLog)
+            {
+                <div class="sc-gmcp-row">
+                    <span class="sc-gmcp-package">@msg.Package</span>
+                    <pre class="sc-gmcp-json">@msg.Json</pre>
+                </div>
+            }
+        }
+    </section>
+</div>
+
+@code {
+    [Parameter]
+    public ProtocolPanelViewModel Vm { get; set; } = null!;
+
+    protected override void OnInitialized()
+    {
+        Vm.Changed += OnVmChanged;
+    }
+
+    private void OnVmChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Vm.Changed -= OnVmChanged;
+    }
+}
