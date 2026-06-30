@@ -74,6 +74,12 @@ body {
 /* ── OutputView component classes (.sc-output / .sc-line) ──────── */
 .sc-output {
     display: block;
+    /* Hold a floor of --sc-cols character columns (set by measureGrid alongside --out-fs). On a
+       screen too narrow to fit them at the minimum font, the output scrolls horizontally instead of
+       wrapping the server's NAWS-width lines — so what the player sees matches what the server wrapped
+       to. font-size must equal the line font so 1ch is the real column width. */
+    font-size: var(--out-fs);
+    min-width: calc(var(--sc-cols, 0) * 1ch);
 }
 
 .sc-line {
@@ -379,6 +385,9 @@ body {
 .sc-output-area {
     flex: 1;
     overflow-y: auto;
+    /* Horizontal scroll when the --sc-cols track is wider than the viewport (narrow screen at min
+       font), so NAWS-width lines are shown intact rather than wrapped. */
+    overflow-x: auto;
     background: var(--outbg);
     padding: 0.75rem 1rem;
 }

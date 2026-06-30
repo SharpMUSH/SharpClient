@@ -29,20 +29,124 @@ export function observeResize(dotNetRef, element) {
     observer.observe(element);
     _observers.set(element, observer);
 
-    return { width: Math.floor(element.clientWidth), height: Math.floor(element.clientHeight) };
+    // Return the *content-box* size (padding excluded) to match what the ResizeObserver reports via
+    // contentRect, so the initial NAWS/font calc and subsequent resizes use the same basis.
+    const cs = getComputedStyle(element);
+    const padX = parseFloat(cs.paddingLeft || '0') + parseFloat(cs.paddingRight || '0');
+    const padY = parseFloat(cs.paddingTop || '0') + parseFloat(cs.paddingBottom || '0');
+    return {
+        width: Math.floor(element.clientWidth - padX),
+        height: Math.floor(element.clientHeight - padY),
+    };
 }
 
 /**
- * Sets the --out-fs CSS variable on the element itself. Because this element is a
- * closer ancestor of the output lines than .sc-shell, its --out-fs wins the cascade
- * over the layout-level value (which is derived from MaxFontSize).
- * @param {HTMLElement} element
- * @param {number} px
+ * Measure the monospace character grid for the output element and SIZE THE FONT so exactly
+ * `targetCols` columns span the available width — then report the resulting {cols, rows} for NAWS.
+ *
+ * The advance and line-height are MEASURED from hidden probes (a 200-char run averages out
+ * sub-pixel rounding), never derived from a hard-coded 0.6em — that guess made an advertised 78
+ * columns wrap ~2 short. A closed loop corrects for glyph-advance non-linearity (hinting): after the
+ * ideal size is computed it re-measures `targetCols` chars and shrinks if they overflow. Font growth
+ * is capped at `maxFont` (line-length cap; content left-aligns), floored at `minFont` (below that the
+ * caller's --sc-cols track scrolls horizontally rather than rendering illegibly small).
+ *
+ * Ported from SharpMUSH.Client's terminalMetrics.js so the two clients agree on column math.
+ * Applies the fitted size as --out-fs and the column count as --sc-cols on the element, and returns
+ * { cols, rows }.
+ *
+ * @param {HTMLElement} element  the scrollable output element (padding is excluded)
+ * @param {number} targetCols    preferred column width (e.g. MinColumns 78); 0 = natural grid
+ * @param {number} minFont       minimum font px
+ * @param {number} maxFont       maximum font px
+ * @returns {{cols:number, rows:number}}
  */
-export function setFontSize(element, px) {
-    if (element) {
-        element.style.setProperty('--out-fs', px + 'px');
+export function measureGrid(element, targetCols, minFont, maxFont) {
+    const minF = minFont > 0 ? minFont : 6;
+    const maxF = Math.max(minF, maxFont > 0 ? maxFont : 24);
+    const fallback = { cols: targetCols > 0 ? targetCols : 80, rows: 24 };
+    if (!element) {
+        return fallback;
     }
+
+    const cs = getComputedStyle(element);
+    const family = (cs.getPropertyValue('--mono') || '').trim() || 'monospace';
+    const letter = cs.letterSpacing;
+    const feature = cs.fontFeatureSettings;
+    const lineHeightCss = cs.lineHeight && cs.lineHeight !== 'normal' ? cs.lineHeight : '1.2';
+    const clampGrid = v => (v < 1 ? 1 : (v > 1000 ? 1000 : v));
+
+    const runWidth = (fontPx, text) => {
+        const p = document.createElement('span');
+        p.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;left:-9999px;top:0';
+        p.style.fontFamily = family;
+        p.style.fontSize = fontPx + 'px';
+        p.style.letterSpacing = letter;
+        p.style.fontFeatureSettings = feature;
+        p.textContent = text;
+        element.appendChild(p);
+        const w = p.getBoundingClientRect().width;
+        p.remove();
+        return w;
+    };
+
+    const REF = 100;
+    const advanceRatio = runWidth(REF, '0'.repeat(200)) / 200 / REF;
+    if (!(advanceRatio > 0)) {
+        return fallback;
+    }
+
+    let lineRatio = 1.2;
+    {
+        const p = document.createElement('span');
+        p.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;left:-9999px;top:0';
+        p.style.fontFamily = family;
+        p.style.fontSize = REF + 'px';
+        p.style.lineHeight = lineHeightCss;
+        p.textContent = '0\n0\n0\n0\n0';
+        element.appendChild(p);
+        const h = p.getBoundingClientRect().height / 5;
+        p.remove();
+        if (h > 0) {
+            lineRatio = h / REF;
+        }
+    }
+
+    const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    const padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    const contentW = element.clientWidth - padX;
+    const contentH = element.clientHeight - padY;
+
+    let fontPx;
+    let cols;
+    if (targetCols > 0) {
+        const targetW = contentW - 1; // a hair inside the box (avoid a sub-pixel scrollbar)
+        let fit = targetW / targetCols / advanceRatio;
+        if (fit > maxF) {
+            fit = maxF;
+        }
+        for (let i = 0; i < 4; i++) {
+            if (fit <= minF) {
+                fit = minF;
+                break;
+            }
+            const actual = runWidth(fit, '0'.repeat(targetCols));
+            if (actual <= targetW) {
+                break;
+            }
+            fit = Math.max(minF, fit * (targetW / actual));
+        }
+        fontPx = fit;
+        cols = targetCols; // honour the preferred width; the --sc-cols track scrolls if it overflows
+    } else {
+        fontPx = parseFloat(cs.getPropertyValue('--out-fs')) || 14;
+        cols = clampGrid(Math.floor(contentW / (advanceRatio * fontPx)));
+    }
+
+    element.style.setProperty('--out-fs', fontPx + 'px');
+    element.style.setProperty('--sc-cols', String(cols));
+
+    return { cols, rows: clampGrid(Math.floor(contentH / (lineRatio * fontPx))) };
 }
 
 /**
