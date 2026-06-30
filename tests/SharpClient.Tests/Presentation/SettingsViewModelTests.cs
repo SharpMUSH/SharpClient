@@ -181,4 +181,21 @@ public sealed class SettingsViewModelTests
     {
         await Assert.That(SettingsViewModel.AccentOptions).Count().IsEqualTo(5);
     }
+
+    [Test]
+    public async Task UnknownAccentIsClampedToDefaultOnConstruction()
+    {
+        var prefs = new FakePreferences();
+        // Seed an unrecognised accent value directly into prefs.
+        prefs.SetString("Accent", "#badbad");
+
+        var vm = new SettingsViewModel(prefs);
+
+        // Should be clamped to the default purple.
+        await Assert.That(vm.Accent).IsEqualTo("#9b7ed4");
+        // The stored pref should also be corrected so a second load stays consistent.
+        await Assert.That(prefs.GetString("Accent", "")).IsEqualTo("#9b7ed4");
+        // RootStyleVariables must not contain the unknown accent.
+        await Assert.That(vm.RootStyleVariables).DoesNotContain("#badbad");
+    }
 }
