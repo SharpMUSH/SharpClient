@@ -1,7 +1,9 @@
 using Android.App;
 using Android.Content.PM;
 using Android.OS;
+using Android.Runtime;
 using Android.Views;
+using SharpClient.App.Services;
 
 namespace SharpClient.App;
 
@@ -13,6 +15,15 @@ public class MainActivity : MauiAppCompatActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+
+        // The .NET-Android catch-all for managed exceptions, including ones thrown on
+        // background/network threads that AppDomain.UnhandledException can miss. The FileLogStore is
+        // resolved lazily at crash time (the DI container is built by the time a crash can occur).
+        AndroidEnvironment.UnhandledExceptionRaiser += (_, e) =>
+        {
+            var store = IPlatformApplication.Current?.Services.GetService(typeof(FileLogStore)) as FileLogStore;
+            store?.WriteException("AndroidEnvironment.UnhandledExceptionRaiser", e.Exception);
+        };
 
         // adjustResize is the prerequisite for keyboard handling. On Android 15+ edge-to-edge it no
         // longer resizes the window by itself (the system expects us to consume the IME inset), which
