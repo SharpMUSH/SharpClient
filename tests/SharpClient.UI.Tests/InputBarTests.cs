@@ -20,7 +20,7 @@ public sealed class InputBarTests
 
         var cut = ctx.Render<InputBar>(p => p.Add(c => c.Vm, vm));
 
-        var btn = cut.Find("button");
+        var btn = cut.Find(".sc-send-btn");
         await Assert.That(btn.HasAttribute("disabled")).IsTrue();
     }
 
@@ -35,7 +35,7 @@ public sealed class InputBarTests
 
         var cut = ctx.Render<InputBar>(p => p.Add(c => c.Vm, vm));
 
-        var btn = cut.Find("button");
+        var btn = cut.Find(".sc-send-btn");
         await Assert.That(btn.HasAttribute("disabled")).IsFalse();
     }
 
@@ -50,7 +50,7 @@ public sealed class InputBarTests
 
         var cut = ctx.Render<InputBar>(p => p.Add(c => c.Vm, vm));
 
-        await cut.Find("button").ClickAsync(new MouseEventArgs());
+        await cut.Find(".sc-send-btn").ClickAsync(new MouseEventArgs());
 
         await Assert.That(s.Sent).Contains("look");
         await Assert.That(vm.Input).IsEqualTo(string.Empty);

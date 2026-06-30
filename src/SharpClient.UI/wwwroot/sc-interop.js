@@ -33,6 +33,48 @@ export function observeResize(dotNetRef, element) {
 }
 
 /**
+ * Sets the --out-fs CSS variable on the element itself. Because this element is a
+ * closer ancestor of the output lines than .sc-shell, its --out-fs wins the cascade
+ * over the layout-level value (which is derived from MaxFontSize).
+ * @param {HTMLElement} element
+ * @param {number} px
+ */
+export function setFontSize(element, px) {
+    if (element) {
+        element.style.setProperty('--out-fs', px + 'px');
+    }
+}
+
+/**
+ * Sticky auto-scroll: keeps the element pinned to the bottom when new content is
+ * appended, unless the user has scrolled up. Idempotent per element.
+ * @param {HTMLElement} element
+ */
+export function attachAutoScroll(element) {
+    if (!element || element._scAutoScroll) {
+        return;
+    }
+    element._scAutoScroll = true;
+
+    const threshold = 24; // px from bottom still counts as "stuck"
+    let stuck = true;
+    const updateStuck = () => {
+        stuck = (element.scrollHeight - element.scrollTop - element.clientHeight) <= threshold;
+    };
+    element.addEventListener('scroll', updateStuck, { passive: true });
+
+    const observer = new MutationObserver(() => {
+        if (stuck) {
+            element.scrollTop = element.scrollHeight;
+        }
+    });
+    observer.observe(element, { childList: true, subtree: true });
+
+    // Start pinned to the bottom.
+    element.scrollTop = element.scrollHeight;
+}
+
+/**
  * Stops observing the element (called on component dispose).
  * @param {HTMLElement} element
  */

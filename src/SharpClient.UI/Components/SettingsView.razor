@@ -38,7 +38,7 @@
             <span class="sc-setting-label">Max text size</span>
             <div class="sc-slider-row">
                 <input type="range" class="sc-slider"
-                       min="10" max="18" step="1"
+                       min="6" max="18" step="1"
                        value="@Vm.MaxFontSize"
                        @onchange="e => Vm.MaxFontSize = int.Parse(e.Value!.ToString()!)" />
                 <span class="sc-setting-value">@Vm.MaxFontSize px</span>

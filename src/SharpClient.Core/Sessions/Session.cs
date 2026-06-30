@@ -85,12 +85,21 @@ public sealed class Session : ISession
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default) =>
         _connection.ConnectAsync(host, port, cancellationToken);
 
-    public Task SendAsync(string line)
+    private static readonly TextStyle EchoStyle = TextStyle.Default with { Foreground = AnsiColor.Indexed(8) };
+
+    public async Task SendAsync(string line)
     {
         var expanded = _aliasEngine is not null && _aliasRules is not null
             ? _aliasEngine.Expand(line, _aliasRules)
             : line;
-        return _connection.SendAsync(expanded);
+
+        // Local echo: MUSH/MUD servers normally don't echo your commands back, so
+        // show what was typed in the scrollback (dim, prefixed) for visibility.
+        var echo = new ScrollbackLine([new StyledSegment("> " + line, EchoStyle)]);
+        _scrollback.Add(echo);
+        LineAppended?.Invoke(echo);
+
+        await _connection.SendAsync(expanded);
     }
 
     public Task SendWindowSizeAsync(int cols, int rows) =>

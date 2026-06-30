@@ -111,7 +111,7 @@ public sealed class SettingsViewTests
 
         var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
 
-        var slider = cut.Find("input[type='range'][min='10']");
+        var slider = cut.Find("input[type='range'][min='6']");
         await Assert.That(slider.GetAttribute("value")).IsEqualTo("16");
     }
 }

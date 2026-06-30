@@ -60,7 +60,12 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
             throw new InvalidOperationException("Not connected.");
         }
 
-        var bytes = _interpreter.CurrentEncoding.GetBytes(line + "\r\n");
+        // TelnetNegotiationCore's SendAsync already appends the CR LF terminator
+        // (and escapes IAC bytes). Appending our own would send a blank line after
+        // every command. Also strip any stray CR/LF from the command text so a
+        // single Send transmits exactly one clean line.
+        var clean = line.Replace("\r", string.Empty).Replace("\n", string.Empty);
+        var bytes = _interpreter.CurrentEncoding.GetBytes(clean);
         await _interpreter.SendAsync(bytes);
     }
 

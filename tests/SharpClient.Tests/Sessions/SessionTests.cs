@@ -50,4 +50,19 @@ public sealed class SessionTests
         await Assert.That(line.Segments[0].Text).IsEqualTo("Alert");
         await Assert.That(session.Scrollback.Count).IsEqualTo(1);
     }
+
+    [Test]
+    public async Task SendAppendsLocalEcho()
+    {
+        var conn = new FakeTelnetConnection();
+        await using var session = new Session(conn);
+
+        await session.SendAsync("hello");
+
+        // The command is sent to the server once...
+        await Assert.That(conn.Sent).Contains("hello");
+        // ...and locally echoed into the scrollback so the user sees what they typed.
+        await Assert.That(session.Scrollback.Count).IsEqualTo(1);
+        await Assert.That(session.Scrollback[0].Segments[0].Text).Contains("hello");
+    }
 }
