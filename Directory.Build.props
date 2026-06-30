@@ -10,4 +10,8 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
+  <!-- Machine-specific paths (Android SDK / JDK location). Not committed. -->
+  <Import Project="$(MSBuildThisFileDirectory)Directory.Local.props"
+          Condition="Exists('$(MSBuildThisFileDirectory)Directory.Local.props')" />
+
 </Project>

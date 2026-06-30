@@ -28,13 +28,23 @@ dotnet run --project tests/SharpClient.Tests   # run the TUnit suite
 
 ### Android app head
 
-Building `SharpClient.App` requires the `maui-android` workload (installed) **and**
-the Android SDK + a JDK, which are not yet present on this machine. Install them
-with:
+```sh
+dotnet build src/SharpClient.App/SharpClient.App.csproj -f net10.0-android
+```
+
+Building `SharpClient.App` requires the `maui-android` workload plus the Android
+SDK and **JDK 17** (the .NET for Android toolchain rejects newer JDKs). On this
+machine those live at `~/Android/Sdk` and `~/Android/jdk-17.0.19+10`, wired in via
+a gitignored `Directory.Local.props` (see `Directory.Local.props` for the property
+names). On a fresh machine, install them with:
 
 ```sh
-dotnet build src/SharpClient.App/SharpClient.App.csproj \
-  -t:InstallAndroidDependencies -p:AcceptAndroidSdkLicenses=True
+# 1. Android SDK (accepts licenses, downloads platform-tools/build-tools/platform)
+dotnet build src/SharpClient.App/SharpClient.App.csproj -f net10.0-android \
+  -t:InstallAndroidDependencies -p:AcceptAndroidSdkLicenses=True \
+  -p:AndroidSdkDirectory=$HOME/Android/Sdk -p:JavaSdkDirectory=<jdk-17-path>
+
+# 2. Point Directory.Local.props at your AndroidSdkDirectory and JavaSdkDirectory
 ```
 
 MAUI has no Linux desktop head, so the day-to-day dev loop runs through the
