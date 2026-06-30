@@ -29,10 +29,9 @@ public sealed class SessionHistory : ISessionHistory
 
         await using var cmd = connection.CreateCommand();
         cmd.CommandText =
-            "INSERT INTO session_history(character_id, line, sequence) VALUES(@cid, @line, @seq)";
+            "INSERT INTO session_history(character_id, line) VALUES(@cid, @line)";
         cmd.Parameters.AddWithValue("@cid", characterId.ToString());
         cmd.Parameters.AddWithValue("@line", line);
-        cmd.Parameters.AddWithValue("@seq", 0L);
         await cmd.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -72,11 +71,17 @@ public sealed class SessionHistory : ISessionHistory
     /// <c>CREATE VIRTUAL TABLE IF NOT EXISTS</c> is idempotent so this is safe to
     /// call on every operation without tracking state.
     /// </summary>
+    /// <remarks>
+    /// The table has no explicit <c>sequence</c> column; ordering is derived from
+    /// FTS5's implicit <c>rowid</c>, which is a monotonically increasing integer
+    /// assigned at insert time and exposed as <see cref="HistoryHit.Sequence"/> by
+    /// <see cref="SearchAsync"/>.
+    /// </remarks>
     private static async Task EnsureTableAsync(SqliteConnection connection, CancellationToken cancellationToken)
     {
         await using var cmd = connection.CreateCommand();
         cmd.CommandText =
-            "CREATE VIRTUAL TABLE IF NOT EXISTS session_history USING fts5(character_id UNINDEXED, line, sequence UNINDEXED);";
+            "CREATE VIRTUAL TABLE IF NOT EXISTS session_history USING fts5(character_id UNINDEXED, line);";
         await cmd.ExecuteNonQueryAsync(cancellationToken);
     }
 

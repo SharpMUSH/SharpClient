@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SharpClient.Core.Domain;
 using SharpClient.Core.Platform;
 using SharpClient.Data;
@@ -206,9 +207,47 @@ public sealed class WorldStoreTests
         var worlds = await store2.GetWorldsAsync();
         await Assert.That(worlds).Count().IsEqualTo(0);
 
-        await Assert.That(db2.Characters.Count()).IsEqualTo(0);
-        await Assert.That(db2.TriggerRules.Count()).IsEqualTo(0);
-        await Assert.That(db2.AliasRules.Count()).IsEqualTo(0);
+        await Assert.That(await db2.Characters.CountAsync()).IsEqualTo(0);
+        await Assert.That(await db2.TriggerRules.CountAsync()).IsEqualTo(0);
+        await Assert.That(await db2.AliasRules.CountAsync()).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task UpdateWorldRemoveCharacterCascadesItsRulesNoOrphans()
+    {
+        // CharA has 1 trigger + 1 alias; CharB has none.
+        // Remove CharA via UpdateWorldAsync and verify no orphan TriggerRule/AliasRule rows remain.
+        var world = BuildSampleWorld();
+
+        await using (var db = new AppDbContext(_storage))
+        {
+            var store = new WorldStore(db);
+            await store.AddWorldAsync(world);
+        }
+
+        // Remove CharA (which owns trigger + alias rules)
+        await using (var db = new AppDbContext(_storage))
+        {
+            var store = new WorldStore(db);
+            var charA = world.Characters.First(c => c.Name == "CharA");
+            world.Characters.Remove(charA);
+            charA.Triggers.Clear();
+            charA.Aliases.Clear();
+            await store.UpdateWorldAsync(world);
+        }
+
+        // Re-open DB and verify counts
+        await using var db2 = new AppDbContext(_storage);
+        var store2 = new WorldStore(db2);
+        var worlds = await store2.GetWorldsAsync();
+
+        await Assert.That(worlds[0].Characters).Count().IsEqualTo(1);
+        await Assert.That(worlds[0].Characters[0].Name).IsEqualTo("CharB");
+
+        // World-scoped trigger + alias remain; CharA's rules must not be orphaned.
+        // World has 1 world-trigger + 1 world-alias; CharA's rules should be gone.
+        await Assert.That(await db2.TriggerRules.CountAsync()).IsEqualTo(1); // world-scoped only
+        await Assert.That(await db2.AliasRules.CountAsync()).IsEqualTo(1);   // world-scoped only
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

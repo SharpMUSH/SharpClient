@@ -274,4 +274,55 @@ public sealed class TriggerEngineTests
         await Assert.That(outcome.SendCommands).Contains("attack");
         await Assert.That(outcome.SendCommands).Contains("loot");
     }
+
+    // ── New tests ────────────────────────────────────────────────────────────
+
+    [Test]
+    public async Task HighlightOutOfRangeActionValueSkippedFirstColourKept()
+    {
+        // First rule: valid index 3 → should apply.
+        // Second rule: index 256 (out-of-range 0-255) → must be skipped; first colour stays.
+        var first = new TriggerRule
+        {
+            Kind = TriggerKind.Substring,
+            Pattern = "hero",
+            Action = TriggerActionKind.Highlight,
+            ActionValue = "3",
+        };
+        var second = new TriggerRule
+        {
+            Kind = TriggerKind.Substring,
+            Pattern = "hero",
+            Action = TriggerActionKind.Highlight,
+            ActionValue = "256", // out of range — skipped
+        };
+
+        var outcome = _engine.Apply("brave hero stands", [first, second]);
+
+        await Assert.That(outcome.Segments).IsNotEmpty();
+        foreach (var segment in outcome.Segments)
+        {
+            await Assert.That(segment.Style.Foreground).IsEqualTo(AnsiColor.Indexed(3));
+        }
+    }
+
+    [Test]
+    public async Task HighlightOnlyOutOfRangeActionValueLeavesSegmentsDefault()
+    {
+        var rule = new TriggerRule
+        {
+            Kind = TriggerKind.Substring,
+            Pattern = "hero",
+            Action = TriggerActionKind.Highlight,
+            ActionValue = "256", // out of range — no highlight applied
+        };
+
+        var outcome = _engine.Apply("brave hero stands", [rule]);
+
+        await Assert.That(outcome.Segments).IsNotEmpty();
+        foreach (var segment in outcome.Segments)
+        {
+            await Assert.That(segment.Style.Foreground).IsEqualTo(AnsiColor.Default);
+        }
+    }
 }

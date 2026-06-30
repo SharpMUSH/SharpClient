@@ -135,10 +135,11 @@ public sealed class SessionHistoryTests
         var result2 = await history.SearchAsync("*");
         var result3 = await history.SearchAsync("\"\"\"");
 
-        // Results are empty (special chars don't match plain text), but no exception was raised
-        await Assert.That(result1).IsNotNull();
-        await Assert.That(result2).IsNotNull();
-        await Assert.That(result3).IsNotNull();
+        // Sanitisation converts special chars to quoted literals that don't match the
+        // plain-text content, so results are empty — not null and not an exception.
+        await Assert.That(result1).Count().IsEqualTo(0);
+        await Assert.That(result2).Count().IsEqualTo(0);
+        await Assert.That(result3).Count().IsEqualTo(0);
     }
 
     // ── Sequence is monotonically from rowid ─────────────────────────────────
