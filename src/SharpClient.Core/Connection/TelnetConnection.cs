@@ -16,6 +16,7 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
     public event Action<ConnectionState>? StateChanged;
     public event Action<GmcpMessage>? GmcpReceived;
     public event Action<NegotiationEvent>? NegotiationReceived;
+    public event Action? MxpEnabled;
 
     public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
 
@@ -48,6 +49,7 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
                 .AddDefaultMUDProtocols(
                     onGMCPMessage: OnGmcpMessageAsync,
                     onMSSP: OnMsspAsync,
+                    onMXPEnabled: OnMxpEnabledAsync,
                     charsetOrder: CharsetPreference)
                 .BuildAndStartAsync(_client, cancellationToken);
 
@@ -128,6 +130,13 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
     private ValueTask OnGmcpMessageAsync((string Package, string Info) msg)
     {
         GmcpReceived?.Invoke(new GmcpMessage(msg.Package, msg.Info));
+        return ValueTask.CompletedTask;
+    }
+
+    private ValueTask OnMxpEnabledAsync()
+    {
+        MxpEnabled?.Invoke();
+        NegotiationReceived?.Invoke(new NegotiationEvent("MXP", "enabled"));
         return ValueTask.CompletedTask;
     }
 

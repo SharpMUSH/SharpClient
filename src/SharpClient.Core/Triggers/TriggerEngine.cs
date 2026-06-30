@@ -15,9 +15,9 @@ public sealed class TriggerEngine : ITriggerEngine
     private static readonly ConcurrentDictionary<(string Pattern, RegexOptions Options), Regex>
         RegexCache = new();
 
-    public TriggerOutcome Apply(string rawLine, IReadOnlyList<TriggerRule> rules)
+    public TriggerOutcome Apply(string rawLine, IReadOnlyList<TriggerRule> rules, MxpParserState? mxp = null)
     {
-        IReadOnlyList<StyledSegment> segments = AnsiParser.Parse(rawLine);
+        IReadOnlyList<StyledSegment> segments = AnsiParser.Parse(rawLine, mxp);
         var sendCommands = new List<string>();
         var notifications = new List<string>();
         AnsiColor? highlightForeground = null;

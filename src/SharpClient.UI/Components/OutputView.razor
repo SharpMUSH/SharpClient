@@ -7,7 +7,16 @@
         <div class="sc-line">
             @foreach (var segment in line.Segments)
             {
-                <span style="@SegmentStyle.ToCss(segment)">@(segment.Text.Length == 0 ? " " : segment.Text)</span>
+                @if (segment.Command is not null && OnSendCommand is not null)
+                {
+                    <button type="button" class="sc-link" style="@SegmentStyle.ToCss(segment)"
+                            title="@(segment.Hint ?? segment.Command)"
+                            @onclick="() => OnSendCommand(segment.Command!)">@(segment.Text.Length == 0 ? " " : segment.Text)</button>
+                }
+                else
+                {
+                    <span style="@SegmentStyle.ToCss(segment)">@(segment.Text.Length == 0 ? " " : segment.Text)</span>
+                }
             }
         </div>
     }
@@ -16,4 +25,8 @@
 @code {
     [Parameter]
     public IReadOnlyList<ScrollbackLine> Lines { get; set; } = [];
+
+    /// <summary>Invoked when a clickable MXP/Pueblo command-link is clicked.</summary>
+    [Parameter]
+    public Func<string, Task>? OnSendCommand { get; set; }
 }
