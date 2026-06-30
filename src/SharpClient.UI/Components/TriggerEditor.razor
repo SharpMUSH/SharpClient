@@ -1,0 +1,146 @@
+@using SharpClient.Core.Domain
+@using SharpClient.Core.Presentation
+@implements IDisposable
+
+<div class="sc-rule-editor">
+
+    @* ── Triggers section ──────────────────────────────────────────────── *@
+    <div class="sc-rule-section">
+        <div class="sc-rule-section-header">
+            <span class="sc-rule-section-title">Triggers</span>
+        </div>
+
+        @foreach (var rule in Vm.Triggers)
+        {
+            var ruleId = rule.Id;
+            <div class="sc-rule">
+                <span class="sc-rule-kind">@rule.Kind.ToString().ToLowerInvariant()</span>
+                <span class="sc-rule-pattern">@rule.Pattern</span>
+                <span class="sc-rule-action">@rule.Action.ToString().ToLowerInvariant() → @rule.ActionValue</span>
+                <input type="checkbox" class="sc-rule-toggle"
+                       checked="@rule.Enabled"
+                       @onchange="async _ => await Vm.ToggleTriggerAsync(ruleId)" />
+                <button type="button" class="sc-icon-btn sc-rule-delete-btn"
+                        title="Delete trigger"
+                        @onclick="async () => await Vm.DeleteTriggerAsync(ruleId)">🗑</button>
+            </div>
+        }
+
+        @if (Vm.Triggers.Count == 0)
+        {
+            <div class="sc-rule-empty">no triggers yet</div>
+        }
+
+        <div class="sc-rule-add">
+            <select class="sc-rule-add-select" @bind="_newTriggerKind">
+                <option value="@TriggerKind.Substring">substr</option>
+                <option value="@TriggerKind.Regex">regex</option>
+            </select>
+            <input class="sc-rule-add-input" placeholder="pattern" @bind="_newTriggerPattern" @bind:event="oninput" />
+            <select class="sc-rule-add-select" @bind="_newTriggerAction">
+                <option value="@TriggerActionKind.Highlight">highlight</option>
+                <option value="@TriggerActionKind.Send">send</option>
+                <option value="@TriggerActionKind.Notify">notify</option>
+            </select>
+            <input class="sc-rule-add-input" placeholder="value" @bind="_newTriggerValue" @bind:event="oninput" />
+            <button type="button" class="sc-rule-add-btn"
+                    disabled="@(!CanAddTrigger)"
+                    @onclick="AddTriggerAsync">Add</button>
+        </div>
+    </div>
+
+    @* ── Aliases section ───────────────────────────────────────────────── *@
+    <div class="sc-rule-section">
+        <div class="sc-rule-section-header">
+            <span class="sc-rule-section-title">Aliases</span>
+        </div>
+
+        @foreach (var alias in Vm.Aliases)
+        {
+            var aliasId = alias.Id;
+            <div class="sc-rule">
+                <span class="sc-rule-kind">alias</span>
+                <span class="sc-rule-pattern">@alias.Pattern</span>
+                <span class="sc-rule-action">→ @alias.Expansion</span>
+                <input type="checkbox" class="sc-rule-toggle"
+                       checked="@alias.Enabled"
+                       @onchange="async _ => await Vm.ToggleAliasAsync(aliasId)" />
+                <button type="button" class="sc-icon-btn sc-rule-delete-btn"
+                        title="Delete alias"
+                        @onclick="async () => await Vm.DeleteAliasAsync(aliasId)">🗑</button>
+            </div>
+        }
+
+        @if (Vm.Aliases.Count == 0)
+        {
+            <div class="sc-rule-empty">no aliases yet</div>
+        }
+
+        <div class="sc-rule-add">
+            <input class="sc-rule-add-input" placeholder="pattern (regex)" @bind="_newAliasPattern" @bind:event="oninput" />
+            <input class="sc-rule-add-input" placeholder="expansion" @bind="_newAliasExpansion" @bind:event="oninput" />
+            <button type="button" class="sc-rule-add-btn"
+                    disabled="@(!CanAddAlias)"
+                    @onclick="AddAliasAsync">Add</button>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    [Parameter] public TriggerAliasEditorViewModel Vm { get; set; } = null!;
+
+    // ── Trigger add form state ──────────────────────────────────────────
+    private TriggerKind _newTriggerKind = TriggerKind.Substring;
+    private string _newTriggerPattern = string.Empty;
+    private TriggerActionKind _newTriggerAction = TriggerActionKind.Highlight;
+    private string _newTriggerValue = string.Empty;
+
+    // ── Alias add form state ────────────────────────────────────────────
+    private string _newAliasPattern = string.Empty;
+    private string _newAliasExpansion = string.Empty;
+
+    private bool CanAddTrigger =>
+        !string.IsNullOrWhiteSpace(_newTriggerPattern) &&
+        !string.IsNullOrWhiteSpace(_newTriggerValue);
+
+    private bool CanAddAlias =>
+        !string.IsNullOrWhiteSpace(_newAliasPattern) &&
+        !string.IsNullOrWhiteSpace(_newAliasExpansion);
+
+    protected override void OnInitialized() => Vm.Changed += OnVmChanged;
+
+    private void OnVmChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task AddTriggerAsync()
+    {
+        if (!CanAddTrigger) return;
+
+        await Vm.AddTriggerAsync(new TriggerRule
+        {
+            Kind = _newTriggerKind,
+            Pattern = _newTriggerPattern.Trim(),
+            Action = _newTriggerAction,
+            ActionValue = _newTriggerValue.Trim(),
+        });
+
+        _newTriggerPattern = string.Empty;
+        _newTriggerValue = string.Empty;
+    }
+
+    private async Task AddAliasAsync()
+    {
+        if (!CanAddAlias) return;
+
+        await Vm.AddAliasAsync(new AliasRule
+        {
+            Pattern = _newAliasPattern.Trim(),
+            Expansion = _newAliasExpansion.Trim(),
+        });
+
+        _newAliasPattern = string.Empty;
+        _newAliasExpansion = string.Empty;
+    }
+
+    public void Dispose() => Vm.Changed -= OnVmChanged;
+}
