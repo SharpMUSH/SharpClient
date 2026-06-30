@@ -8,6 +8,8 @@ public sealed class UiFakeSession : ISession
     public ConnectionState State { get; set; } = ConnectionState.Connected;
     public string CharacterName { get; set; } = string.Empty;
     public string WorldName { get; set; } = string.Empty;
+    public Guid WorldId { get; set; } = Guid.Empty;
+    public Guid CharacterId { get; set; } = Guid.Empty;
     public IReadOnlyList<ScrollbackLine> Scrollback { get; set; } = [];
     public List<string> Sent { get; } = [];
 
@@ -23,6 +25,8 @@ public sealed class UiFakeSession : ISession
         Sent.Add(line);
         return Task.CompletedTask;
     }
+
+    public Task SendWindowSizeAsync(int cols, int rows) => Task.CompletedTask;
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

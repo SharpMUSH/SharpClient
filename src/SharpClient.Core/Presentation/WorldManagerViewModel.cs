@@ -101,6 +101,34 @@ public sealed class WorldManagerViewModel
         _sessions.Add(session);
     }
 
+    /// <summary>
+    /// Returns the active session for a character, matched first by
+    /// <see cref="ISession.CharacterId"/> (exact), then by character name as fallback.
+    /// </summary>
+    public ISession? ActiveSessionFor(Character character) =>
+        _sessions.Sessions.FirstOrDefault(s => s.CharacterId == character.Id)
+        ?? _sessions.Sessions.FirstOrDefault(s =>
+            string.Equals(s.CharacterName, character.Name, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Returns true if any character in the world currently has a live session.
+    /// </summary>
+    public bool IsWorldLive(World world) =>
+        world.Characters.Any(c => ActiveSessionFor(c) is not null);
+
+    /// <summary>
+    /// Activates (makes current) the existing session for the given character.
+    /// No-op if no session exists for that character.
+    /// </summary>
+    public void ActivateSession(Character character)
+    {
+        var session = ActiveSessionFor(character);
+        if (session is not null)
+        {
+            _sessions.Activate(session);
+        }
+    }
+
     // Stores the connect string as a secret keyed by the character id; never writes it
     // into a domain text field. A blank connect string leaves any existing secret in
     // place (edit cannot clear a secret — functional over fancy).

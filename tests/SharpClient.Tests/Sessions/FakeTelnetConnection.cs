@@ -11,6 +11,7 @@ public sealed class FakeTelnetConnection : ITelnetConnection
 
     public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
     public List<string> Sent { get; } = [];
+    public List<(int Width, int Height)> NawsSent { get; } = [];
 
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default)
     {
@@ -27,6 +28,12 @@ public sealed class FakeTelnetConnection : ITelnetConnection
     public Task DisconnectAsync()
     {
         RaiseState(ConnectionState.Disconnected);
+        return Task.CompletedTask;
+    }
+
+    public Task SendNawsAsync(int width, int height)
+    {
+        NawsSent.Add((width, height));
         return Task.CompletedTask;
     }
 

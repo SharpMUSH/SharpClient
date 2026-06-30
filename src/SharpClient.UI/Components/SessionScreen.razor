@@ -1,7 +1,11 @@
+@using Microsoft.JSInterop
 @using SharpClient.Core.Presentation
 @using SharpClient.Core.Sessions
 
-@implements IDisposable
+@inject SettingsViewModel Settings
+@inject IJSRuntime JS
+
+@implements IAsyncDisposable
 
 <div class="sc-session-screen">
     <div class="sc-session-header">
@@ -11,7 +15,7 @@
             <button class="sc-protocol-toggle" @onclick="ToggleProtocol" title="Toggle protocol panel">{ }</button>
         }
     </div>
-    <div class="sc-output-area">
+    <div class="sc-output-area" @ref="_outputRef" style="font-size:var(--out-fs)">
         @if (Vm.Active is null)
         {
             <div class="sc-empty-state">
@@ -38,18 +42,92 @@
     public ProtocolPanelViewModel? ProtocolVm { get; set; }
 
     private bool _showProtocol;
+    private ElementReference _outputRef;
+    private IJSObjectReference? _interop;
+    private DotNetObjectReference<SessionScreen>? _dotNetRef;
+    private int _lastMinColumns;
 
     protected override void OnInitialized()
     {
         Vm.Changed += OnVmChanged;
+        Settings.Changed += OnSettingsChanged;
+        _lastMinColumns = Settings.MinColumns;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            _interop = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/SharpClient.UI/sc-interop.js");
+            var dims = await _interop.InvokeAsync<SizeDims>("observeResize", _dotNetRef, _outputRef);
+            await ApplyFontAndNawsAsync(dims.Width, dims.Height);
+        }
+        else if (_lastMinColumns != Settings.MinColumns)
+        {
+            _lastMinColumns = Settings.MinColumns;
+            // Re-query current size and push updated NAWS.
+            if (_interop is not null && _dotNetRef is not null)
+            {
+                var dims = await _interop.InvokeAsync<SizeDims>("observeResize", _dotNetRef, _outputRef);
+                await ApplyFontAndNawsAsync(dims.Width, dims.Height);
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnResized(int width, int height)
+    {
+        await ApplyFontAndNawsAsync(width, height);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplyFontAndNawsAsync(int widthPx, int heightPx)
+    {
+        if (widthPx <= 0)
+        {
+            return;
+        }
+
+        var minCols = Settings.MinColumns;
+        // fontPx = floor(widthPx / (MinColumns * 0.6)), clamped to [8, MaxFontSize]
+        var rawFontPx = (int)Math.Floor(widthPx / (minCols * 0.6));
+        var fontPx = Math.Max(8, Math.Min(Settings.MaxFontSize, rawFontPx));
+
+        await JS.InvokeVoidAsync("eval",
+            $"document.documentElement.style.setProperty('--out-fs','{fontPx}px')");
+
+        if (Vm.Active is not null)
+        {
+            var rows = heightPx > 0 ? (int)Math.Floor(heightPx / (fontPx * 1.58)) : 24;
+            await Vm.Active.SendWindowSizeAsync(minCols, rows);
+        }
     }
 
     private void OnVmChanged() => InvokeAsync(StateHasChanged);
 
+    private void OnSettingsChanged() => InvokeAsync(StateHasChanged);
+
     private void ToggleProtocol() => _showProtocol = !_showProtocol;
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         Vm.Changed -= OnVmChanged;
+        Settings.Changed -= OnSettingsChanged;
+
+        if (_interop is not null && _dotNetRef is not null)
+        {
+            await _interop.InvokeVoidAsync("stopObserving", _outputRef);
+        }
+
+        _dotNetRef?.Dispose();
+
+        if (_interop is not null)
+        {
+            await _interop.DisposeAsync();
+        }
     }
+
+    private sealed record SizeDims(int Width, int Height);
 }
