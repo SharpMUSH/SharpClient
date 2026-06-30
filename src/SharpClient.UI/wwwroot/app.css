@@ -349,6 +349,10 @@ body {
 .sc-wm-sub { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 3px; }
 .sc-wm-addbtn { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--acc2); background: var(--acc-soft); border: 1px solid var(--acc-line); border-radius: 9px; padding: 7px 11px; cursor: pointer; }
 
+.sc-wm-error { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid #e06c75; border-radius: 10px; padding: 10px 12px; }
+.sc-wm-error-text { flex: 1; font-size: 13px; color: #e06c75; line-height: 1.4; }
+.sc-wm-error-dismiss { flex: none; width: 24px; height: 24px; border-radius: 7px; background: transparent; border: 1px solid var(--bd); color: #e06c75; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
 .sc-wm-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 60px 20px; }
 .sc-wm-empty-title { font-size: 17px; font-weight: 600; color: #e7ecf2; }
 .sc-wm-empty-text { font-size: 13px; color: var(--dim); max-width: 230px; line-height: 1.5; }

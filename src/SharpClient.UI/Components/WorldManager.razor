@@ -13,6 +13,14 @@
         <button type="button" class="sc-wm-addbtn" @onclick="OpenAddWorld">+ World</button>
     </div>
 
+    @if (Vm.LastError is { } error)
+    {
+        <div class="sc-wm-error" role="alert">
+            <span class="sc-wm-error-text">@error</span>
+            <button type="button" class="sc-wm-error-dismiss" title="Dismiss" @onclick="DismissError">×</button>
+        </div>
+    }
+
     @if (!Vm.HasWorlds)
     {
         <div class="sc-wm-empty">
@@ -218,6 +226,8 @@
         await Vm.ConnectAsync(world, character);
 
     private async Task OpenRulesAsync(Guid worldId) => await OnOpenRules.InvokeAsync(worldId);
+
+    private void DismissError() => Vm.ClearError();
 
     private void OpenSession(Character character)
     {

@@ -6,11 +6,26 @@ using TelnetNegotiationCore.Models;
 
 namespace SharpClient.Core.Connection;
 
-public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelnetConnection
+public sealed class TelnetConnection : ITelnetConnection
 {
+    private readonly ITelnetInterpreterFactory _factory;
+    private readonly ReconnectOptions _reconnect;
+
     private TcpClient? _client;
     private TelnetInterpreter? _interpreter;
     private Task? _readTask;
+    private Task? _monitorTask;
+    private CancellationTokenSource? _reconnectCts;
+
+    private string? _host;
+    private int _port;
+    private bool _intentionalDisconnect;
+
+    public TelnetConnection(ITelnetInterpreterFactory factory, ReconnectOptions? reconnectOptions = null)
+    {
+        _factory = factory;
+        _reconnect = reconnectOptions ?? ReconnectOptions.Default;
+    }
 
     public event Action<string>? LineReceived;
     public event Action<ConnectionState>? StateChanged;
@@ -33,29 +48,15 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
 
     public async Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default)
     {
-        if (_client is not null)
-        {
-            await DisconnectAsync();
-        }
+        await DisconnectAsync();
+
+        _intentionalDisconnect = false;
+        _reconnectCts = new CancellationTokenSource();
 
         SetState(ConnectionState.Connecting);
         try
         {
-            _client = new TcpClient();
-            await _client.ConnectAsync(host, port, cancellationToken);
-
-            var (interpreter, readTask) = await factory.CreateBuilder()
-                .OnSubmit(OnSubmitAsync)
-                .AddDefaultMUDProtocols(
-                    onGMCPMessage: OnGmcpMessageAsync,
-                    onMSSP: OnMsspAsync,
-                    onMXPEnabled: OnMxpEnabledAsync,
-                    charsetOrder: CharsetPreference)
-                .BuildAndStartAsync(_client, cancellationToken);
-
-            _interpreter = interpreter;
-            _readTask = readTask;
-            SetState(ConnectionState.Connected);
+            await EstablishConnectionAsync(host, port, cancellationToken);
         }
         catch
         {
@@ -95,6 +96,11 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
 
     public async Task DisconnectAsync()
     {
+        // Mark intentional first so the read-loop monitor does not treat the
+        // resulting socket teardown as a drop and try to reconnect.
+        _intentionalDisconnect = true;
+        _reconnectCts?.Cancel();
+
         if (_interpreter is not null)
         {
             await _interpreter.DisposeAsync();
@@ -106,20 +112,122 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
 
         if (_readTask is not null)
         {
-            try
-            {
-                await _readTask;
-            }
-            catch (OperationCanceledException) { }
-            catch (System.IO.IOException) { }
-            catch (ObjectDisposedException) { }
+            await AwaitQuietlyAsync(_readTask);
             _readTask = null;
         }
+
+        // Wait for the monitor (and any in-flight reconnect loop) to unwind before
+        // disposing the CTS it observes.
+        if (_monitorTask is not null)
+        {
+            await AwaitQuietlyAsync(_monitorTask);
+            _monitorTask = null;
+        }
+
+        _reconnectCts?.Dispose();
+        _reconnectCts = null;
 
         SetState(ConnectionState.Disconnected);
     }
 
     public async ValueTask DisposeAsync() => await DisconnectAsync();
+
+    // Performs the actual TCP connect + telnet negotiation and starts the read-loop
+    // monitor. Used both for the initial connect and for each reconnect attempt.
+    private async Task EstablishConnectionAsync(string host, int port, CancellationToken cancellationToken)
+    {
+        var client = new TcpClient();
+        // SO_KEEPALIVE lets the OS probe a silently-dead peer so a half-open socket
+        // eventually surfaces as a read-loop completion instead of hanging forever.
+        client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+        await client.ConnectAsync(host, port, cancellationToken);
+
+        var (interpreter, readTask) = await _factory.CreateBuilder()
+            .OnSubmit(OnSubmitAsync)
+            .AddDefaultMUDProtocols(
+                onGMCPMessage: OnGmcpMessageAsync,
+                onMSSP: OnMsspAsync,
+                onMXPEnabled: OnMxpEnabledAsync,
+                charsetOrder: CharsetPreference)
+            .BuildAndStartAsync(client, cancellationToken);
+
+        _client = client;
+        _interpreter = interpreter;
+        _readTask = readTask;
+        _host = host;
+        _port = port;
+        SetState(ConnectionState.Connected);
+        _monitorTask = MonitorReadLoopAsync(readTask);
+    }
+
+    // Watches the interpreter's read loop. When it completes (server closed the socket
+    // or a read error), and the teardown was not user-initiated, drives reconnection.
+    private async Task MonitorReadLoopAsync(Task readTask)
+    {
+        await AwaitQuietlyAsync(readTask);
+
+        if (_intentionalDisconnect || _reconnectCts is null)
+        {
+            return;
+        }
+
+        await ReconnectLoopAsync(_reconnectCts.Token);
+    }
+
+    private async Task ReconnectLoopAsync(CancellationToken token)
+    {
+        SetState(ConnectionState.Reconnecting);
+
+        for (var attempt = 1; attempt <= _reconnect.MaxAttempts; attempt++)
+        {
+            try
+            {
+                await Task.Delay(_reconnect.DelayFor(attempt), token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            if (token.IsCancellationRequested || _intentionalDisconnect)
+            {
+                return;
+            }
+
+            // Tear down the dead client before the next attempt; keep the existing
+            // state (Reconnecting) so we don't flicker through Disconnected.
+            _client?.Dispose();
+            _client = null;
+            _interpreter = null;
+
+            try
+            {
+                await EstablishConnectionAsync(_host!, _port, token);
+                return;
+            }
+            catch
+            {
+                // Attempt failed; fall through to the next backoff iteration.
+            }
+        }
+
+        if (!_intentionalDisconnect && !token.IsCancellationRequested)
+        {
+            SetState(ConnectionState.Error);
+        }
+    }
+
+    private static async Task AwaitQuietlyAsync(Task task)
+    {
+        try
+        {
+            await task;
+        }
+        catch (OperationCanceledException) { }
+        catch (System.IO.IOException) { }
+        catch (ObjectDisposedException) { }
+        catch (SocketException) { }
+    }
 
     private ValueTask OnSubmitAsync(byte[] data, Encoding encoding, TelnetInterpreter interpreter)
     {

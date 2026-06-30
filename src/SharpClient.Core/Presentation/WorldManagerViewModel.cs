@@ -12,6 +12,7 @@ public sealed class WorldManagerViewModel
     private readonly ISessionLauncher _launcher;
 
     private IReadOnlyList<World> _worlds = [];
+    private string? _lastError;
 
     public WorldManagerViewModel(
         IWorldStore store,
@@ -28,6 +29,12 @@ public sealed class WorldManagerViewModel
     public IReadOnlyList<World> Worlds => _worlds;
 
     public bool HasWorlds => _worlds.Count > 0;
+
+    /// <summary>
+    /// User-visible message describing the most recent connect failure, or null when
+    /// there is nothing to show. Dismiss with <see cref="ClearError"/>.
+    /// </summary>
+    public string? LastError => _lastError;
 
     public event Action? Changed;
 
@@ -97,8 +104,37 @@ public sealed class WorldManagerViewModel
 
     public async Task ConnectAsync(World world, Character character, CancellationToken cancellationToken = default)
     {
-        var session = await _launcher.LaunchAsync(world, character, cancellationToken);
-        _sessions.Add(session);
+        // The launcher (and the telnet connect it wraps) throws on a bad host/port or an
+        // offline server. Catch it here so the failure surfaces as a dismissible banner
+        // instead of tearing through the Blazor circuit with no user feedback.
+        try
+        {
+            var session = await _launcher.LaunchAsync(world, character, cancellationToken);
+            _sessions.Add(session);
+            ClearError();
+        }
+        catch (Exception ex)
+        {
+            SetError($"Couldn't connect to {world.Name}: {ex.Message}");
+        }
+    }
+
+    /// <summary>Clears any surfaced connect error and notifies observers if one was set.</summary>
+    public void ClearError()
+    {
+        if (_lastError is null)
+        {
+            return;
+        }
+
+        _lastError = null;
+        RaiseChanged();
+    }
+
+    private void SetError(string message)
+    {
+        _lastError = message;
+        RaiseChanged();
     }
 
     /// <summary>
