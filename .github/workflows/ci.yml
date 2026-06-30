@@ -1,0 +1,38 @@
+name: CI
+
+# Run unit tests on every pull request, regardless of which branch it targets,
+# so incoming PRs are verified before merge. Also runnable manually.
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Each test project (TUnit on Microsoft.Testing.Platform) is an executable
+      # that returns a non-zero exit code on failure. They reference only the
+      # plain net10.0 libraries (Core / UI / Data) — not the MAUI Android head —
+      # so no Android SDK or maui workload is needed here. Release config means
+      # TreatWarningsAsErrors also gates the build.
+      - name: Core tests
+        run: dotnet run --project tests/SharpClient.Tests/SharpClient.Tests.csproj -c Release
+
+      - name: UI component tests (bUnit)
+        run: dotnet run --project tests/SharpClient.UI.Tests/SharpClient.UI.Tests.csproj -c Release
+
+      - name: Data / persistence tests
+        run: dotnet run --project tests/SharpClient.Data.Tests/SharpClient.Data.Tests.csproj -c Release

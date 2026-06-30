@@ -1,0 +1,86 @@
+name: Release APK
+
+# When a GitHub Release is published, build the Android APK and attach it to the
+# release. Also runnable manually (uploads the APK as a workflow artifact only).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write # required to upload assets onto the release
+
+jobs:
+  build-apk:
+    name: Build & attach Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # .NET for Android (net10.0-android) requires JDK 17 specifically.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up .NET (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Install MAUI Android workload
+        run: dotnet workload install maui-android
+
+      # Acquire any missing Android SDK platform/build-tools for the target API
+      # into the runner's pre-installed SDK (ANDROID_SDK_ROOT). Accepts licenses.
+      - name: Install Android SDK dependencies
+        run: >
+          dotnet build src/SharpClient.App/SharpClient.App.csproj
+          -f net10.0-android
+          -t:InstallAndroidDependencies
+          -p:AcceptAndroidSdkLicenses=True
+          -p:JavaSdkDirectory="$JAVA_HOME"
+          -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
+
+      # Produces a signed APK. By default this uses an auto-generated debug key
+      # (installable via sideload). For Play-store signing, add a keystore via
+      # repository secrets and pass -p:AndroidKeyStore=true -p:AndroidSigningKeyStore=...
+      # -p:AndroidSigningStorePass=... -p:AndroidSigningKeyAlias=... -p:AndroidSigningKeyPass=...
+      - name: Publish APK (Release)
+        run: >
+          dotnet publish src/SharpClient.App/SharpClient.App.csproj
+          -c Release
+          -f net10.0-android
+          -p:JavaSdkDirectory="$JAVA_HOME"
+          -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
+          -p:AcceptAndroidSdkLicenses=True
+
+      - name: Locate APK
+        id: apk
+        run: |
+          apk="$(find src/SharpClient.App/bin/Release/net10.0-android -name '*-Signed.apk' | head -n1)"
+          if [ -z "$apk" ]; then
+            apk="$(find src/SharpClient.App/bin/Release/net10.0-android -name '*.apk' | head -n1)"
+          fi
+          if [ -z "$apk" ]; then
+            echo "No APK found under bin/Release/net10.0-android" >&2
+            find src/SharpClient.App/bin/Release/net10.0-android -name '*.apk' >&2 || true
+            exit 1
+          fi
+          echo "path=$apk" >> "$GITHUB_OUTPUT"
+          echo "Found APK: $apk"
+
+      - name: Upload APK as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sharpclient-apk
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+
+      - name: Attach APK to the GitHub Release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ steps.apk.outputs.path }}" --clobber
