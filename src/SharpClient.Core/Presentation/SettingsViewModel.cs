@@ -63,6 +63,13 @@ public sealed class SettingsViewModel
         _accent      = prefs.GetString("Accent",      "#9b7ed4");
         _glow        = prefs.GetBool  ("Glow",        true);
         _scanlines   = prefs.GetBool  ("Scanlines",   true);
+
+        // Clamp unknown accent to default so --acc2/soft/line don't desync.
+        if (!s_accentMeta.ContainsKey(_accent))
+        {
+            _accent = "#9b7ed4";
+            _prefs.SetString("Accent", _accent);
+        }
     }
 
     // ── Properties ───────────────────────────────────────────────────────────
@@ -114,7 +121,7 @@ public sealed class SettingsViewModel
             var (acc2, soft, line) = s_accentMeta.TryGetValue(_accent, out var m) ? m
                 : ("#b89fe0", "rgba(155,126,212,.16)", "rgba(155,126,212,.55)");
             return $"--acc:{_accent};--acc2:{acc2};--acc-soft:{soft};--acc-line:{line};" +
-                   $"--mono:{FontFamily};--out-fs:{_maxFontSize}px;";
+                   $"--mono:{FontFamily};--out-fs:{_maxFontSize}px;--min-cols:{_minColumns};";
         }
     }
 }
