@@ -105,4 +105,16 @@ public sealed class AnsiParserTests
         await Assert.That(segments[0].Style.Background).IsEqualTo(AnsiColor.Default);
         await Assert.That(segments[0].Text).IsEqualTo("X");
     }
+
+    [Test]
+    public async Task TrailingNewlineIsPreservedInSegmentText()
+    {
+        // A line delivered from the server may include a trailing '\n'.
+        // AnsiParser is not responsible for stripping it — the raw character
+        // must survive into the segment text unchanged.
+        var segments = AnsiParser.Parse("hello\n");
+
+        await Assert.That(segments.Count).IsEqualTo(1);
+        await Assert.That(segments[0].Text).IsEqualTo("hello\n");
+    }
 }

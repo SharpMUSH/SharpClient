@@ -38,4 +38,27 @@ public sealed class AnsiPaletteTests
     {
         await Assert.That(AnsiPalette.ToHex(999)).IsEqualTo("#c4d1c8");
     }
+
+    // ── New tests ────────────────────────────────────────────────────────────
+
+    [Test]
+    public async Task GrayscaleRampEndsAtIndex255()
+    {
+        // v = 8 + (255 − 232) × 10 = 8 + 230 = 238 = 0xEE
+        await Assert.That(AnsiPalette.ToHex(255)).IsEqualTo("#eeeeee");
+    }
+
+    [Test]
+    public async Task MidCubeIndex100Maps()
+    {
+        // n = 100 − 16 = 84; r = CubeSteps[84/36%6]=CubeSteps[2]=135=0x87
+        // g = CubeSteps[84/6%6]=CubeSteps[2]=135=0x87; b = CubeSteps[84%6]=CubeSteps[0]=0=0x00
+        await Assert.That(AnsiPalette.ToHex(100)).IsEqualTo("#878700");
+    }
+
+    [Test]
+    public async Task NegativeIndexFallsBackToPhosphor()
+    {
+        await Assert.That(AnsiPalette.ToHex(-1)).IsEqualTo("#c4d1c8");
+    }
 }
