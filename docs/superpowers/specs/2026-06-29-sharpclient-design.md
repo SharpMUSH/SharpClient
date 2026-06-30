@@ -91,12 +91,26 @@ The UI surfaces five states, so `ConnectionState` is extended beyond Phase 1's
 raise a `StateChanged` event (Phase 1 shipped it on `TelnetConnection`; `Session`
 forwarding is a Phase-2 addition the UI binds to for tab dots/pills).
 
-### Persistence
+### Persistence — backing store (decided)
 
-- Worlds + Characters serialized to `worlds.json` in `FileSystem.AppDataDirectory`.
-- **Secrets** (passwords in connect strings) stored via MAUI `SecureStorage`, keyed
-  by Character — never written to `worlds.json` in plaintext.
-- Per-Character session logs written under app data (`logs/<world>/<character>/…`).
+The modern .NET stack, chosen because we want **searchable session history**:
+
+- **SQLite via EF Core** (`Microsoft.EntityFrameworkCore.Sqlite`) is the primary
+  structured store — `Worlds`, `Characters`, `Triggers`, `Aliases` as related
+  tables with migrations. The DB file lives in `FileSystem.AppDataDirectory`.
+- **Searchable session history** uses a **SQLite FTS5** virtual table over stored
+  session lines (full-text search across sessions, persisted across restarts).
+  EF Core doesn't model FTS5 natively, so the history layer uses a keyless entity
+  + raw SQL via `Microsoft.Data.Sqlite`.
+- **Secrets** (passwords in connect strings) stay in MAUI `SecureStorage`
+  (Android Keystore), keyed by Character — **never** in the SQLite DB.
+- **App preferences** (output font, min columns, max font size, accent,
+  glow/scanlines) in MAUI `Preferences`.
+- All of this sits **behind interfaces** (`IWorldStore` → EF Core impl,
+  `ISessionHistory` → FTS5 impl, `ISecretStore` → SecureStorage). Core stays
+  MAUI-free. **Tests** run EF Core SQLite against an in-memory/temp-file
+  connection — fast, deterministic, no device — preserving interface-based
+  testing.
 
 ## 5. Components (each a focused, independently testable unit)
 
@@ -106,7 +120,8 @@ forwarding is a Phase-2 addition the UI binds to for tab dots/pills).
 | `AnsiParser` | Pure: raw line → `List<StyledSegment>` (fg/bg/bold/underline/inverse, incl. xterm-256). No I/O. | — |
 | `TriggerEngine` | Apply declarative trigger rules to incoming lines → actions (highlight/send/notify). | `AnsiParser` model |
 | `AliasEngine` | Expand input patterns → text with `$1…$n` args before send. | — |
-| `WorldStore` | CRUD Worlds with nested Characters; JSON persistence + SecureStorage for secrets. | MAUI storage |
+| `WorldStore` | CRUD Worlds with nested Characters via EF Core SQLite; secrets via `ISecretStore`. | EF Core SQLite |
+| `SessionHistory` | Persist session lines + full-text search via SQLite FTS5. | `Microsoft.Data.Sqlite` |
 | `SessionLogger` | Append per-Character session output (raw + cleaned) to a log file. | file I/O |
 | `Session` | Tie one Character (+ its World) to a live `TelnetConnection` + logger + trigger engine + scrollback buffer of parsed lines. The unit the UI binds to. | above units |
 | `SessionManager` | Hold open Sessions (tabs); track the active one. | `Session` |
@@ -185,16 +200,21 @@ terminal size derived from the output view dimensions.
 
 1. **Core pipeline** ✅ *done* — `TelnetConnection` + `AnsiParser` + minimal
    `Session`, connect/send/receive to a real MUSH (PR #1).
-2. **UI foundation** — extract Core interfaces (§5.1) + platform abstractions;
-   `SegmentStyle` render-contract mapper; view models for the session/world
-   surfaces; the design tokens/CSS; the Blazor shell, `OutputView`, `InputBar`,
-   `SessionTabs`; `SessionManager`; `Reconnecting`/`Error` states +
-   `Session.StateChanged`. bUnit + view-model tests, all interface-based.
-3. **Worlds & Characters** — `WorldStore` (via `IAppStorage`), `ISecretStore`
-   secrets, `WorldManager` UI, Connect flow + login automation.
-4. **Negotiation + Protocol Panel** — GMCP/MSDP/NAWS surfacing + the panel.
-5. **Triggers/aliases + logging** — declarative engines, editor UI,
-   `SessionLogger`.
+2. **UI foundation** ✅ *done* — Core interfaces (`ITelnetConnection`/`ISession`/
+   `ISessionManager`); `AnsiPalette` + `SegmentStyle` render contract;
+   `SessionManager`; `SessionsViewModel`; `Reconnecting`/`Error` +
+   `Session.StateChanged`; bUnit-tested `OutputView`. All interface-based.
+3. **Session shell + Web preview host** — `SharpClient.Web` (Blazor Server over
+   the RCL with in-memory fakes, for native-on-Linux visual testing without the
+   Android SDK); `SessionTabs`, `InputBar`, the session screen wiring
+   `SessionsViewModel`; design-token CSS; phone-nav / tablet-rail shell.
+4. **Worlds & Characters** — `WorldStore` over **EF Core SQLite**, `ISecretStore`
+   (SecureStorage) secrets, `Preferences` for app settings, `WorldManager` UI,
+   Connect flow + login automation. `SessionHistory` (SQLite FTS5) for searchable
+   history.
+5. **Negotiation + Protocol Panel** — GMCP/MSDP/NAWS surfacing + the panel.
+6. **Triggers/aliases + logging** — declarative engines, editor UI; session
+   lines persisted to `SessionHistory` (replaces flat log files).
 
 The visual design is now **folded in** (§3 "Visual design", `docs/design/`):
 the "Phosphor" direction, colour/typography tokens, the ANSI palette, the
