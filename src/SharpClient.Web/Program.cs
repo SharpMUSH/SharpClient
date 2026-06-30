@@ -57,6 +57,10 @@ builder.Services.AddScoped<WorldManagerViewModel>(sp => new WorldManagerViewMode
 builder.Services.AddScoped<TriggerAliasEditorViewModel>(sp =>
     new TriggerAliasEditorViewModel(
         sp.GetRequiredService<IWorldStore>()));
+builder.Services.AddScoped<HistorySearchViewModel>(sp =>
+    new HistorySearchViewModel(
+        sp.GetRequiredService<ISessionHistory>(),
+        sp.GetRequiredService<IWorldStore>()));
 
 var app = builder.Build();
 

@@ -1,4 +1,5 @@
 @using Microsoft.JSInterop
+@using SharpClient.Core.Connection
 @using SharpClient.Core.Presentation
 @using SharpClient.Core.Sessions
 
@@ -10,10 +11,26 @@
 <div class="sc-session-screen">
     <div class="sc-session-header">
         <SessionTabs Vm="Vm" />
-        @if (ProtocolVm is not null)
-        {
-            <button class="sc-protocol-toggle" @onclick="ToggleProtocol" title="Toggle protocol panel">{ }</button>
-        }
+        <div class="sc-session-actions">
+            @if (Vm.Active is not null)
+            {
+                <span class="sc-state-pill sc-state-@StateClass(Vm.Active.State)">
+                    <span class="sc-state-pill-dot"></span>
+                    @StateLabel(Vm.Active.State)
+                </span>
+            }
+            @if (ProtocolVm is not null)
+            {
+                <button class="sc-protocol-toggle @(_showProtocol ? "sc-protocol-toggle-active" : string.Empty)"
+                        @onclick="ToggleProtocol" title="Toggle protocol panel" aria-label="Toggle protocol panel">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M7.5 6 4 10l3.5 4" />
+                        <path d="M12.5 6 16 10l-3.5 4" />
+                    </svg>
+                </button>
+            }
+        </div>
     </div>
     <div class="sc-output-area" @ref="_outputRef">
         @if (Vm.Active is null)
@@ -116,6 +133,24 @@
     private void OnSettingsChanged() => InvokeAsync(StateHasChanged);
 
     private void ToggleProtocol() => _showProtocol = !_showProtocol;
+
+    private static string StateClass(ConnectionState state) => state switch
+    {
+        ConnectionState.Connected => "connected",
+        ConnectionState.Connecting => "connecting",
+        ConnectionState.Reconnecting => "reconnecting",
+        ConnectionState.Error => "error",
+        _ => "disconnected",
+    };
+
+    private static string StateLabel(ConnectionState state) => state switch
+    {
+        ConnectionState.Connected => "Connected",
+        ConnectionState.Connecting => "Connecting",
+        ConnectionState.Reconnecting => "Reconnecting",
+        ConnectionState.Error => "Error",
+        _ => "Disconnected",
+    };
 
     public async ValueTask DisposeAsync()
     {

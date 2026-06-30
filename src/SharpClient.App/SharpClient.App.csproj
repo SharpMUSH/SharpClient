@@ -51,10 +51,17 @@
     <!-- Android Release defaults to Mono AOT, which fails to precompile
          TelnetNegotiationCore.Functional.dll (it depends on FSharp.Core, which the
          AOT compiler cannot resolve). Disable AOT for Android Release so `dotnet
-         publish -c Release` produces an APK; the app runs under the JIT/interpreter. -->
+         publish -c Release` produces an APK; the app runs under the JIT/interpreter.
+
+         PublishTrimmed=false: the Release trimmer ("optimize assemblies for size") fails on
+         FSharp.Core's embedded ILLink.Substitutions.xml — it tries to remove F# signature/
+         optimization resources it can't find and aborts with IL2040 / NETSDK1144. That substitution
+         step can't be suppressed, so disable trimming for the Android Release build. The APK is
+         larger but correct; size-trim can be revisited if FSharp.Core's linker metadata is fixed. -->
     <PropertyGroup Condition="'$(Configuration)' == 'Release' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
         <RunAOTCompilation>false</RunAOTCompilation>
         <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+        <PublishTrimmed>false</PublishTrimmed>
     </PropertyGroup>
 
     <ItemGroup>
@@ -98,7 +105,11 @@
              directly so its types (ITelnetInterpreterFactory, AddTelnetClient) are
              visible under net10.0-android; transitive exposure from SharpClient.Core
              does not flow through for the MAUI Android TFM. -->
-        <PackageReference Include="TelnetNegotiationCore" Version="2.5.0" />
+        <!-- 2.5.1 fixes the missing FSharp.Core nuspec dependency, so FSharp.Core now flows in
+             transitively (and is packaged into the APK) without an explicit reference here. The F#
+             MSDP assembly no longer crashes negotiation with "Could not load file or assembly
+             'FSharp.Core'". -->
+        <PackageReference Include="TelnetNegotiationCore" Version="2.5.1" />
     </ItemGroup>
 
     <ItemGroup>

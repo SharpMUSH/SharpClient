@@ -93,6 +93,10 @@ public static class MauiProgram
                 sp.GetRequiredService<ISecretStore>(),
                 sp.GetRequiredService<ISessionManager>(),
                 sp.GetRequiredService<ISessionLauncher>()));
+        builder.Services.AddTransient<HistorySearchViewModel>(sp =>
+            new HistorySearchViewModel(
+                sp.GetRequiredService<ISessionHistory>(),
+                sp.GetRequiredService<IWorldStore>()));
 
         // ── Session launcher (real telnet) ────────────────────────────────
         builder.Services.AddTransient<ISessionLauncher, SharpClient.Core.Sessions.TelnetSessionLauncher>();

@@ -1,0 +1,66 @@
+@using SharpClient.Core.Presentation
+@implements IDisposable
+
+<div class="sc-history-search">
+    <div class="sc-history-search-header">
+        <div class="sc-history-search-title">History Search</div>
+        <div class="sc-history-search-sub">Full-text search across every line received this session and before.</div>
+    </div>
+
+    <form class="sc-history-search-bar" @onsubmit="RunSearchAsync" @onsubmit:preventDefault="true">
+        <input class="sc-history-search-input"
+               type="search"
+               placeholder="Search transcript…"
+               autocomplete="off"
+               value="@Vm.Query"
+               @oninput="e => Vm.SetQuery(e.Value?.ToString() ?? string.Empty)" />
+        <button class="sc-history-search-btn" type="submit" disabled="@(Vm.IsSearching)">
+            @(Vm.IsSearching ? "…" : "Search")
+        </button>
+        @if (Vm.HasSearched)
+        {
+            <button class="sc-history-clear-btn" type="button" @onclick="Clear" title="Clear">&#xD7;</button>
+        }
+    </form>
+
+    @if (Vm.IsSearching)
+    {
+        <p class="sc-history-status">Searching…</p>
+    }
+    else if (Vm.HasSearched && Vm.Results.Count == 0)
+    {
+        <p class="sc-history-status">No matches.</p>
+    }
+    else if (Vm.Results.Count > 0)
+    {
+        <p class="sc-history-count">@Vm.Results.Count match@(Vm.Results.Count == 1 ? "" : "es")</p>
+        <ul class="sc-history-results">
+            @foreach (var hit in Vm.Results)
+            {
+                <li class="sc-history-result">
+                    <span class="sc-history-result-char">@hit.CharacterLabel</span>
+                    <span class="sc-history-result-line">@hit.Line</span>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p class="sc-history-status">Type a query and press Search.</p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public HistorySearchViewModel Vm { get; set; } = null!;
+
+    protected override void OnInitialized() => Vm.Changed += OnChanged;
+
+    private Task RunSearchAsync() => Vm.SearchAsync();
+
+    private void Clear() => Vm.Clear();
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Vm.Changed -= OnChanged;
+}
