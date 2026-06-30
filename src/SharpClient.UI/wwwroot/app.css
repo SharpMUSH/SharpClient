@@ -136,7 +136,7 @@ body {
 .sc-session-screen {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100%;
     background: var(--bg);
 }
 
@@ -343,7 +343,7 @@ body {
 }
 
 /* ── World Manager ─────────────────────────────────────────────────────── */
-.sc-wm { max-width: 560px; margin: 0 auto; padding: 18px 14px 80px; display: flex; flex-direction: column; gap: 10px; }
+.sc-wm { max-width: 560px; margin: 0 auto; padding: 18px 14px 24px; display: flex; flex-direction: column; gap: 10px; }
 .sc-wm-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .sc-wm-title { font-size: 19px; font-weight: 600; color: #eff3f7; letter-spacing: -.01em; }
 .sc-wm-sub { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 3px; }
@@ -391,13 +391,37 @@ body {
 .sc-modal-submit { margin-top: 4px; font-size: 14px; font-weight: 600; color: #0a0c10; background: var(--acc2); border: none; border-radius: 10px; padding: 13px; cursor: pointer; }
 .sc-modal-submit:disabled { opacity: .5; cursor: not-allowed; }
 
-/* ── Top nav ───────────────────────────────────────────────────────────── */
-.sc-nav { position: fixed; top: 10px; right: 14px; z-index: 40; display: flex; gap: 6px; }
-.sc-nav-link { font-family: var(--mono); font-size: 12px; color: var(--dim); text-decoration: none; background: var(--panel); border: 1px solid var(--bd); border-radius: 8px; padding: 6px 11px; }
-.sc-nav-link:hover { color: var(--acc2); border-color: var(--acc-line); }
+/* ── Bottom nav ────────────────────────────────────────────────────────── */
+.sc-nav {
+    flex: none;
+    display: flex;
+    background: var(--panel);
+    border-top: 1px solid var(--bd);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.sc-nav-link {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px 0 7px;
+    color: var(--faint);
+    text-decoration: none;
+    font-family: var(--ui);
+    font-size: 10.5px;
+    letter-spacing: .01em;
+    border-top: 2px solid transparent;
+    margin-top: -1px;
+    transition: color .12s ease;
+}
+.sc-nav-link svg { width: 21px; height: 21px; display: block; }
+.sc-nav-link:hover { color: var(--dim); }
+.sc-nav-link.active { color: var(--acc2); border-top-color: var(--acc2); }
 
 /* ── Trigger & Alias Editor ─────────────────────────────────────────────── */
-.sc-rule-editor { max-width: 640px; margin: 0 auto; padding: 18px 14px 80px; display: flex; flex-direction: column; gap: 16px; }
+.sc-rule-editor { max-width: 640px; margin: 0 auto; padding: 18px 14px 24px; display: flex; flex-direction: column; gap: 16px; }
 .sc-rule-section { background: var(--panel); border: 1px solid var(--bd); border-radius: 12px; overflow: hidden; }
 .sc-rule-section-header { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-bottom: 1px solid var(--bd); }
 .sc-rule-section-title { font-size: 11px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .07em; }
@@ -421,8 +445,15 @@ body {
 
 /* ── Shell wrapper (receives --acc / --mono / --out-fs overrides) ── */
 .sc-shell {
-    display: block;
-    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.sc-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 /* ── Settings: glow effect ─────────────────────────────────────── */
