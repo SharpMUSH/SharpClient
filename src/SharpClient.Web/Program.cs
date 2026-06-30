@@ -1,4 +1,5 @@
 using SharpClient.Core.Connection;
+using SharpClient.Core.Platform;
 using SharpClient.Core.Presentation;
 using SharpClient.Core.Sessions;
 using SharpClient.Web;
@@ -8,6 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddSingleton<IPreferences, WebPreferences>();
+builder.Services.AddSingleton<SettingsViewModel>(sp =>
+    new SettingsViewModel(sp.GetRequiredService<IPreferences>()));
 
 builder.Services.AddSingleton<SessionManager>();
 builder.Services.AddSingleton<ISessionManager>(sp => sp.GetRequiredService<SessionManager>());
