@@ -29,10 +29,10 @@
         <MauiXamlInflator>SourceGen</MauiXamlInflator>
 
         <!-- Display name -->
-        <ApplicationTitle>SharpClient.App</ApplicationTitle>
+        <ApplicationTitle>SharpClient</ApplicationTitle>
 
         <!-- App Identifier -->
-        <ApplicationId>com.companyname.sharpclient.app</ApplicationId>
+        <ApplicationId>com.sharpmush.sharpclient.app</ApplicationId>
 
         <!-- Versions -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
