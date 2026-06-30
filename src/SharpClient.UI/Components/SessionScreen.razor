@@ -24,7 +24,7 @@
         }
         else
         {
-            <OutputView Lines="Vm.Active.Scrollback" />
+            <OutputView Lines="Vm.Active.Scrollback" OnSendCommand="cmd => Vm.Active!.SendAsync(cmd)" />
         }
     </div>
     @if (_showProtocol && ProtocolVm is not null)

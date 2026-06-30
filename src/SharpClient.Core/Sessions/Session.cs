@@ -24,6 +24,7 @@ public sealed class Session : ISession
     private readonly List<ScrollbackLine> _scrollback = [];
     private readonly List<NegotiationEvent> _negotiationLog = [];
     private readonly List<GmcpMessage> _gmcpLog = [];
+    private readonly MxpParserState _mxp = new();
     private event Action? _protocolChanged;
 
     public Session(
@@ -54,6 +55,7 @@ public sealed class Session : ISession
         _connection.StateChanged += OnStateChanged;
         _connection.GmcpReceived += OnGmcpReceived;
         _connection.NegotiationReceived += OnNegotiationReceived;
+        _connection.MxpEnabled += OnMxpEnabled;
     }
 
     public IReadOnlyList<ScrollbackLine> Scrollback => _scrollback;
@@ -111,25 +113,44 @@ public sealed class Session : ISession
         _connection.StateChanged -= OnStateChanged;
         _connection.GmcpReceived -= OnGmcpReceived;
         _connection.NegotiationReceived -= OnNegotiationReceived;
+        _connection.MxpEnabled -= OnMxpEnabled;
         await _connection.DisposeAsync();
+    }
+
+    private void OnMxpEnabled()
+    {
+        _mxp.IsMxpActive = true;
+        _protocolChanged?.Invoke();
     }
 
     private async void OnLineReceived(string raw)
     {
+        // Pueblo negotiation is banner-based (no telnet option): the server announces
+        // itself in plain text and the client replies with PUEBLOCLIENT over the data channel.
+        if (!_mxp.IsPuebloActive && raw.Contains("This world is Pueblo", StringComparison.OrdinalIgnoreCase))
+        {
+            _mxp.IsPuebloActive = true;
+            _protocolChanged?.Invoke();
+            await _connection.SendAsync("PUEBLOCLIENT 2.01");
+        }
+
+        // Reset per-line MXP mode to the negotiated default before parsing this line.
+        _mxp.BeginLine();
+
         IReadOnlyList<StyledSegment> segments;
         IReadOnlyList<string> sendCommands;
         IReadOnlyList<string> notifications;
 
         if (_triggerEngine is not null && _triggerRules is not null)
         {
-            var outcome = _triggerEngine.Apply(raw, _triggerRules);
+            var outcome = _triggerEngine.Apply(raw, _triggerRules, _mxp);
             segments = outcome.Segments;
             sendCommands = outcome.SendCommands;
             notifications = outcome.Notifications;
         }
         else
         {
-            segments = AnsiParser.Parse(raw);
+            segments = AnsiParser.Parse(raw, _mxp);
             sendCommands = [];
             notifications = [];
         }

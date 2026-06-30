@@ -391,6 +391,23 @@ body {
 .sc-modal-submit { margin-top: 4px; font-size: 14px; font-weight: 600; color: #0a0c10; background: var(--acc2); border: none; border-radius: 10px; padding: 13px; cursor: pointer; }
 .sc-modal-submit:disabled { opacity: .5; cursor: not-allowed; }
 
+/* ── MXP / Pueblo clickable command-links ──────────────────────────────── */
+.sc-link {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    cursor: pointer;
+    color: var(--acc2);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.sc-link:hover {
+    color: var(--acc);
+    background: var(--acc-soft);
+}
+
 /* ── Bottom nav ────────────────────────────────────────────────────────── */
 .sc-nav {
     flex: none;

@@ -10,7 +10,7 @@ public sealed record TriggerOutcome(
 
 public interface ITriggerEngine
 {
-    // Parse rawLine via AnsiParser, apply Highlight rules (restyle matched runs),
-    // collect Send/Notify actions from matching rules. Disabled rules are ignored.
-    public TriggerOutcome Apply(string rawLine, IReadOnlyList<TriggerRule> rules);
+    // Parse rawLine via AnsiParser (with optional MXP/Pueblo markup state), apply Highlight
+    // rules (restyle matched runs), collect Send/Notify actions. Disabled rules are ignored.
+    public TriggerOutcome Apply(string rawLine, IReadOnlyList<TriggerRule> rules, MxpParserState? mxp = null);
 }

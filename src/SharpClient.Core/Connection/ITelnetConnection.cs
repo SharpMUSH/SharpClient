@@ -10,6 +10,9 @@ public interface ITelnetConnection : IAsyncDisposable
 
     public event Action<NegotiationEvent>? NegotiationReceived;
 
+    /// <summary>Raised when MXP (telnet option 91) negotiation completes successfully.</summary>
+    public event Action? MxpEnabled;
+
     public ConnectionState State { get; }
 
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default);
