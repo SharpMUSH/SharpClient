@@ -17,6 +17,7 @@
 
     --mono: 'JetBrains Mono', 'Courier New', monospace;
     --ui:   'Space Grotesk', system-ui, sans-serif;
+    --out-fs: 14px;
 }
 
 /* ── Reset / Base ──────────────────────────────────────────────── */
@@ -77,7 +78,7 @@ body {
 
 .sc-line {
     font-family: var(--mono);
-    font-size: 13px;
+    font-size: var(--out-fs);
     line-height: 1.58;
     color: var(--pho);
     white-space: pre-wrap;
@@ -357,3 +358,60 @@ body {
 .sc-rule-add-btn:disabled { opacity: .45; cursor: not-allowed; background: var(--faint); }
 
 .sc-rules-btn { flex: none; font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--acc2); background: var(--acc-soft); border: 1px solid var(--acc-line); border-radius: 8px; padding: 6px 11px; cursor: pointer; }
+
+/* ── Shell wrapper (receives --acc / --mono / --out-fs overrides) ── */
+.sc-shell {
+    min-height: 100vh;
+    display: contents;
+}
+
+/* ── Settings: glow effect ─────────────────────────────────────── */
+.sc-glow .sc-line {
+    text-shadow: 0 0 6px rgba(150,210,170,.28);
+}
+
+/* ── Settings: scanlines overlay ──────────────────────────────── */
+.sc-scanlines::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,.08) 2px,
+        rgba(0,0,0,.08) 4px
+    );
+}
+
+/* ── Settings page ─────────────────────────────────────────────── */
+.sc-settings { max-width: 480px; margin: 0 auto; padding: 18px 14px 80px; display: flex; flex-direction: column; gap: 18px; }
+.sc-settings-title { font-size: 19px; font-weight: 600; color: #eff3f7; letter-spacing: -.01em; margin-bottom: 4px; }
+.sc-settings-section { background: var(--panel); border: 1px solid var(--bd); border-radius: 12px; overflow: hidden; }
+.sc-settings-section-header { padding: 11px 14px; border-bottom: 1px solid var(--bd); font-size: 11px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .07em; }
+.sc-setting { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-top: 1px solid var(--bd); flex-wrap: wrap; gap: 8px; }
+.sc-setting:first-child { border-top: none; }
+.sc-setting-label { font-family: var(--mono); font-size: 12px; color: var(--tx); }
+.sc-setting-value { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+
+/* Font picker */
+.sc-font-options { display: flex; gap: 6px; flex-wrap: wrap; }
+.sc-font-option { font-family: var(--mono); font-size: 11px; padding: 5px 10px; border-radius: 7px; border: 1px solid var(--bd2); background: var(--outbg); color: var(--dim); cursor: pointer; }
+.sc-font-option-active { border-color: var(--acc-line); color: var(--acc2); background: var(--acc-soft); }
+
+/* Accent swatches */
+.sc-accent-swatches { display: flex; gap: 8px; }
+.sc-accent-swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; flex-shrink: 0; }
+.sc-accent-swatch-active { outline: 2px solid var(--tx); outline-offset: 2px; }
+
+/* Range sliders */
+.sc-slider-row { display: flex; align-items: center; gap: 10px; }
+.sc-slider { flex: 1; accent-color: var(--acc); cursor: pointer; }
+
+/* Toggle */
+.sc-toggle { width: 36px; height: 20px; appearance: none; background: var(--elev); border-radius: 10px; position: relative; cursor: pointer; border: 1px solid var(--bd2); transition: background .15s; }
+.sc-toggle::before { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--dim); transition: transform .15s, background .15s; }
+.sc-toggle:checked { background: var(--acc); border-color: var(--acc-line); }
+.sc-toggle:checked::before { transform: translateX(16px); background: #fff; }
