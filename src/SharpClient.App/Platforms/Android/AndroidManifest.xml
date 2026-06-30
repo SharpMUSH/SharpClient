@@ -63,7 +63,7 @@
               components. Explicit declaration required for Android 12+ (API 31).
         -->
         <service
-            android:name="com.companyname.sharpclient.app.ConnectionKeepAliveService"
+            android:name="com.sharpmush.sharpclient.app.ConnectionKeepAliveService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
 
@@ -90,5 +90,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+        WAKE_LOCK — the keep-alive service holds a PARTIAL_WAKE_LOCK so the CPU keeps the TCP
+        socket and telnet-NOP keepalive alive while the screen is off / the device dozes.
+    -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
 </manifest>
