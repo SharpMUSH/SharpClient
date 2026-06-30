@@ -4,6 +4,20 @@
 
 <div class="sc-rule-editor">
 
+    @* ── Scope selector ───────────────────────────────────────────────────── *@
+    <div class="sc-rule-scope-bar">
+        <label class="sc-rule-scope-label" for="sc-scope-select">Scope:</label>
+        <select id="sc-scope-select" class="sc-rule-scope-select"
+                value="@(_scopeValue)"
+                @onchange="OnScopeChanged">
+            <option value="">World</option>
+            @foreach (var ch in Vm.Characters)
+            {
+                <option value="@ch.Id.ToString()">@ch.Name</option>
+            }
+        </select>
+    </div>
+
     @* ── Triggers section ──────────────────────────────────────────────── *@
     <div class="sc-rule-section">
         <div class="sc-rule-section-header">
@@ -20,10 +34,37 @@
                 <input type="checkbox" class="sc-rule-toggle"
                        checked="@rule.Enabled"
                        @onchange="async _ => await Vm.ToggleTriggerAsync(ruleId)" />
+                <button type="button" class="sc-icon-btn sc-rule-edit-btn"
+                        title="Edit trigger"
+                        @onclick="() => OpenEditTrigger(rule)">✏</button>
                 <button type="button" class="sc-icon-btn sc-rule-delete-btn"
                         title="Delete trigger"
                         @onclick="async () => await Vm.DeleteTriggerAsync(ruleId)">🗑</button>
             </div>
+
+            @if (_editingTriggerId == ruleId)
+            {
+                <div class="sc-rule-inline-form sc-rule-inline-form--trigger">
+                    <select class="sc-rule-add-select" @bind="_editTriggerKind">
+                        <option value="@TriggerKind.Substring">substr</option>
+                        <option value="@TriggerKind.Regex">regex</option>
+                    </select>
+                    <input class="sc-rule-add-input" placeholder="pattern"
+                           @bind="_editTriggerPattern" @bind:event="oninput" />
+                    <select class="sc-rule-add-select" @bind="_editTriggerAction">
+                        <option value="@TriggerActionKind.Highlight">highlight</option>
+                        <option value="@TriggerActionKind.Send">send</option>
+                        <option value="@TriggerActionKind.Notify">notify</option>
+                    </select>
+                    <input class="sc-rule-add-input" placeholder="value"
+                           @bind="_editTriggerValue" @bind:event="oninput" />
+                    <button type="button" class="sc-rule-add-btn"
+                            disabled="@(!CanSaveTriggerEdit)"
+                            @onclick="SaveEditTriggerAsync">Save</button>
+                    <button type="button" class="sc-icon-btn"
+                            @onclick="CancelEditTrigger">Cancel</button>
+                </div>
+            }
         }
 
         @if (Vm.Triggers.Count == 0)
@@ -65,10 +106,28 @@
                 <input type="checkbox" class="sc-rule-toggle"
                        checked="@alias.Enabled"
                        @onchange="async _ => await Vm.ToggleAliasAsync(aliasId)" />
+                <button type="button" class="sc-icon-btn sc-rule-edit-btn"
+                        title="Edit alias"
+                        @onclick="() => OpenEditAlias(alias)">✏</button>
                 <button type="button" class="sc-icon-btn sc-rule-delete-btn"
                         title="Delete alias"
                         @onclick="async () => await Vm.DeleteAliasAsync(aliasId)">🗑</button>
             </div>
+
+            @if (_editingAliasId == aliasId)
+            {
+                <div class="sc-rule-inline-form sc-rule-inline-form--alias">
+                    <input class="sc-rule-add-input" placeholder="pattern (regex)"
+                           @bind="_editAliasPattern" @bind:event="oninput" />
+                    <input class="sc-rule-add-input" placeholder="expansion"
+                           @bind="_editAliasExpansion" @bind:event="oninput" />
+                    <button type="button" class="sc-rule-add-btn"
+                            disabled="@(!CanSaveAliasEdit)"
+                            @onclick="SaveEditAliasAsync">Save</button>
+                    <button type="button" class="sc-icon-btn"
+                            @onclick="CancelEditAlias">Cancel</button>
+                </div>
+            }
         }
 
         @if (Vm.Aliases.Count == 0)
@@ -90,15 +149,41 @@
 @code {
     [Parameter] public TriggerAliasEditorViewModel Vm { get; set; } = null!;
 
+    // ── Scope state ─────────────────────────────────────────────────────
+    private string _scopeValue = string.Empty;
+
+    private void OnScopeChanged(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString() ?? string.Empty;
+        _scopeValue = raw;
+        var characterId = string.IsNullOrEmpty(raw) ? (Guid?)null : Guid.Parse(raw);
+        Vm.SetScope(characterId);
+        // close any open inline forms when switching scope
+        CancelEditTrigger();
+        CancelEditAlias();
+    }
+
     // ── Trigger add form state ──────────────────────────────────────────
     private TriggerKind _newTriggerKind = TriggerKind.Substring;
     private string _newTriggerPattern = string.Empty;
     private TriggerActionKind _newTriggerAction = TriggerActionKind.Highlight;
     private string _newTriggerValue = string.Empty;
 
+    // ── Trigger inline-edit state ───────────────────────────────────────
+    private Guid? _editingTriggerId;
+    private TriggerKind _editTriggerKind;
+    private string _editTriggerPattern = string.Empty;
+    private TriggerActionKind _editTriggerAction;
+    private string _editTriggerValue = string.Empty;
+
     // ── Alias add form state ────────────────────────────────────────────
     private string _newAliasPattern = string.Empty;
     private string _newAliasExpansion = string.Empty;
+
+    // ── Alias inline-edit state ─────────────────────────────────────────
+    private Guid? _editingAliasId;
+    private string _editAliasPattern = string.Empty;
+    private string _editAliasExpansion = string.Empty;
 
     private bool CanAddTrigger =>
         !string.IsNullOrWhiteSpace(_newTriggerPattern) &&
@@ -108,9 +193,19 @@
         !string.IsNullOrWhiteSpace(_newAliasPattern) &&
         !string.IsNullOrWhiteSpace(_newAliasExpansion);
 
+    private bool CanSaveTriggerEdit =>
+        !string.IsNullOrWhiteSpace(_editTriggerPattern) &&
+        !string.IsNullOrWhiteSpace(_editTriggerValue);
+
+    private bool CanSaveAliasEdit =>
+        !string.IsNullOrWhiteSpace(_editAliasPattern) &&
+        !string.IsNullOrWhiteSpace(_editAliasExpansion);
+
     protected override void OnInitialized() => Vm.Changed += OnVmChanged;
 
     private void OnVmChanged() => InvokeAsync(StateHasChanged);
+
+    // ── Trigger add ────────────────────────────────────────────────────
 
     private async Task AddTriggerAsync()
     {
@@ -128,6 +223,43 @@
         _newTriggerValue = string.Empty;
     }
 
+    // ── Trigger inline edit ─────────────────────────────────────────────
+
+    private void OpenEditTrigger(TriggerRule rule)
+    {
+        _editingAliasId = null;
+        _editingTriggerId = rule.Id;
+        _editTriggerKind = rule.Kind;
+        _editTriggerPattern = rule.Pattern;
+        _editTriggerAction = rule.Action;
+        _editTriggerValue = rule.ActionValue;
+    }
+
+    private async Task SaveEditTriggerAsync()
+    {
+        if (!CanSaveTriggerEdit || _editingTriggerId is null) return;
+
+        await Vm.UpdateTriggerAsync(new TriggerRule
+        {
+            Id = _editingTriggerId.Value,
+            Kind = _editTriggerKind,
+            Pattern = _editTriggerPattern.Trim(),
+            Action = _editTriggerAction,
+            ActionValue = _editTriggerValue.Trim(),
+        });
+
+        CancelEditTrigger();
+    }
+
+    private void CancelEditTrigger()
+    {
+        _editingTriggerId = null;
+        _editTriggerPattern = string.Empty;
+        _editTriggerValue = string.Empty;
+    }
+
+    // ── Alias add ──────────────────────────────────────────────────────
+
     private async Task AddAliasAsync()
     {
         if (!CanAddAlias) return;
@@ -140,6 +272,37 @@
 
         _newAliasPattern = string.Empty;
         _newAliasExpansion = string.Empty;
+    }
+
+    // ── Alias inline edit ───────────────────────────────────────────────
+
+    private void OpenEditAlias(AliasRule alias)
+    {
+        _editingTriggerId = null;
+        _editingAliasId = alias.Id;
+        _editAliasPattern = alias.Pattern;
+        _editAliasExpansion = alias.Expansion;
+    }
+
+    private async Task SaveEditAliasAsync()
+    {
+        if (!CanSaveAliasEdit || _editingAliasId is null) return;
+
+        await Vm.UpdateAliasAsync(new AliasRule
+        {
+            Id = _editingAliasId.Value,
+            Pattern = _editAliasPattern.Trim(),
+            Expansion = _editAliasExpansion.Trim(),
+        });
+
+        CancelEditAlias();
+    }
+
+    private void CancelEditAlias()
+    {
+        _editingAliasId = null;
+        _editAliasPattern = string.Empty;
+        _editAliasExpansion = string.Empty;
     }
 
     public void Dispose() => Vm.Changed -= OnVmChanged;
