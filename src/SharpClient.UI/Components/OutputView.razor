@@ -1,0 +1,19 @@
+@using SharpClient.Core.Rendering
+@using SharpClient.Core.Sessions
+
+<div class="sc-output">
+    @foreach (var line in Lines)
+    {
+        <div class="sc-line">
+            @foreach (var segment in line.Segments)
+            {
+                <span style="@SegmentStyle.ToCss(segment)">@(segment.Text.Length == 0 ? " " : segment.Text)</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ScrollbackLine> Lines { get; set; } = [];
+}

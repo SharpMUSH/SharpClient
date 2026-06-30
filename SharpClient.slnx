@@ -6,5 +6,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SharpClient.Tests/SharpClient.Tests.csproj" />
+    <Project Path="tests/SharpClient.UI.Tests/SharpClient.UI.Tests.csproj" />
   </Folder>
 </Solution>
