@@ -66,14 +66,27 @@
         <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
 
+    <!-- SQLitePCLRaw.lib.e_sqlite3 2.1.11 (transitive via EF Core SQLite) has GHSA-2m69-gcr7-jv3q;
+         2.1.11 is the latest release — no patched version exists yet. -->
+    <ItemGroup>
+        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
+    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
+        <!-- TNC is the NuGet package (not a local project reference). It must be listed
+             directly so its types (ITelnetInterpreterFactory, AddTelnetClient) are
+             visible under net10.0-android; transitive exposure from SharpClient.Core
+             does not flow through for the MAUI Android TFM. -->
+        <PackageReference Include="TelnetNegotiationCore" Version="2.5.0" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\SharpClient.Core\SharpClient.Core.csproj" />
+      <ProjectReference Include="..\SharpClient.Data\SharpClient.Data.csproj" />
       <ProjectReference Include="..\SharpClient.UI\SharpClient.UI.csproj" />
     </ItemGroup>
 

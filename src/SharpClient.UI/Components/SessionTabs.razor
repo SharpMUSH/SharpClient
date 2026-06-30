@@ -1,0 +1,34 @@
+@using SharpClient.Core.Connection
+@using SharpClient.Core.Presentation
+@using SharpClient.Core.Sessions
+
+<div class="sc-tab-bar">
+    @foreach (var session in Vm.Tabs)
+    {
+        var isActive = session == Vm.Active;
+        <div class="sc-tab @(isActive ? "sc-tab-active" : string.Empty)" @onclick="() => Vm.Select(session)">
+            <span class="sc-state-dot" style="background:@StateDotColor(session.State)"></span>
+            <span class="sc-tab-name">@session.CharacterName</span>
+            @if (!string.IsNullOrEmpty(session.WorldName))
+            {
+                <span class="sc-tab-world">@session.WorldName</span>
+            }
+            <button class="sc-tab-close" @onclick:stopPropagation="true" @onclick="async () => await Vm.CloseAsync(session)">&#xD7;</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public SessionsViewModel Vm { get; set; } = null!;
+
+    private static string StateDotColor(ConnectionState state) => state switch
+    {
+        ConnectionState.Connected => "#8fc16f",
+        ConnectionState.Connecting => "#e5c07b",
+        ConnectionState.Reconnecting => "#e5c07b",
+        ConnectionState.Disconnected => "#5c6672",
+        ConnectionState.Error => "#e06c75",
+        _ => "#5c6672",
+    };
+}

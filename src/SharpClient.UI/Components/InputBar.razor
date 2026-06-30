@@ -1,0 +1,34 @@
+@using SharpClient.Core.Presentation
+
+<div class="sc-input-bar">
+    <input class="sc-input"
+           type="text"
+           value="@Vm.Input"
+           @oninput="OnInput"
+           @onkeydown="OnKeyDown"
+           placeholder="Enter command…" />
+    <button class="sc-send-btn"
+            disabled="@(!Vm.CanSend)"
+            @onclick="SendAsync">Send</button>
+</div>
+
+@code {
+    [Parameter]
+    public SessionsViewModel Vm { get; set; } = null!;
+
+    private void OnInput(ChangeEventArgs e) => Vm.Input = e.Value?.ToString() ?? string.Empty;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendAsync();
+        }
+    }
+
+    private async Task SendAsync()
+    {
+        await Vm.SendAsync();
+        StateHasChanged();
+    }
+}

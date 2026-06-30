@@ -1,0 +1,11 @@
+@page "/settings"
+@rendermode InteractiveServer
+
+@using SharpClient.Core.Presentation
+@using SharpClient.UI.Components
+
+@inject SettingsViewModel Vm
+
+<PageTitle>SharpClient &middot; Settings</PageTitle>
+
+<SettingsView Vm="@Vm" />

@@ -1,0 +1,55 @@
+@using SharpClient.Core.Presentation
+@using SharpClient.Core.Sessions
+
+@implements IDisposable
+
+<div class="sc-session-screen">
+    <div class="sc-session-header">
+        <SessionTabs Vm="Vm" />
+        @if (ProtocolVm is not null)
+        {
+            <button class="sc-protocol-toggle" @onclick="ToggleProtocol" title="Toggle protocol panel">{ }</button>
+        }
+    </div>
+    <div class="sc-output-area">
+        @if (Vm.Active is null)
+        {
+            <div class="sc-empty-state">
+                <p>No active session. Open a session to get started.</p>
+            </div>
+        }
+        else
+        {
+            <OutputView Lines="Vm.Active.Scrollback" />
+        }
+    </div>
+    @if (_showProtocol && ProtocolVm is not null)
+    {
+        <ProtocolPanel Vm="ProtocolVm" />
+    }
+    <InputBar Vm="Vm" />
+</div>
+
+@code {
+    [Parameter]
+    public SessionsViewModel Vm { get; set; } = null!;
+
+    [Parameter]
+    public ProtocolPanelViewModel? ProtocolVm { get; set; }
+
+    private bool _showProtocol;
+
+    protected override void OnInitialized()
+    {
+        Vm.Changed += OnVmChanged;
+    }
+
+    private void OnVmChanged() => InvokeAsync(StateHasChanged);
+
+    private void ToggleProtocol() => _showProtocol = !_showProtocol;
+
+    public void Dispose()
+    {
+        Vm.Changed -= OnVmChanged;
+    }
+}
