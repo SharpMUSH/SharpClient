@@ -17,7 +17,7 @@
         </label>
         <label class="sc-field">
             <span class="sc-field-label">connect string · auto-sent on connect</span>
-            <input class="sc-field-input sc-field-input-secret" @bind="_connect" @bind:event="oninput"
+            <input type="password" class="sc-field-input sc-field-input-secret" @bind="_connect" @bind:event="oninput"
                    placeholder="@(_isEdit ? "leave blank to keep current" : "connect Vesper yourpassword")" />
         </label>
 
