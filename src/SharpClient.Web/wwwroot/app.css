@@ -361,8 +361,8 @@ body {
 
 /* ── Shell wrapper (receives --acc / --mono / --out-fs overrides) ── */
 .sc-shell {
+    display: block;
     min-height: 100vh;
-    display: contents;
 }
 
 /* ── Settings: glow effect ─────────────────────────────────────── */

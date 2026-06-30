@@ -334,3 +334,30 @@ body {
 .sc-nav { position: fixed; top: 10px; right: 14px; z-index: 40; display: flex; gap: 6px; }
 .sc-nav-link { font-family: var(--mono); font-size: 12px; color: var(--dim); text-decoration: none; background: var(--panel); border: 1px solid var(--bd); border-radius: 8px; padding: 6px 11px; }
 .sc-nav-link:hover { color: var(--acc2); border-color: var(--acc-line); }
+
+/* ── Shell wrapper (receives --acc / --mono / --out-fs overrides) ── */
+.sc-shell {
+    display: block;
+    min-height: 100vh;
+}
+
+/* ── Settings: glow effect ─────────────────────────────────────── */
+.sc-glow .sc-line {
+    text-shadow: 0 0 6px rgba(150,210,170,.28);
+}
+
+/* ── Settings: scanlines overlay ──────────────────────────────── */
+.sc-scanlines::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,.08) 2px,
+        rgba(0,0,0,.08) 4px
+    );
+}
