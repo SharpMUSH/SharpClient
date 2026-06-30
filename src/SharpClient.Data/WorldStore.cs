@@ -50,6 +50,10 @@ public sealed class WorldStore : IWorldStore
     {
         await EnsureSchemaAsync(cancellationToken);
 
+        // Atomic boundary: the delete and re-insert must commit together, or a
+        // failure between them would leave the world permanently deleted.
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+
         // Clear stale tracked entities so identity resolution returns a clean load.
         _db.ChangeTracker.Clear();
 
@@ -66,7 +70,7 @@ public sealed class WorldStore : IWorldStore
         if (existing is not null)
         {
             _db.Worlds.Remove(existing);
-            await _db.SaveChangesAsync(cancellationToken); // commit deletion first
+            await _db.SaveChangesAsync(cancellationToken); // delete within the transaction
         }
 
         // Clear all tracked entities after the deletion so the subsequent Add
@@ -74,7 +78,9 @@ public sealed class WorldStore : IWorldStore
         _db.ChangeTracker.Clear();
 
         _db.Worlds.Add(world);
-        await _db.SaveChangesAsync(cancellationToken); // then commit insertion
+        await _db.SaveChangesAsync(cancellationToken); // re-insert within the transaction
+
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public async Task DeleteWorldAsync(Guid worldId, CancellationToken cancellationToken = default)
