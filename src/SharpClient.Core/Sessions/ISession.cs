@@ -12,6 +12,10 @@ public interface ISession : IAsyncDisposable
 
     public ConnectionState State { get; }
 
+    public string CharacterName { get; }
+
+    public string WorldName { get; }
+
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default);
 
     public Task SendAsync(string line);

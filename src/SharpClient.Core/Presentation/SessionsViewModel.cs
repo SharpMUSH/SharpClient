@@ -41,6 +41,8 @@ public sealed class SessionsViewModel
 
     public void Select(ISession session) => _manager.Activate(session);
 
+    public Task CloseAsync(ISession session) => _manager.CloseAsync(session);
+
     public async Task SendAsync()
     {
         if (!CanSend || Active is null)

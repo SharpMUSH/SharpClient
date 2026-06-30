@@ -10,9 +10,11 @@ public sealed class Session : ISession
     private readonly ITelnetConnection _connection;
     private readonly List<ScrollbackLine> _scrollback = [];
 
-    public Session(ITelnetConnection connection)
+    public Session(ITelnetConnection connection, string characterName = "", string worldName = "")
     {
         _connection = connection;
+        CharacterName = characterName;
+        WorldName = worldName;
         _connection.LineReceived += OnLineReceived;
         _connection.StateChanged += OnStateChanged;
     }
@@ -24,6 +26,10 @@ public sealed class Session : ISession
     public event Action<ConnectionState>? StateChanged;
 
     public ConnectionState State => _connection.State;
+
+    public string CharacterName { get; }
+
+    public string WorldName { get; }
 
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default) =>
         _connection.ConnectAsync(host, port, cancellationToken);

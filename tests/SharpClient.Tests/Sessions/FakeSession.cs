@@ -9,6 +9,8 @@ public sealed class FakeSession : ISession
     public event Action<ScrollbackLine>? LineAppended;
     public event Action<ConnectionState>? StateChanged;
     public ConnectionState State { get; set; } = ConnectionState.Connected;
+    public string CharacterName { get; set; } = string.Empty;
+    public string WorldName { get; set; } = string.Empty;
     public bool Disposed { get; private set; }
     public List<string> Sent { get; } = [];
 
