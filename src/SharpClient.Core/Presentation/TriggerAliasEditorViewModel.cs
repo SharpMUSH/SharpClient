@@ -35,14 +35,16 @@ public sealed class TriggerAliasEditorViewModel
 
     public async Task AddTriggerAsync(TriggerRule rule, CancellationToken ct = default)
     {
-        _world!.Triggers.Add(rule);
+        if (_world is null) return;
+        _world.Triggers.Add(rule);
         await _store.UpdateWorldAsync(_world, ct);
         await LoadAsync(_worldId, ct);
     }
 
     public async Task UpdateTriggerAsync(TriggerRule rule, CancellationToken ct = default)
     {
-        var idx = _world!.Triggers.FindIndex(t => t.Id == rule.Id);
+        if (_world is null) return;
+        var idx = _world.Triggers.FindIndex(t => t.Id == rule.Id);
         if (idx >= 0) _world.Triggers[idx] = rule;
         await _store.UpdateWorldAsync(_world, ct);
         await LoadAsync(_worldId, ct);
@@ -50,16 +52,19 @@ public sealed class TriggerAliasEditorViewModel
 
     public async Task DeleteTriggerAsync(Guid id, CancellationToken ct = default)
     {
-        _world!.Triggers.RemoveAll(t => t.Id == id);
+        if (_world is null) return;
+        _world.Triggers.RemoveAll(t => t.Id == id);
         await _store.UpdateWorldAsync(_world, ct);
         await LoadAsync(_worldId, ct);
     }
 
     public async Task ToggleTriggerAsync(Guid id, CancellationToken ct = default)
     {
-        var rule = _world!.Triggers.FirstOrDefault(t => t.Id == id);
-        if (rule is not null) rule.Enabled = !rule.Enabled;
-        await _store.UpdateWorldAsync(_world!, ct);
+        if (_world is null) return;
+        var rule = _world.Triggers.FirstOrDefault(t => t.Id == id);
+        if (rule is null) return;
+        rule.Enabled = !rule.Enabled;
+        await _store.UpdateWorldAsync(_world, ct);
         await LoadAsync(_worldId, ct);
     }
 
@@ -67,14 +72,16 @@ public sealed class TriggerAliasEditorViewModel
 
     public async Task AddAliasAsync(AliasRule rule, CancellationToken ct = default)
     {
-        _world!.Aliases.Add(rule);
+        if (_world is null) return;
+        _world.Aliases.Add(rule);
         await _store.UpdateWorldAsync(_world, ct);
         await LoadAsync(_worldId, ct);
     }
 
     public async Task UpdateAliasAsync(AliasRule rule, CancellationToken ct = default)
     {
-        var idx = _world!.Aliases.FindIndex(a => a.Id == rule.Id);
+        if (_world is null) return;
+        var idx = _world.Aliases.FindIndex(a => a.Id == rule.Id);
         if (idx >= 0) _world.Aliases[idx] = rule;
         await _store.UpdateWorldAsync(_world, ct);
         await LoadAsync(_worldId, ct);
@@ -82,16 +89,19 @@ public sealed class TriggerAliasEditorViewModel
 
     public async Task DeleteAliasAsync(Guid id, CancellationToken ct = default)
     {
-        _world!.Aliases.RemoveAll(a => a.Id == id);
+        if (_world is null) return;
+        _world.Aliases.RemoveAll(a => a.Id == id);
         await _store.UpdateWorldAsync(_world, ct);
         await LoadAsync(_worldId, ct);
     }
 
     public async Task ToggleAliasAsync(Guid id, CancellationToken ct = default)
     {
-        var alias = _world!.Aliases.FirstOrDefault(a => a.Id == id);
-        if (alias is not null) alias.Enabled = !alias.Enabled;
-        await _store.UpdateWorldAsync(_world!, ct);
+        if (_world is null) return;
+        var alias = _world.Aliases.FirstOrDefault(a => a.Id == id);
+        if (alias is null) return;
+        alias.Enabled = !alias.Enabled;
+        await _store.UpdateWorldAsync(_world, ct);
         await LoadAsync(_worldId, ct);
     }
 
