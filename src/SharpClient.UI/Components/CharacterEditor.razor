@@ -1,0 +1,72 @@
+@using SharpClient.Core.Domain
+@using SharpClient.Core.Presentation
+
+<div class="sc-modal-overlay" @onclick="OnClose">
+    <div class="sc-modal" @onclick:stopPropagation="true">
+        <div class="sc-modal-header">
+            <div>
+                <div class="sc-modal-title">@(_isEdit ? "Edit Character" : "Add Character")</div>
+                <div class="sc-modal-sub">on @World.Name</div>
+            </div>
+            <button type="button" class="sc-modal-close" @onclick="OnClose">×</button>
+        </div>
+
+        <label class="sc-field">
+            <span class="sc-field-label">character name</span>
+            <input class="sc-field-input" @bind="_name" @bind:event="oninput" placeholder="e.g. Vesper" />
+        </label>
+        <label class="sc-field">
+            <span class="sc-field-label">connect string · auto-sent on connect</span>
+            <input class="sc-field-input sc-field-input-secret" @bind="_connect" @bind:event="oninput"
+                   placeholder="@(_isEdit ? "leave blank to keep current" : "connect Vesper yourpassword")" />
+        </label>
+
+        <button type="button" class="sc-modal-submit" disabled="@(!CanSubmit)" @onclick="SubmitAsync">
+            @(_isEdit ? "Save character" : "Add character")
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public WorldManagerViewModel Vm { get; set; } = null!;
+    [Parameter] public World World { get; set; } = null!;
+    [Parameter] public Character? Character { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool _isEdit;
+    private string _name = string.Empty;
+    private string _connect = string.Empty;
+
+    private bool CanSubmit => !string.IsNullOrWhiteSpace(_name);
+
+    protected override void OnParametersSet()
+    {
+        _isEdit = Character is not null;
+        if (Character is not null)
+        {
+            _name = Character.Name;
+            _connect = string.Empty; // secret never echoed back
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (!CanSubmit)
+        {
+            return;
+        }
+
+        var connect = string.IsNullOrWhiteSpace(_connect) ? null : _connect.Trim();
+
+        if (Character is null)
+        {
+            await Vm.AddCharacterAsync(World, _name.Trim(), connect);
+        }
+        else
+        {
+            await Vm.UpdateCharacterAsync(World, Character, _name.Trim(), connect);
+        }
+
+        await OnClose.InvokeAsync();
+    }
+}
