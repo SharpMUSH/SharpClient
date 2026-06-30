@@ -108,23 +108,18 @@
             return;
         }
 
-        var minCols = Settings.MinColumns;
-        // Largest font that still fits at least MinColumns columns, but never above
-        // the user's max-font setting and never below 6px.
+        // Measure the real character grid and fit the font so MinColumns span the width, then report
+        // the resulting grid over NAWS. The measurement (advance + line-height from probes, closed-loop
+        // fit for hinting non-linearity, padding-aware) lives in measureGrid, ported from
+        // SharpMUSH.Client's terminalMetrics.js so both clients agree — no hard-coded 0.6em advance,
+        // which had wrapped an advertised 78 columns ~2 short. measureGrid applies --out-fs (fitted
+        // size) and --sc-cols (column track width) on the element.
         var cap = Math.Max(6, Settings.MaxFontSize);
-        var rawFontPx = (int)Math.Floor(widthPx / (minCols * 0.6));
-        var fontPx = Math.Clamp(rawFontPx, 6, cap);
-
-        // Apply on the output element directly so it wins over the layout-level
-        // accent/font CSS variables.
-        await _interop.InvokeVoidAsync("setFontSize", _outputRef, fontPx);
+        var grid = await _interop.InvokeAsync<GridDims>("measureGrid", _outputRef, Settings.MinColumns, 6, cap);
 
         if (Vm.Active is not null)
         {
-            // Advertise the ACTUAL columns/rows that fit at this size (>= MinColumns).
-            var cols = Math.Max(minCols, (int)Math.Floor(widthPx / (fontPx * 0.6)));
-            var rows = heightPx > 0 ? (int)Math.Floor(heightPx / (fontPx * 1.2)) : 24;
-            await Vm.Active.SendWindowSizeAsync(cols, rows);
+            await Vm.Active.SendWindowSizeAsync(grid.Cols, grid.Rows);
         }
     }
 
@@ -171,4 +166,6 @@
     }
 
     private sealed record SizeDims(int Width, int Height);
+
+    private sealed record GridDims(int Cols, int Rows);
 }
