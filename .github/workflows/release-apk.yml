@@ -1,7 +1,17 @@
-name: Release APK
+name: Release Android (signed APK + AAB)
 
-# When a GitHub Release is published, build the Android APK and attach it to the
-# release. Also runnable manually (uploads the APK as a workflow artifact only).
+# When a GitHub Release is published, build SIGNED Android artifacts and attach
+# them to the release:
+#   * a signed .apk  — for direct sideloading / out-of-store distribution
+#   * a signed .aab  — Android App Bundle, required for Google Play uploads
+# Also runnable manually (uploads the artifacts to the workflow run only).
+#
+# REQUIRED REPOSITORY SECRETS (Settings -> Secrets and variables -> Actions):
+#   ANDROID_KEYSTORE_BASE64    base64-encoded release keystore (.jks/.keystore)
+#   ANDROID_KEYSTORE_PASSWORD  the keystore (store) password
+#   ANDROID_KEY_ALIAS          the alias of the signing key inside the keystore
+#   ANDROID_KEY_PASSWORD       the password for that key alias
+# See docs/release-signing.md for how to generate and upload the keystore.
 on:
   release:
     types: [published]
@@ -11,9 +21,12 @@ permissions:
   contents: write # required to upload assets onto the release
 
 jobs:
-  build-apk:
-    name: Build & attach Android APK
+  build-android:
+    name: Build & attach signed Android artifacts
     runs-on: ubuntu-latest
+    env:
+      # Path the keystore is decoded to at build time (runner-local, ephemeral).
+      KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,7 +44,7 @@ jobs:
           global-json-file: global.json
 
       - name: Install MAUI Android workload
-        run: dotnet workload install maui-android
+        run: dotnet workload restore src/SharpClient.App/SharpClient.App.csproj
 
       # Acquire any missing Android SDK platform/build-tools for the target API
       # into the runner's pre-installed SDK (ANDROID_SDK_ROOT). Accepts licenses.
@@ -44,11 +57,22 @@ jobs:
           -p:JavaSdkDirectory="$JAVA_HOME"
           -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
 
-      # Produces a signed APK. By default this uses an auto-generated debug key
-      # (installable via sideload). For Play-store signing, add a keystore via
-      # repository secrets and pass -p:AndroidKeyStore=true -p:AndroidSigningKeyStore=...
-      # -p:AndroidSigningStorePass=... -p:AndroidSigningKeyAlias=... -p:AndroidSigningKeyPass=...
-      - name: Publish APK (Release)
+      # Decode the base64 keystore secret into a real file. Fail loudly if the
+      # secret is missing/empty so a release never silently ships a debug build.
+      - name: Decode signing keystore
+        run: |
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 secret is not set — cannot produce a signed release." >&2
+            exit 1
+          fi
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$KEYSTORE_PATH"
+          echo "Decoded keystore to $KEYSTORE_PATH"
+
+      # Publish a SIGNED .apk (sideload). AndroidKeyStore=true + the signing
+      # properties make dotnet sign with our release keystore instead of the
+      # auto-generated debug key. AndroidPackageFormat=apk is the default but is
+      # set explicitly for clarity.
+      - name: Publish signed APK (Release)
         run: >
           dotnet publish src/SharpClient.App/SharpClient.App.csproj
           -c Release
@@ -56,31 +80,76 @@ jobs:
           -p:JavaSdkDirectory="$JAVA_HOME"
           -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
           -p:AcceptAndroidSdkLicenses=True
+          -p:AndroidPackageFormat=apk
+          -p:AndroidKeyStore=true
+          -p:AndroidSigningKeyStore="$KEYSTORE_PATH"
+          -p:AndroidSigningStorePass='${{ secrets.ANDROID_KEYSTORE_PASSWORD }}'
+          -p:AndroidSigningKeyAlias='${{ secrets.ANDROID_KEY_ALIAS }}'
+          -p:AndroidSigningKeyPass='${{ secrets.ANDROID_KEY_PASSWORD }}'
 
-      - name: Locate APK
-        id: apk
+      # Publish a SIGNED .aab (App Bundle) for Google Play. Same signing inputs,
+      # AndroidPackageFormat=aab switches the packaging.
+      - name: Publish signed AAB (Release)
+        run: >
+          dotnet publish src/SharpClient.App/SharpClient.App.csproj
+          -c Release
+          -f net10.0-android
+          -p:JavaSdkDirectory="$JAVA_HOME"
+          -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
+          -p:AcceptAndroidSdkLicenses=True
+          -p:AndroidPackageFormat=aab
+          -p:AndroidKeyStore=true
+          -p:AndroidSigningKeyStore="$KEYSTORE_PATH"
+          -p:AndroidSigningStorePass='${{ secrets.ANDROID_KEYSTORE_PASSWORD }}'
+          -p:AndroidSigningKeyAlias='${{ secrets.ANDROID_KEY_ALIAS }}'
+          -p:AndroidSigningKeyPass='${{ secrets.ANDROID_KEY_PASSWORD }}'
+
+      # Locate the produced artifacts. Prefer the *-Signed.apk emitted by the
+      # signing pipeline; fall back to any .apk. The .aab is always signed.
+      - name: Locate artifacts
+        id: artifacts
         run: |
-          apk="$(find src/SharpClient.App/bin/Release/net10.0-android -name '*-Signed.apk' | head -n1)"
+          base="src/SharpClient.App/bin/Release/net10.0-android"
+          apk="$(find "$base" -name '*-Signed.apk' | head -n1)"
           if [ -z "$apk" ]; then
-            apk="$(find src/SharpClient.App/bin/Release/net10.0-android -name '*.apk' | head -n1)"
+            apk="$(find "$base" -name '*.apk' | head -n1)"
           fi
+          aab="$(find "$base" -name '*.aab' | head -n1)"
           if [ -z "$apk" ]; then
-            echo "No APK found under bin/Release/net10.0-android" >&2
-            find src/SharpClient.App/bin/Release/net10.0-android -name '*.apk' >&2 || true
+            echo "::error::No APK found under $base" >&2
+            find "$base" -name '*.apk' >&2 || true
             exit 1
           fi
-          echo "path=$apk" >> "$GITHUB_OUTPUT"
+          if [ -z "$aab" ]; then
+            echo "::error::No AAB found under $base" >&2
+            find "$base" -name '*.aab' >&2 || true
+            exit 1
+          fi
+          echo "apk=$apk" >> "$GITHUB_OUTPUT"
+          echo "aab=$aab" >> "$GITHUB_OUTPUT"
           echo "Found APK: $apk"
+          echo "Found AAB: $aab"
 
-      - name: Upload APK as build artifact
+      # Remove the decoded keystore from the runner as soon as the build is done.
+      - name: Remove decoded keystore
+        if: always()
+        run: rm -f "$KEYSTORE_PATH"
+
+      - name: Upload artifacts to the workflow run
         uses: actions/upload-artifact@v4
         with:
-          name: sharpclient-apk
-          path: ${{ steps.apk.outputs.path }}
+          name: sharpclient-android
+          path: |
+            ${{ steps.artifacts.outputs.apk }}
+            ${{ steps.artifacts.outputs.aab }}
           if-no-files-found: error
 
-      - name: Attach APK to the GitHub Release
+      - name: Attach signed artifacts to the GitHub Release
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" "${{ steps.apk.outputs.path }}" --clobber
+        run: >
+          gh release upload "${{ github.event.release.tag_name }}"
+          "${{ steps.artifacts.outputs.apk }}"
+          "${{ steps.artifacts.outputs.aab }}"
+          --clobber
