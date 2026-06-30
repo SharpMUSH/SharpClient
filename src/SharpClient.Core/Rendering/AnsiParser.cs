@@ -74,7 +74,7 @@ public static class AnsiParser
                         inSend = true;
                     }
                 }
-                else if (name == "a" && mxp.IsPuebloActive)
+                else if (name == "a" && mxp!.IsPuebloActive)
                 {
                     var cmd = GetAttr(attrs, "xch_cmd");
                     if (cmd is not null)
@@ -155,10 +155,14 @@ public static class AnsiParser
             }
 
             // MXP / Pueblo markup. Locked MXP lines (mode 2) suppress all parsing.
-            if (current == '<' && mxp is not null
-                && (mxp.IsPuebloActive || (mxp.IsMxpActive && mxp.LineMode != 2)))
+            var markup = mxp is not null
+                && (mxp.IsPuebloActive || (mxp.IsMxpActive && mxp.LineMode != 2));
+
+            if (current == '<' && markup)
             {
-                var gt = line.IndexOf('>', index);
+                // Quote-aware scan for the tag terminator so a '>' inside a quoted attribute
+                // value (e.g. <a xch_cmd="say 5 > 3">) doesn't truncate the tag.
+                var gt = FindTagEnd(line, index + 1);
                 if (gt < 0)
                 {
                     text.Append(current); // unterminated tag: treat '<' as literal
@@ -168,6 +172,16 @@ public static class AnsiParser
 
                 HandleTag(line.Substring(index + 1, gt - (index + 1)));
                 index = gt + 1;
+                continue;
+            }
+
+            // HTML entity decoding only happens inside MXP/Pueblo markup (after tag tokenisation,
+            // on text runs). In plain ANSI output '&' is always literal. A lone or unrecognised
+            // '&' is emitted verbatim — never dropped.
+            if (current == '&' && markup && TryDecodeEntity(line, index, out var entity, out var consumed))
+            {
+                text.Append(entity);
+                index += consumed;
                 continue;
             }
 
@@ -215,7 +229,7 @@ public static class AnsiParser
                         j++;
                     }
 
-                    return body[start..j];
+                    return DecodeEntities(body[start..j]);
                 }
                 else
                 {
@@ -225,7 +239,7 @@ public static class AnsiParser
                         j++;
                     }
 
-                    return body[start..j];
+                    return DecodeEntities(body[start..j]);
                 }
             }
 
@@ -233,6 +247,140 @@ public static class AnsiParser
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Scan from <paramref name="start"/> for the '>' that closes a tag, skipping over single- or
+    /// double-quoted attribute values so a literal '>' inside an attribute doesn't end the tag early
+    /// (the Pueblo reference client guards this exact case). Returns -1 if unterminated.
+    /// </summary>
+    private static int FindTagEnd(string s, int start)
+    {
+        var quote = '\0';
+        for (var k = start; k < s.Length; k++)
+        {
+            var c = s[k];
+            if (quote != '\0')
+            {
+                if (c == quote)
+                {
+                    quote = '\0';
+                }
+            }
+            else if (c is '"' or '\'')
+            {
+                quote = c;
+            }
+            else if (c == '>')
+            {
+                return k;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>Decode every HTML entity in a string (used for attribute values).</summary>
+    private static string DecodeEntities(string s)
+    {
+        if (s.IndexOf('&') < 0)
+        {
+            return s;
+        }
+
+        var sb = new StringBuilder(s.Length);
+        var i = 0;
+        while (i < s.Length)
+        {
+            if (s[i] == '&' && TryDecodeEntity(s, i, out var decoded, out var consumed))
+            {
+                sb.Append(decoded);
+                i += consumed;
+            }
+            else
+            {
+                sb.Append(s[i]);
+                i++;
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Try to decode the HTML entity beginning at <paramref name="i"/> (must point at '&amp;').
+    /// Handles the core named entities, <c>&amp;apos;</c>/<c>&amp;nbsp;</c>/<c>&amp;copy;</c>/<c>&amp;reg;</c>/<c>&amp;trade;</c>,
+    /// and numeric <c>&amp;#NN;</c> (decimal) / <c>&amp;#xNN;</c> (hex), decoding to full Unicode.
+    /// Named lookup is case-insensitive (friendlier than the reference client). A terminating ';'
+    /// is required; an unrecognised or unterminated sequence returns false so the caller emits the
+    /// literal '&amp;' (entities are never silently dropped). Numeric values below U+0020 or outside
+    /// the Unicode range are consumed but produce no output (control chars are ignored, per MXP).
+    /// </summary>
+    private static bool TryDecodeEntity(string s, int i, out string decoded, out int consumed)
+    {
+        decoded = string.Empty;
+        consumed = 0;
+
+        if (i >= s.Length || s[i] != '&')
+        {
+            return false;
+        }
+
+        var semi = s.IndexOf(';', i + 1);
+        if (semi < 0 || semi - (i + 1) is 0 or > 12)
+        {
+            return false; // no terminator, empty, or implausibly long
+        }
+
+        var name = s[(i + 1)..semi];
+        consumed = semi - i + 1;
+
+        if (name[0] == '#')
+        {
+            var isHex = name.Length > 1 && name[1] is 'x' or 'X';
+            var digits = isHex ? name[2..] : name[1..];
+            var v = 0;
+            var ok = digits.Length > 0 && (isHex
+                ? int.TryParse(digits, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out v)
+                : int.TryParse(digits, out v));
+            if (!ok)
+            {
+                consumed = 0;
+                return false;
+            }
+
+            if (v < 0x20 || v > 0x10FFFF || (v >= 0xD800 && v <= 0xDFFF))
+            {
+                decoded = string.Empty; // ignore control / invalid / surrogate code points
+                return true;
+            }
+
+            decoded = char.ConvertFromUtf32(v);
+            return true;
+        }
+
+        var mapped = name.ToLowerInvariant() switch
+        {
+            "lt" => "<",
+            "gt" => ">",
+            "amp" => "&",
+            "quot" => "\"",
+            "apos" => "'",
+            "nbsp" => " ",
+            "copy" => "©",
+            "reg" => "®",
+            "trade" => "™",
+            _ => null,
+        };
+
+        if (mapped is null)
+        {
+            consumed = 0;
+            return false;
+        }
+
+        decoded = mapped;
+        return true;
     }
 
     private static bool IsCsiFinal(char c) => c is >= '@' and <= '~';
