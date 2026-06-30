@@ -2,6 +2,7 @@ using System.Net.Sockets;
 using System.Text;
 using TelnetNegotiationCore.Builders;
 using TelnetNegotiationCore.Interpreters;
+using TelnetNegotiationCore.Models;
 
 namespace SharpClient.Core.Connection;
 
@@ -12,8 +13,9 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
     private Task? _readTask;
 
     public event Action<string>? LineReceived;
-
     public event Action<ConnectionState>? StateChanged;
+    public event Action<GmcpMessage>? GmcpReceived;
+    public event Action<NegotiationEvent>? NegotiationReceived;
 
     public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
 
@@ -32,6 +34,9 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
 
             var (interpreter, readTask) = await factory.CreateBuilder()
                 .OnSubmit(OnSubmitAsync)
+                .AddDefaultMUDProtocols(
+                    onGMCPMessage: OnGmcpMessageAsync,
+                    onMSSP: OnMsspAsync)
                 .BuildAndStartAsync(_client, cancellationToken);
 
             _interpreter = interpreter;
@@ -90,6 +95,23 @@ public sealed class TelnetConnection(ITelnetInterpreterFactory factory) : ITelne
     private ValueTask OnSubmitAsync(byte[] data, Encoding encoding, TelnetInterpreter interpreter)
     {
         LineReceived?.Invoke(encoding.GetString(data));
+        return ValueTask.CompletedTask;
+    }
+
+    private ValueTask OnGmcpMessageAsync((string Package, string Info) msg)
+    {
+        GmcpReceived?.Invoke(new GmcpMessage(msg.Package, msg.Info));
+        return ValueTask.CompletedTask;
+    }
+
+    private ValueTask OnMsspAsync(MSSPConfig cfg)
+    {
+        var parts = new List<string>();
+        if (cfg.Name is not null) parts.Add($"NAME={cfg.Name}");
+        if (cfg.Players is not null) parts.Add($"PLAYERS={cfg.Players}");
+        if (cfg.Uptime is not null) parts.Add($"UPTIME={cfg.Uptime}");
+        var detail = parts.Count > 0 ? string.Join(" ", parts) : "(no data)";
+        NegotiationReceived?.Invoke(new NegotiationEvent("MSSP", detail));
         return ValueTask.CompletedTask;
     }
 

@@ -16,6 +16,12 @@ public interface ISession : IAsyncDisposable
 
     public string WorldName { get; }
 
+    public IReadOnlyList<NegotiationEvent> NegotiationLog => [];
+
+    public IReadOnlyList<GmcpMessage> GmcpLog => [];
+
+    public event Action? ProtocolChanged { add { } remove { } }
+
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default);
 
     public Task SendAsync(string line);

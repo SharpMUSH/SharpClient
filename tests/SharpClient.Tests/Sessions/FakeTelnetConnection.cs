@@ -6,6 +6,8 @@ public sealed class FakeTelnetConnection : ITelnetConnection
 {
     public event Action<string>? LineReceived;
     public event Action<ConnectionState>? StateChanged;
+    public event Action<GmcpMessage>? GmcpReceived;
+    public event Action<NegotiationEvent>? NegotiationReceived;
 
     public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
     public List<string> Sent { get; } = [];
@@ -29,6 +31,10 @@ public sealed class FakeTelnetConnection : ITelnetConnection
     }
 
     public void Emit(string line) => LineReceived?.Invoke(line);
+
+    public void EmitGmcp(GmcpMessage msg) => GmcpReceived?.Invoke(msg);
+
+    public void EmitNegotiation(NegotiationEvent ev) => NegotiationReceived?.Invoke(ev);
 
     public void RaiseState(ConnectionState state)
     {
