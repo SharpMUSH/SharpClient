@@ -43,6 +43,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<IAppStorage, MauiAppStorage>();
         builder.Services.AddSingleton<ISecretStore, MauiSecretStore>();
         builder.Services.AddSingleton<INotifier, MauiNotifier>();
+        builder.Services.AddSingleton<SharpClient.Core.Platform.IPreferences, MauiPreferences>();
+        builder.Services.AddSingleton<SettingsViewModel>(sp =>
+            new SettingsViewModel(sp.GetRequiredService<SharpClient.Core.Platform.IPreferences>()));
 
         // ── Data / persistence ────────────────────────────────────────────
         // AppDbContext is transient so each call gets a fresh context; this
