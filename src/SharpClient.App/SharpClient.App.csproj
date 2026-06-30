@@ -48,6 +48,15 @@
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     </PropertyGroup>
 
+    <!-- Android Release defaults to Mono AOT, which fails to precompile
+         TelnetNegotiationCore.Functional.dll (it depends on FSharp.Core, which the
+         AOT compiler cannot resolve). Disable AOT for Android Release so `dotnet
+         publish -c Release` produces an APK; the app runs under the JIT/interpreter. -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Release' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+        <RunAOTCompilation>false</RunAOTCompilation>
+        <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    </PropertyGroup>
+
     <ItemGroup>
         <!-- App Icon -->
         <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
