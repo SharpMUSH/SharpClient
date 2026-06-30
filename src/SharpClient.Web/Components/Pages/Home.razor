@@ -1,59 +1,11 @@
 @page "/"
 @rendermode InteractiveServer
 
-@using SharpClient.Core.Rendering
-@using SharpClient.Core.Sessions
+@using SharpClient.Core.Presentation
 @using SharpClient.UI.Components
 
-<PageTitle>SharpClient — Output Preview</PageTitle>
+@inject SessionsViewModel Vm
 
-<div class="terminal-page">
-    <p class="page-title">Output Feed Preview — Red Sector / The Drome</p>
-    <div class="output-container">
-        <OutputView Lines="@_feed" />
-    </div>
-</div>
+<PageTitle>SharpClient</PageTitle>
 
-@code {
-    private IReadOnlyList<ScrollbackLine> _feed = [];
-
-    protected override void OnInitialized()
-    {
-        _feed = BuildSampleFeed();
-    }
-
-    private static IReadOnlyList<ScrollbackLine> BuildSampleFeed()
-    {
-        // String literals use \u001b (C# unicode escape) for the ESC character (U+001B).
-        // AnsiParser strips SGR sequences and returns styled segments.
-        string[] rawLines =
-        [
-            "\u001b[1mRED SECTOR — THE DROME\u001b[0m",
-            "A vast underground arena carved from volcanic basalt, lit by chemical torches.",
-            "",
-            "\u001b[31mThe walls are slick with condensation and old blood.\u001b[0m",
-            "\u001b[92mServer:\u001b[0m  The Drome MUD v3.4.1  \u001b[92m[online]\u001b[0m",
-            "\u001b[38;5;208mWARNING:\u001b[0m  Low-visibility zone — torches flicker at zone boundary.",
-            "\u001b[1m\u001b[36mThe Arena Master\u001b[0m steps from the shadows and surveys the pit.",
-            "\u001b[33mGold\u001b[0m glints against \u001b[34mblue\u001b[0m steel; the crowd roars.",
-            "\u001b[93m[SYSTEM]\u001b[0m  Connection established.  Type \u001b[4mhelp\u001b[0m to begin.",
-            "\u001b[35mA resonant chime echoes through the stone passages.\u001b[0m",
-            "",
-            "\u001b[38;5;118mHP: 320/320  \u001b[38;5;208mMP: 140/200  \u001b[38;5;87mSP:  75/100\u001b[0m",
-            "You are in the Gate Tunnel.  Exits: [north] [west]",
-            "",
-            "\u001b[1m\u001b[97m[ Combat Log ]\u001b[0m",
-            "\u001b[91mDrakar strikes you for 42 points of damage!\u001b[0m",
-            "\u001b[92mYou strike Drakar for 31 points of damage.\u001b[0m",
-            "\u001b[7m ROUNDTIME: 3s \u001b[0m",
-            "",
-            "\u001b[1m\u001b[35m[Trigger]\u001b[0m  Matched pattern «highlight» — active.",
-            "\u001b[38;5;135mThe shadows pulse with unnatural energy.\u001b[0m",
-            "The Gate Tunnel smells of smoke and iron.",
-        ];
-
-        return rawLines
-            .Select(r => new ScrollbackLine(AnsiParser.Parse(r)))
-            .ToArray();
-    }
-}
+<SessionScreen Vm="@Vm" />
