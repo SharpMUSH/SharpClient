@@ -74,12 +74,14 @@ body {
 /* ── OutputView component classes (.sc-output / .sc-line) ──────── */
 .sc-output {
     display: block;
-    /* Hold a floor of --sc-cols character columns (set by measureGrid alongside --out-fs). On a
-       screen too narrow to fit them at the minimum font, the output scrolls horizontally instead of
-       wrapping the server's NAWS-width lines — so what the player sees matches what the server wrapped
-       to. font-size must equal the line font so 1ch is the real column width. */
+    /* Hold a floor of --sc-cols character columns. The track width is published in pixels by
+       measureGrid as --sc-cols-width, measured from a real glyph run on the SAME basis the font was
+       fitted to — NOT the CSS `ch` unit, whose single-glyph rounding ran ~2px wider than the fit and
+       produced a spurious horizontal scrollbar even when the columns fit. In the fitting case the
+       track stays inside the box, so lines wrap at the column edge with no scroll; only on a screen
+       too narrow to fit the columns at the minimum font does it exceed the box and scroll. */
     font-size: var(--out-fs);
-    min-width: calc(var(--sc-cols, 0) * 1ch);
+    min-width: var(--sc-cols-width, 0px);
 }
 
 .sc-line {
