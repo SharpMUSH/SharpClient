@@ -79,11 +79,6 @@ body {
 /* ── OutputView component classes (.sc-output / .sc-line) ──────── */
 .sc-output {
     display: block;
-    /* No forced min-width track: the font is fitted (measureGrid) so --sc-cols columns span the
-       content box, so the block just fills its container and lines wrap at the column edge. A
-       min-width track only ever pushed the block WIDER than the box (by sub-pixel/rounding or Android
-       WebView font-boosting), which .sc-output-area then turned into a horizontal scrollbar — the bug
-       this removes. Wrapping is preferred over horizontal scrolling. */
     font-size: var(--out-fs);
 }
 

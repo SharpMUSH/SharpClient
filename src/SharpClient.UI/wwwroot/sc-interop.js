@@ -164,8 +164,17 @@ export function measureGrid(element, targetCols, minFont, maxFont) {
         cols = clampGrid(Math.floor(contentW / (advanceRatio * fontPx)));
     }
 
+    // Publish the column-track width in PIXELS, measured on the same basis the font was fitted to
+    // (a real run of `cols` glyphs). The CSS `ch` unit can't be used for the track: its single-glyph
+    // advance rounds a couple px wider than this averaged run, which pushed `cols * 1ch` past the
+    // content box and produced a spurious horizontal scrollbar even though the columns fit. Measured
+    // px keeps the track <= the box in the fitting case (no scroll, lines wrap at the column edge) and
+    // only exceeds it when the screen genuinely can't fit `cols` at the min font (then it scrolls).
+    const trackW = runWidth(fontPx, '0'.repeat(cols));
+
     element.style.setProperty('--out-fs', fontPx + 'px');
     element.style.setProperty('--sc-cols', String(cols));
+    element.style.setProperty('--sc-cols-width', trackW + 'px');
 
     return { cols, rows: clampGrid(Math.floor(contentH / (lineRatio * fontPx))) };
 }
