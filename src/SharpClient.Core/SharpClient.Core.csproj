@@ -7,7 +7,7 @@
   <ItemGroup>
     <!-- 2.5.1 declares its FSharp.Core dependency (the F# MSDP assembly needs it); earlier versions
          did not, which crashed MSDP negotiation. No explicit FSharp.Core reference needed anymore. -->
-    <PackageReference Include="TelnetNegotiationCore" Version="2.5.1" />
+    <PackageReference Include="TelnetNegotiationCore" Version="2.5.2" />
   </ItemGroup>
 
 </Project>

@@ -108,8 +108,11 @@
         <!-- 2.5.1 fixes the missing FSharp.Core nuspec dependency, so FSharp.Core now flows in
              transitively (and is packaged into the APK) without an explicit reference here. The F#
              MSDP assembly no longer crashes negotiation with "Could not load file or assembly
-             'FSharp.Core'". -->
-        <PackageReference Include="TelnetNegotiationCore" Version="2.5.1" />
+             'FSharp.Core'".
+             2.5.2 stops the client from initiating CHARSET (WILL CHARSET): a client/server
+             WILL/WILL collision left CHARSET unresolved and made SharpMUSH drop the login line,
+             so connecting to Convergence always bounced back to the login screen. -->
+        <PackageReference Include="TelnetNegotiationCore" Version="2.5.2" />
     </ItemGroup>
 
     <ItemGroup>
