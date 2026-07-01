@@ -111,6 +111,8 @@ public sealed class Session : ISession
 
     public Task ForceReconnectAsync() => _connection.ForceReconnectAsync();
 
+    public Task ReconnectAsync() => _connection.ReconnectAsync();
+
     private static readonly TextStyle EchoStyle = TextStyle.Default with { Foreground = AnsiColor.Indexed(8) };
 
     public async Task SendAsync(string line)

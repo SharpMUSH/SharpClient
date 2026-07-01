@@ -35,6 +35,10 @@ public sealed class SessionsViewModel
     public bool CanDisconnect =>
         Active is { State: ConnectionState.Connected or ConnectionState.Connecting or ConnectionState.Reconnecting };
 
+    /// <summary>True while the active session is down and could be reconnected in place.</summary>
+    public bool CanConnect =>
+        Active is { State: ConnectionState.Disconnected or ConnectionState.Error };
+
     public IReadOnlyList<string> History =>
         Active is not null && _histories.TryGetValue(Active, out var h) ? h : [];
 
@@ -50,6 +54,9 @@ public sealed class SessionsViewModel
     /// connected but the socket is actually dead.
     /// </summary>
     public Task DisconnectAsync() => Active?.DisconnectAsync() ?? Task.CompletedTask;
+
+    /// <summary>Reconnect the active (down) session to its endpoint, in place.</summary>
+    public Task ReconnectAsync() => Active?.ReconnectAsync() ?? Task.CompletedTask;
 
     public async Task SendAsync()
     {

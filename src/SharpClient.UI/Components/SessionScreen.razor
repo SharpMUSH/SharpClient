@@ -27,6 +27,17 @@
                     </svg>
                 </button>
             }
+            else if (Vm.CanConnect)
+            {
+                <button class="sc-connect-btn" @onclick="ReconnectAsync"
+                        title="Reconnect this session" aria-label="Connect">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10 3.5v6" />
+                        <path d="M6.2 6.2a5 5 0 1 0 7.6 0" />
+                    </svg>
+                </button>
+            }
             @if (ProtocolVm is not null)
             {
                 <button class="sc-protocol-toggle @(_showProtocol ? "sc-protocol-toggle-active" : string.Empty)"
@@ -71,6 +82,12 @@
     private async Task DisconnectAsync()
     {
         await Vm.DisconnectAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ReconnectAsync()
+    {
+        await Vm.ReconnectAsync();
         await InvokeAsync(StateHasChanged);
     }
     private ElementReference _outputRef;

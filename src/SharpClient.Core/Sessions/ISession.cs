@@ -34,6 +34,9 @@ public interface ISession : IAsyncDisposable
     /// <summary>Force an immediate reconnect to the same endpoint (e.g. after a network change).</summary>
     public Task ForceReconnectAsync() => Task.CompletedTask;
 
+    /// <summary>User-initiated reconnect to the last endpoint; works even after an intentional disconnect.</summary>
+    public Task ReconnectAsync() => Task.CompletedTask;
+
     public Task SendAsync(string line);
 
     public Task SendWindowSizeAsync(int cols, int rows) => Task.CompletedTask;

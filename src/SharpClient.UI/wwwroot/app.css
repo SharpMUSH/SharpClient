@@ -263,6 +263,32 @@ body {
     background: rgba(255, 107, 107, .08);
 }
 
+/* Connect button — same spot/glyph as Disconnect, accent-tinted to invite reconnecting a down session. */
+.sc-connect-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--acc-soft);
+    border: 1px solid var(--acc-line);
+    color: var(--acc2);
+    cursor: pointer;
+    transition: color .12s, border-color .12s, background .12s;
+}
+
+.sc-connect-btn svg {
+    width: 17px;
+    height: 17px;
+    display: block;
+}
+
+.sc-connect-btn:hover {
+    color: var(--tx);
+    border-color: var(--acc2);
+}
+
 /* ── Protocol panel (negotiation + GMCP inspector) ─────────────── */
 .sc-protocol-panel {
     flex-shrink: 0;
