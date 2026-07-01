@@ -6,6 +6,7 @@ using SharpClient.Core.Presentation;
 using SharpClient.Core.Sessions;
 using SharpClient.Core.Triggers;
 using SharpClient.Data;
+using SharpClient.UI;
 using SharpClient.Web;
 using SharpClient.Web.Components;
 
@@ -20,8 +21,6 @@ builder.Services.AddSingleton<ITelnetConnectionFactory, TelnetConnectionFactory>
 
 // ── Platform services ──────────────────────────────────────────────────────
 builder.Services.AddSingleton<IPreferences, WebPreferences>();
-builder.Services.AddSingleton<SettingsViewModel>(sp =>
-    new SettingsViewModel(sp.GetRequiredService<IPreferences>()));
 
 builder.Services.AddSingleton<IAppStorage, WebAppStorage>();
 builder.Services.AddSingleton<ISecretStore, WebSecretStore>();
@@ -41,10 +40,6 @@ builder.Services.AddSingleton<ILogExporter, NoopLogExporter>();
 // ── Session management ─────────────────────────────────────────────────────
 builder.Services.AddSingleton<SessionManager>();
 builder.Services.AddSingleton<ISessionManager>(sp => sp.GetRequiredService<SessionManager>());
-builder.Services.AddSingleton<SessionsViewModel>(sp =>
-    new SessionsViewModel(sp.GetRequiredService<ISessionManager>()));
-builder.Services.AddSingleton<ProtocolPanelViewModel>(sp =>
-    new ProtocolPanelViewModel(sp.GetRequiredService<ISessionManager>()));
 
 // ── Data / persistence ─────────────────────────────────────────────────────
 builder.Services.AddScoped<AppDbContext>();
@@ -55,18 +50,9 @@ builder.Services.AddScoped<ISessionHistory, SessionHistory>();
 builder.Services.AddScoped<ISessionLauncher, TelnetSessionLauncher>();
 
 // ── View models ────────────────────────────────────────────────────────────
-builder.Services.AddScoped<WorldManagerViewModel>(sp => new WorldManagerViewModel(
-    sp.GetRequiredService<IWorldStore>(),
-    sp.GetRequiredService<ISecretStore>(),
-    sp.GetRequiredService<ISessionManager>(),
-    sp.GetRequiredService<ISessionLauncher>()));
-builder.Services.AddScoped<TriggerAliasEditorViewModel>(sp =>
-    new TriggerAliasEditorViewModel(
-        sp.GetRequiredService<IWorldStore>()));
-builder.Services.AddScoped<HistorySearchViewModel>(sp =>
-    new HistorySearchViewModel(
-        sp.GetRequiredService<ISessionHistory>(),
-        sp.GetRequiredService<IWorldStore>()));
+// Registered via the shared extension so MAUI and Web stay in lockstep (no host drift).
+// Per-view view models are Scoped here to match the Web's per-request scope.
+builder.Services.AddSharpClientViewModels(ServiceLifetime.Scoped);
 
 var app = builder.Build();
 

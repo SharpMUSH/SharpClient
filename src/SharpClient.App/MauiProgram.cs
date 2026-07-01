@@ -10,6 +10,7 @@ using SharpClient.Core.Presentation;
 using SharpClient.Core.Sessions;
 using SharpClient.Core.Triggers;
 using SharpClient.Data;
+using SharpClient.UI;
 
 namespace SharpClient.App;
 
@@ -90,8 +91,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISecretStore, MauiSecretStore>();
         builder.Services.AddSingleton<INotifier, MauiNotifier>();
         builder.Services.AddSingleton<SharpClient.Core.Platform.IPreferences, MauiPreferences>();
-        builder.Services.AddSingleton<SettingsViewModel>(sp =>
-            new SettingsViewModel(sp.GetRequiredService<SharpClient.Core.Platform.IPreferences>()));
 
         // ── Data / persistence ────────────────────────────────────────────
         // AppDbContext is transient so each call gets a fresh context; this
@@ -106,26 +105,13 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISessionManager>(sp =>
             sp.GetRequiredService<SessionManager>());
 
-        // ── View models ───────────────────────────────────────────────────
-        builder.Services.AddSingleton<SessionsViewModel>(sp =>
-            new SessionsViewModel(sp.GetRequiredService<ISessionManager>()));
-
-        builder.Services.AddSingleton<ProtocolPanelViewModel>(sp =>
-            new ProtocolPanelViewModel(sp.GetRequiredService<ISessionManager>()));
-
-        builder.Services.AddTransient<WorldManagerViewModel>(sp =>
-            new WorldManagerViewModel(
-                sp.GetRequiredService<IWorldStore>(),
-                sp.GetRequiredService<ISecretStore>(),
-                sp.GetRequiredService<ISessionManager>(),
-                sp.GetRequiredService<ISessionLauncher>()));
-        builder.Services.AddTransient<HistorySearchViewModel>(sp =>
-            new HistorySearchViewModel(
-                sp.GetRequiredService<ISessionHistory>(),
-                sp.GetRequiredService<IWorldStore>()));
-
         // ── Session launcher (real telnet) ────────────────────────────────
         builder.Services.AddTransient<ISessionLauncher, SharpClient.Core.Sessions.TelnetSessionLauncher>();
+
+        // ── View models ───────────────────────────────────────────────────
+        // Registered via the shared extension so MAUI and Web stay in lockstep (no host drift).
+        // Per-view view models are Transient here to match MAUI's per-request-less lifetime model.
+        builder.Services.AddSharpClientViewModels(ServiceLifetime.Transient);
 
         // ── Trigger / alias engines (stateless) ──────────────────────────
         builder.Services.AddSingleton<ITriggerEngine, TriggerEngine>();
