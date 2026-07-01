@@ -6,31 +6,20 @@
 
 **A modern, cross-platform client for MUSH &amp; MUD text worlds.**
 
-[![CI](https://github.com/SharpMUSH/SharpClient/actions/workflows/ci.yml/badge.svg)](https://github.com/SharpMUSH/SharpClient/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/SharpMUSH/SharpClient?include_prereleases&sort=semver&color=00b894&label=release)](https://github.com/SharpMUSH/SharpClient/releases)
-[![.NET 10](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com)
-[![Platforms](https://img.shields.io/badge/platforms-Android%20%C2%B7%20Web-00b894)](#install)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![CI](https://github.com/SharpMUSH/SharpClient/actions/workflows/ci.yml/badge.svg)](https://github.com/SharpMUSH/SharpClient/actions/workflows/ci.yml) [![Latest release](https://img.shields.io/github/v/release/SharpMUSH/SharpClient?include_prereleases&sort=semver&color=00b894&label=release)](https://github.com/SharpMUSH/SharpClient/releases) [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com) [![Platforms](https://img.shields.io/badge/platforms-Android%20%C2%B7%20Web-00b894)](#install) [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 </div>
 
-SharpClient connects to text-based **MUSH / MUD** servers over Telnet, with the modern MU\* protocol
-stack and a clean Blazor interface. A single, fully-testable core drives both a native **Android** app
-and a **Blazor web** client, speaking Telnet through
-[TelnetNegotiationCore](https://github.com/HarryCordewener/TelnetNegotiationCore).
+SharpClient connects to text-based **MUSH / MUD** servers over Telnet, with the modern MU\* protocol stack and a clean Blazor interface. A single, fully-testable core drives both a native **Android** app and a **Blazor web** client, speaking Telnet through [TelnetNegotiationCore](https://github.com/HarryCordewener/TelnetNegotiationCore).
 
 ## Features
 
-- **Modern MU\* protocols** — GMCP, MSSP, MSDP, NAWS and CHARSET, plus MXP and Pueblo, with
-  EOR/GA prompt handling and UTF-8.
+- **Modern MU\* protocols** — GMCP, MSSP, MSDP, NAWS and CHARSET, plus MXP and Pueblo, with EOR/GA prompt handling and UTF-8.
 - **Rich rendering** — full ANSI/SGR colour &amp; styling, MXP links, and MXP/Pueblo markup.
 - **Automation** — per-world and per-character **triggers** and **aliases**.
-- **Sessions that stay put** — multiple worlds &amp; characters, saved connect credentials, and
-  automatic **reconnect with backoff**.
-- **Truly cross-platform** — one shared core behind a MAUI Blazor Hybrid Android app and a
-  Blazor Server web client.
-- **Built to be tested** — all connection, parsing and automation logic lives in a MAUI-free core
-  with a TUnit suite.
+- **Sessions that stay put** — multiple worlds &amp; characters, saved connect credentials, and automatic **reconnect with backoff**.
+- **Truly cross-platform** — one shared core behind a MAUI Blazor Hybrid Android app and a Blazor Server web client.
+- **Built to be tested** — all connection, parsing and automation logic lives in a MAUI-free core with a TUnit suite.
 
 ## Screenshots
 
@@ -46,9 +35,7 @@ and a **Blazor web** client, speaking Telnet through
 
 ### Android
 
-Signed APKs are attached to every [release](https://github.com/SharpMUSH/SharpClient/releases). You can
-sideload the `.apk` directly, but the easiest way to install **and stay updated** is
-[Obtainium](https://github.com/ImranR98/Obtainium), which tracks this repo's releases for you:
+Signed APKs are attached to every [release](https://github.com/SharpMUSH/SharpClient/releases). You can sideload the `.apk` directly, but the easiest way to install **and stay updated** is [Obtainium](https://github.com/ImranR98/Obtainium), which tracks this repo's releases for you:
 
 1. Install Obtainium.
 2. Add an app with this source URL:
@@ -61,10 +48,7 @@ sideload the `.apk` directly, but the easiest way to install **and stay updated*
    ```
 3. Obtainium picks up the universal signed APK from each release and notifies you when a new version ships.
 
-Each release ships a **single universal APK** — no ABI/architecture filter needed — and its
-`versionName`/`versionCode` are derived from the release tag, so Obtainium and Android both see the
-correct version and can update in place. If a release is marked **pre-release** on GitHub, enable
-"include prereleases" for the app in Obtainium or it will be skipped.
+Each release ships a **single universal APK** — no ABI/architecture filter needed — and its `versionName`/`versionCode` are derived from the release tag, so Obtainium and Android both see the correct version and can update in place. If a release is marked **pre-release** on GitHub, enable "include prereleases" for the app in Obtainium or it will be skipped.
 
 ### Web
 
@@ -89,9 +73,7 @@ dotnet run --project tests/SharpClient.Tests   # run the TUnit suite
 dotnet build src/SharpClient.App/SharpClient.App.csproj -f net10.0-android
 ```
 
-Building `SharpClient.App` requires the `maui-android` workload plus the Android SDK and **JDK 17**
-(the .NET for Android toolchain rejects newer JDKs). Machine-specific SDK/JDK paths are wired in via a
-gitignored `Directory.Local.props`. On a fresh machine:
+Building `SharpClient.App` requires the `maui-android` workload plus the Android SDK and **JDK 17** (the .NET for Android toolchain rejects newer JDKs). Machine-specific SDK/JDK paths are wired in via a gitignored `Directory.Local.props`. On a fresh machine:
 
 ```sh
 # Install the Android SDK (accepts licenses, downloads platform-tools/build-tools/platform)
@@ -102,8 +84,7 @@ dotnet build src/SharpClient.App/SharpClient.App.csproj -f net10.0-android \
 # Then point Directory.Local.props at your AndroidSdkDirectory and JavaSdkDirectory.
 ```
 
-MAUI has no Linux desktop head, so on Linux the App head builds/deploys to an Android device or
-emulator while the inner loop stays on `Core` + `Tests`.
+MAUI has no Linux desktop head, so on Linux the App head builds/deploys to an Android device or emulator while the inner loop stays on `Core` + `Tests`.
 
 ## Architecture
 
@@ -118,21 +99,15 @@ A MAUI-free core holds all the logic; the platform heads are thin hosts around i
 | `src/SharpClient.Web` | Blazor Server (`net10.0`) | Web client head. |
 | `tests/*` | TUnit / bUnit | Unit tests for `Core` &amp; `Data`, component tests for `UI`. |
 
-Shared build settings (warnings-as-errors, nullable, modern C#) live in
-[`Directory.Build.props`](Directory.Build.props); the SDK is pinned to .NET 10 via
-[`global.json`](global.json). The design spec and visual-design brief live in
-[`docs/superpowers/specs`](docs/superpowers/specs).
+Shared build settings (warnings-as-errors, nullable, modern C#) live in [`Directory.Build.props`](Directory.Build.props); the SDK is pinned to .NET 10 via [`global.json`](global.json). The design spec and visual-design brief live in [`docs/superpowers/specs`](docs/superpowers/specs).
 
 ## Tech stack
 
-.NET 10 · MAUI Blazor Hybrid · Blazor Server · TUnit &amp; bUnit · EF Core (SQLite) ·
-[TelnetNegotiationCore](https://github.com/HarryCordewener/TelnetNegotiationCore)
+.NET 10 · MAUI Blazor Hybrid · Blazor Server · TUnit &amp; bUnit · EF Core (SQLite) · [TelnetNegotiationCore](https://github.com/HarryCordewener/TelnetNegotiationCore)
 
 ## Contributing
 
-Issues and pull requests are welcome. The inner loop runs entirely on `Core` + `Tests` (no Android
-SDK required) — see [Build from source](#build-from-source). CI builds and runs the test suites on
-every push.
+Issues and pull requests are welcome. The inner loop runs entirely on `Core` + `Tests` (no Android SDK required) — see [Build from source](#build-from-source). CI builds and runs the test suites on every push.
 
 ## License
 
