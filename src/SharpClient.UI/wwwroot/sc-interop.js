@@ -69,8 +69,9 @@ export function observeResize(dotNetRef, element) {
  * sub-pixel rounding), never derived from a hard-coded 0.6em — that guess made an advertised 78
  * columns wrap ~2 short. A closed loop corrects for glyph-advance non-linearity (hinting): after the
  * ideal size is computed it re-measures `targetCols` chars and shrinks if they overflow. Font growth
- * is capped at `maxFont` (line-length cap; content left-aligns), floored at `minFont` (below that the
- * caller's --sc-cols track scrolls horizontally rather than rendering illegibly small).
+ * is capped at `maxFont` (line-length cap; content left-aligns), floored at `minFont`. If even at
+ * `minFont` the targetCols don't fit, the RETURNED column count is the number that actually fits (not
+ * targetCols), so NAWS never advertises more than is visible and lines don't wrap on the client.
  *
  * Ported from SharpMUSH.Client's terminalMetrics.js so the two clients agree on column math.
  * Applies the fitted size as --out-fs and the column count as --sc-cols on the element, and returns
@@ -139,7 +140,6 @@ export function measureGrid(element, targetCols, minFont, maxFont) {
     const contentH = element.clientHeight - padY;
 
     let fontPx;
-    let cols;
     if (targetCols > 0) {
         const targetW = contentW - 1; // a hair inside the box (avoid a sub-pixel scrollbar)
         let fit = targetW / targetCols / advanceRatio;
@@ -158,16 +158,39 @@ export function measureGrid(element, targetCols, minFont, maxFont) {
             fit = Math.max(minF, fit * (targetW / actual));
         }
         fontPx = fit;
-        cols = targetCols; // honour the preferred width; the --sc-cols track scrolls if it overflows
     } else {
         fontPx = parseFloat(cs.getPropertyValue('--out-fs')) || 14;
-        cols = clampGrid(Math.floor(contentW / (advanceRatio * fontPx)));
     }
+
+    // Columns that ACTUALLY fit — measured with the REAL glyph advance at the fitted size, NOT the
+    // linear advanceRatio (sampled at 100px). Glyph advance is proportionally larger at tiny sizes
+    // (hinting/rounding), so the linear value over-counts near the min-font floor: it once reported 104
+    // columns "fit" at 6px when only ~78 truly did, so an advertised 90 wrapped. Reporting the honest
+    // count means NAWS never advertises more than is visible, so the server wraps to fit and the client
+    // never wraps a second time.
+    const realAdvance = runWidth(fontPx, '0'.repeat(100)) / 100;
+    const fitCols = realAdvance > 0 ? Math.floor(contentW / realAdvance) : 1;
+    const cols = targetCols > 0
+        ? Math.min(targetCols, Math.max(1, fitCols))
+        : clampGrid(fitCols);
+    const vscroll = element.scrollHeight > element.clientHeight;
 
     element.style.setProperty('--out-fs', fontPx + 'px');
     element.style.setProperty('--sc-cols', String(cols));
 
-    return { cols, rows: clampGrid(Math.floor(contentH / (lineRatio * fontPx))) };
+    return {
+        cols,
+        rows: clampGrid(Math.floor(contentH / (lineRatio * fontPx))),
+        // diagnostics (see SessionScreen logging)
+        fontPx: Math.round(fontPx * 100) / 100,
+        clientW: element.clientWidth,
+        contentW,
+        padX,
+        advanceRatio: Math.round(advanceRatio * 10000) / 10000,
+        targetCols,
+        actualCols: fitCols,
+        vscroll,
+    };
 }
 
 /**

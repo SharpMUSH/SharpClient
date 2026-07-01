@@ -1,3 +1,4 @@
+@using Microsoft.Extensions.Logging
 @using Microsoft.JSInterop
 @using SharpClient.Core.Connection
 @using SharpClient.Core.Presentation
@@ -5,6 +6,7 @@
 
 @inject SettingsViewModel Settings
 @inject IJSRuntime JS
+@inject ILogger<SessionScreen> Logger
 
 @implements IAsyncDisposable
 
@@ -110,7 +112,24 @@
         // which had wrapped an advertised 78 columns ~2 short. measureGrid applies --out-fs (fitted
         // size) and --sc-cols (column track width) on the element.
         var cap = Math.Max(6, Settings.MaxFontSize);
-        var grid = await _interop.InvokeAsync<GridDims>("measureGrid", _outputRef, Settings.MinColumns, 6, cap);
+        // Min font 4px (not 6): a high MinColumns on a narrow phone needs a small font to fit — e.g. 90
+        // columns in ~376px needs ~5.9px. Flooring at 6px stopped short, so 90 wrapped. measureGrid
+        // reports the honest fitted column count, so if even 4px can't fit MinColumns it advertises what
+        // does fit instead of over-advertising.
+        const int minFont = 4;
+        var grid = await _interop.InvokeAsync<GridDims>("measureGrid", _outputRef, Settings.MinColumns, minFont, cap);
+
+        // Diagnostics for column/wrap issues — captured to the on-device log (FileLoggerProvider) so it
+        // can be exported. actualCols < targetCols means the advertised width can't be shown and lines
+        // wrap; compare fontPx against the 6px floor and contentW against clientW (scrollbar/inset loss).
+        Logger.LogInformation(
+            "NAWS fit: minCols(setting)={MinColumns} maxFont(cap)={Cap} probeW={ProbeWidth} probeH={ProbeHeight} " +
+            "clientW={ClientW} contentW={ContentW} padX={PadX} advanceRatio={AdvanceRatio} fontPx={FontPx} " +
+            "targetCols={TargetCols} actualColsThatFit={ActualCols} reportedCols(NAWS)={Cols} rows={Rows} vScroll={VScroll} fits={Fits}",
+            Settings.MinColumns, cap, widthPx, heightPx,
+            grid.ClientW, grid.ContentW, grid.PadX, grid.AdvanceRatio, grid.FontPx,
+            grid.TargetCols, grid.ActualCols, grid.Cols, grid.Rows, grid.VScroll,
+            grid.ActualCols >= grid.TargetCols);
 
         if (Vm.Active is not null)
         {
@@ -144,5 +163,15 @@
 
     private sealed record SizeDims(int Width, int Height);
 
-    private sealed record GridDims(int Cols, int Rows);
+    private sealed record GridDims(
+        int Cols,
+        int Rows,
+        double FontPx,
+        double ClientW,
+        double ContentW,
+        double PadX,
+        double AdvanceRatio,
+        int TargetCols,
+        int ActualCols,
+        bool VScroll);
 }

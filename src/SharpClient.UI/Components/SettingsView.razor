@@ -28,12 +28,15 @@
         <div class="sc-settings-section-header">Layout</div>
         <div class="sc-setting">
             <span class="sc-setting-label">Min columns</span>
-            <div class="sc-slider-row">
-                <input type="range" class="sc-slider"
-                       min="60" max="120" step="1"
+            <div class="sc-stepper">
+                <button type="button" class="sc-stepper-btn" aria-label="Fewer columns"
+                        @onclick="() => AdjustMinColumns(-1)">−</button>
+                <input type="number" inputmode="numeric" class="sc-stepper-input"
+                       min="@MinColumnsMin" max="@MinColumnsMax" step="1"
                        value="@Vm.MinColumns"
-                       @onchange="e => Vm.MinColumns = int.Parse(e.Value!.ToString()!)" />
-                <span class="sc-setting-value">@Vm.MinColumns</span>
+                       @onchange="OnMinColumnsInput" />
+                <button type="button" class="sc-stepper-btn" aria-label="More columns"
+                        @onclick="() => AdjustMinColumns(1)">+</button>
             </div>
         </div>
         <div class="sc-setting">
@@ -102,6 +105,22 @@
     public SettingsViewModel Vm { get; set; } = null!;
 
     private bool _exporting;
+
+    // Typeable/stepped bounds for Min columns. Wider than the old 60–120 slider so unusual widths
+    // are reachable; the value is clamped on every change.
+    private const int MinColumnsMin = 20;
+    private const int MinColumnsMax = 500;
+
+    private void AdjustMinColumns(int delta) =>
+        Vm.MinColumns = Math.Clamp(Vm.MinColumns + delta, MinColumnsMin, MinColumnsMax);
+
+    private void OnMinColumnsInput(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var value))
+        {
+            Vm.MinColumns = Math.Clamp(value, MinColumnsMin, MinColumnsMax);
+        }
+    }
 
     protected override void OnInitialized() => Vm.Changed += OnChanged;
 
