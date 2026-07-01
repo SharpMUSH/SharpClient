@@ -90,7 +90,11 @@ body {
     line-height: 1.2;
     color: var(--pho);
     white-space: pre-wrap;
-    word-break: break-all;
+    /* Wrap long lines at word boundaries (readable for prose / RP text) rather
+       than mid-word. overflow-wrap still breaks inside a single token when it is
+       too long to fit, so an over-wide line can't overflow the output column.
+       (Was word-break: break-all, which broke every line character-by-character.) */
+    overflow-wrap: break-word;
     /* preserve height for blank lines */
     min-height: 1.2em;
 }
