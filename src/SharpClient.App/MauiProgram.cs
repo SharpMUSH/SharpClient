@@ -123,6 +123,11 @@ public static class MauiProgram
             new HistorySearchViewModel(
                 sp.GetRequiredService<ISessionHistory>(),
                 sp.GetRequiredService<IWorldStore>()));
+        // Backs the Rules page (triggers/aliases editor). Was registered on the Web host but not
+        // here, so opening Rules on Android threw "no registered service ... TriggerAliasEditorViewModel".
+        builder.Services.AddTransient<TriggerAliasEditorViewModel>(sp =>
+            new TriggerAliasEditorViewModel(
+                sp.GetRequiredService<IWorldStore>()));
 
         // ── Session launcher (real telnet) ────────────────────────────────
         builder.Services.AddTransient<ISessionLauncher, SharpClient.Core.Sessions.TelnetSessionLauncher>();
