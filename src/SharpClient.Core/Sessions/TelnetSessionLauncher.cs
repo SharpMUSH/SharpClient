@@ -50,6 +50,14 @@ public sealed class TelnetSessionLauncher : ISessionLauncher
         var aliasRules = MergeAliases(world.Aliases, character.Aliases);
         var triggerRules = MergeTriggers(world.Triggers, character.Triggers);
 
+        // Resolve the character's stored connect string on demand. The Session invokes this on the
+        // initial connect AND on every automatic reconnect, so a dropped session re-authenticates
+        // itself instead of being left at the server's login screen. The secret is fetched from the
+        // store each time rather than held in the Session.
+        Func<ValueTask<string?>>? autoLoginProvider = character.ConnectSecretKey is { } key
+            ? async () => await _secrets.GetAsync(key)
+            : null;
+
         var session = new Session(
             connection,
             character.Name,
@@ -61,26 +69,10 @@ public sealed class TelnetSessionLauncher : ISessionLauncher
             _triggerEngine,
             triggerRules,
             _notifier,
-            _history);
+            _history,
+            autoLoginProvider);
 
         await session.ConnectAsync(world.Host, world.Port, cancellationToken);
-
-        try
-        {
-            if (character.ConnectSecretKey is { } key)
-            {
-                var secret = await _secrets.GetAsync(key);
-                if (!string.IsNullOrWhiteSpace(secret))
-                {
-                    await session.SendAsync(secret);
-                }
-            }
-        }
-        catch
-        {
-            await session.DisposeAsync();
-            throw;
-        }
 
         return session;
     }

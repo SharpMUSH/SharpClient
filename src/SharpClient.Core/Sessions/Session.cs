@@ -19,6 +19,12 @@ public sealed class Session : ISession
     private readonly INotifier? _notifier;
     private readonly ISessionHistory? _history;
 
+    // Auto-login command provider (resolves the character's stored connect string). Invoked on
+    // every transition into Connected so an auto-reconnected session re-authenticates instead of
+    // being left at the server's login screen. Null when the character has no stored credentials.
+    private readonly Func<ValueTask<string?>>? _autoLoginProvider;
+    private ConnectionState _lastState = ConnectionState.Disconnected;
+
     // LineReceived fires off the network read thread while Blazor enumerates Scrollback on the
     // render thread — appending mid-enumeration throws "Collection was modified" and kills the UI.
     // _scrollbackLock guards every read and write of _scrollback; the Scrollback getter hands out an
@@ -41,9 +47,11 @@ public sealed class Session : ISession
         ITriggerEngine? triggerEngine = null,
         IReadOnlyList<TriggerRule>? triggerRules = null,
         INotifier? notifier = null,
-        ISessionHistory? history = null)
+        ISessionHistory? history = null,
+        Func<ValueTask<string?>>? autoLoginProvider = null)
     {
         _connection = connection;
+        _autoLoginProvider = autoLoginProvider;
         CharacterName = characterName;
         WorldName = worldName;
         WorldId = worldId;
@@ -198,7 +206,38 @@ public sealed class Session : ISession
         }
     }
 
-    private void OnStateChanged(ConnectionState state) => StateChanged?.Invoke(state);
+    private void OnStateChanged(ConnectionState state)
+    {
+        var previous = _lastState;
+        _lastState = state;
+        StateChanged?.Invoke(state);
+
+        // On every transition into Connected — the initial connect AND each automatic reconnect —
+        // re-send the stored auto-login, so a dropped-and-reconnected session lands logged in
+        // instead of stranded at the server's login screen.
+        if (state == ConnectionState.Connected
+            && previous != ConnectionState.Connected
+            && _autoLoginProvider is not null)
+        {
+            _ = SendAutoLoginAsync();
+        }
+    }
+
+    private async Task SendAutoLoginAsync()
+    {
+        try
+        {
+            var command = await _autoLoginProvider!().ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(command))
+            {
+                await SendAsync(command).ConfigureAwait(false);
+            }
+        }
+        catch
+        {
+            // Best-effort: a failed auto-login just leaves the user at the login screen to retry.
+        }
+    }
 
     private void OnGmcpReceived(GmcpMessage msg)
     {
