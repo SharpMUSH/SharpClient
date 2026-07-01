@@ -113,8 +113,12 @@
              'FSharp.Core'".
              2.5.2 stops the client from initiating CHARSET (WILL CHARSET): a client/server
              WILL/WILL collision left CHARSET unresolved and made SharpMUSH drop the login line,
-             so connecting to Convergence always bounced back to the login screen. -->
-        <PackageReference Include="TelnetNegotiationCore" Version="2.5.2" />
+             so connecting to Convergence always bounced back to the login screen.
+             2.5.3 fixes client NAWS (RFC 1073): the client now offers WILL NAWS and only sends
+             an SB NAWS window-size update once the server enables it (DO NAWS). Previously it sent
+             an unsolicited SB NAWS that made SharpMUSH swallow the next line, so typed logins
+             intermittently bounced back to the login screen. -->
+        <PackageReference Include="TelnetNegotiationCore" Version="2.5.3" />
     </ItemGroup>
 
     <ItemGroup>
