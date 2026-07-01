@@ -394,7 +394,9 @@ body {
        font-boosting excess is clipped rather than turned into a left/right scrollbar. */
     overflow-x: hidden;
     background: var(--outbg);
-    padding: 0.75rem 1rem;
+    /* Tight horizontal inset so the column grid uses nearly the full screen width (a wide inset here
+       wasted ~5 columns at the fitted font size). Vertical padding stays comfortable. */
+    padding: 0.75rem 4px;
 }
 
 /* ── Empty State ───────────────────────────────────────────────── */
@@ -614,8 +616,8 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    padding: 8px 0 7px;
+    gap: 2px;
+    padding: 4px 0 3px;
     color: var(--faint);
     text-decoration: none;
     font-family: var(--ui);
@@ -625,7 +627,7 @@ body {
     margin-top: -1px;
     transition: color .12s ease;
 }
-.sc-nav-link svg { width: 21px; height: 21px; display: block; }
+.sc-nav-link svg { width: 19px; height: 19px; display: block; }
 .sc-nav-link:hover { color: var(--dim); }
 .sc-nav-link.active { color: var(--acc2); border-top-color: var(--acc2); }
 
