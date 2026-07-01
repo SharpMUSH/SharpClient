@@ -112,7 +112,12 @@
         // which had wrapped an advertised 78 columns ~2 short. measureGrid applies --out-fs (fitted
         // size) and --sc-cols (column track width) on the element.
         var cap = Math.Max(6, Settings.MaxFontSize);
-        var grid = await _interop.InvokeAsync<GridDims>("measureGrid", _outputRef, Settings.MinColumns, 6, cap);
+        // Min font 4px (not 6): a high MinColumns on a narrow phone needs a small font to fit — e.g. 90
+        // columns in ~376px needs ~5.9px. Flooring at 6px stopped short, so 90 wrapped. measureGrid
+        // reports the honest fitted column count, so if even 4px can't fit MinColumns it advertises what
+        // does fit instead of over-advertising.
+        const int minFont = 4;
+        var grid = await _interop.InvokeAsync<GridDims>("measureGrid", _outputRef, Settings.MinColumns, minFont, cap);
 
         // Diagnostics for column/wrap issues — captured to the on-device log (FileLoggerProvider) so it
         // can be exported. actualCols < targetCols means the advertised width can't be shown and lines
