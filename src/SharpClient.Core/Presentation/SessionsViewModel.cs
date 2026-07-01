@@ -31,6 +31,10 @@ public sealed class SessionsViewModel
 
     public bool CanSend => Active?.State == ConnectionState.Connected && !string.IsNullOrWhiteSpace(Input);
 
+    /// <summary>True while the active session has a live-ish connection the user could drop.</summary>
+    public bool CanDisconnect =>
+        Active is { State: ConnectionState.Connected or ConnectionState.Connecting or ConnectionState.Reconnecting };
+
     public IReadOnlyList<string> History =>
         Active is not null && _histories.TryGetValue(Active, out var h) ? h : [];
 
@@ -39,6 +43,13 @@ public sealed class SessionsViewModel
     public void Select(ISession session) => _manager.Activate(session);
 
     public Task CloseAsync(ISession session) => _manager.CloseAsync(session);
+
+    /// <summary>
+    /// Intentionally drop the active session's connection. Stops auto-reconnect (the user can
+    /// reconnect from the world list), which is the escape hatch when the client thinks it is
+    /// connected but the socket is actually dead.
+    /// </summary>
+    public Task DisconnectAsync() => Active?.DisconnectAsync() ?? Task.CompletedTask;
 
     public async Task SendAsync()
     {

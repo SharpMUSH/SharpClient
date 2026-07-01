@@ -14,8 +14,17 @@ public sealed class FakeTelnetConnection : ITelnetConnection
     public List<string> Sent { get; } = [];
     public List<(int Width, int Height)> NawsSent { get; } = [];
 
+    public int ForceReconnectCount { get; private set; }
+
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default)
     {
+        RaiseState(ConnectionState.Connected);
+        return Task.CompletedTask;
+    }
+
+    public Task ForceReconnectAsync()
+    {
+        ForceReconnectCount++;
         RaiseState(ConnectionState.Connected);
         return Task.CompletedTask;
     }

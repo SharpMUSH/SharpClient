@@ -16,6 +16,17 @@
         <div class="sc-session-actions">
             @* Connection state is already shown as a coloured dot on each tab (SessionTabs), so the
                redundant "Connected" state pill has been removed from the header. *@
+            @if (Vm.CanDisconnect)
+            {
+                <button class="sc-disconnect-btn" @onclick="DisconnectAsync"
+                        title="Disconnect this session" aria-label="Disconnect">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10 3.5v6" />
+                        <path d="M6.2 6.2a5 5 0 1 0 7.6 0" />
+                    </svg>
+                </button>
+            }
             @if (ProtocolVm is not null)
             {
                 <button class="sc-protocol-toggle @(_showProtocol ? "sc-protocol-toggle-active" : string.Empty)"
@@ -56,6 +67,12 @@
     public ProtocolPanelViewModel? ProtocolVm { get; set; }
 
     private bool _showProtocol;
+
+    private async Task DisconnectAsync()
+    {
+        await Vm.DisconnectAsync();
+        await InvokeAsync(StateHasChanged);
+    }
     private ElementReference _outputRef;
     private IJSObjectReference? _interop;
     private DotNetObjectReference<SessionScreen>? _dotNetRef;

@@ -107,6 +107,10 @@ public sealed class Session : ISession
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default) =>
         _connection.ConnectAsync(host, port, cancellationToken);
 
+    public Task DisconnectAsync() => _connection.DisconnectAsync();
+
+    public Task ForceReconnectAsync() => _connection.ForceReconnectAsync();
+
     private static readonly TextStyle EchoStyle = TextStyle.Default with { Foreground = AnsiColor.Indexed(8) };
 
     public async Task SendAsync(string line)
