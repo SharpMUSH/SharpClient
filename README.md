@@ -17,7 +17,11 @@ repo's releases for you:
    ```
    https://github.com/SharpMUSH/SharpClient
    ```
-   or use the deep link [obtainium://add/https://github.com/SharpMUSH/SharpClient](obtainium://add/https://github.com/SharpMUSH/SharpClient).
+   or, from your phone, paste this Obtainium deep link (GitHub can't render it as
+   a clickable link, so copy it as-is):
+   ```
+   obtainium://add/https://github.com/SharpMUSH/SharpClient
+   ```
 3. Obtainium picks up the universal signed APK from each release and notifies you
    when a new version ships.
 
