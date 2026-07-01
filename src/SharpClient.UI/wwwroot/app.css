@@ -547,8 +547,11 @@ body {
 .sc-chev-open { transform: rotate(180deg); }
 
 .sc-char-row { display: flex; align-items: center; gap: 11px; padding: 10px 14px; border-top: 1px solid var(--bd); }
+/* The badge + name + status dot form the primary click target (open the session, or connect). */
+.sc-char-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 11px; cursor: pointer; }
+.sc-char-main:hover .sc-char-name { color: var(--acc2); }
 .sc-char-badge { flex: none; width: 26px; height: 26px; border-radius: 7px; background: var(--outbg); border: 1px solid var(--bd2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; color: var(--dim); }
-.sc-char-name { flex: 1; min-width: 0; font-size: 14px; color: #e7ecf2; }
+.sc-char-name { flex: 1; min-width: 0; font-size: 14px; color: #e7ecf2; transition: color .12s ease; }
 .sc-connect-btn { flex: none; font-size: 12.5px; font-weight: 600; color: #0a0c10; background: var(--acc2); border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
 .sc-icon-btn { flex: none; width: 30px; height: 30px; border-radius: 8px; background: transparent; border: 1px solid var(--bd); color: var(--faint); display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .sc-icon-btn-danger:hover { border-color: rgba(224, 108, 117, .5); color: #e06c75; }

@@ -12,13 +12,8 @@
     <div class="sc-session-header">
         <SessionTabs Vm="Vm" />
         <div class="sc-session-actions">
-            @if (Vm.Active is not null)
-            {
-                <span class="sc-state-pill sc-state-@StateClass(Vm.Active.State)">
-                    <span class="sc-state-pill-dot"></span>
-                    @StateLabel(Vm.Active.State)
-                </span>
-            }
+            @* Connection state is already shown as a coloured dot on each tab (SessionTabs), so the
+               redundant "Connected" state pill has been removed from the header. *@
             @if (ProtocolVm is not null)
             {
                 <button class="sc-protocol-toggle @(_showProtocol ? "sc-protocol-toggle-active" : string.Empty)"
@@ -128,24 +123,6 @@
     private void OnSettingsChanged() => InvokeAsync(StateHasChanged);
 
     private void ToggleProtocol() => _showProtocol = !_showProtocol;
-
-    private static string StateClass(ConnectionState state) => state switch
-    {
-        ConnectionState.Connected => "connected",
-        ConnectionState.Connecting => "connecting",
-        ConnectionState.Reconnecting => "reconnecting",
-        ConnectionState.Error => "error",
-        _ => "disconnected",
-    };
-
-    private static string StateLabel(ConnectionState state) => state switch
-    {
-        ConnectionState.Connected => "Connected",
-        ConnectionState.Connecting => "Connecting",
-        ConnectionState.Reconnecting => "Reconnecting",
-        ConnectionState.Error => "Error",
-        _ => "Disconnected",
-    };
 
     public async ValueTask DisposeAsync()
     {
