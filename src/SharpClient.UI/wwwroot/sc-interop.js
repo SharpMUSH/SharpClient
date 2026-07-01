@@ -29,6 +29,27 @@ export function observeResize(dotNetRef, element) {
     observer.observe(element);
     _observers.set(element, observer);
 
+    // Re-fire the callback once the layout has actually settled. The first measurement can happen
+    // before (a) the JetBrains Mono webfont has loaded — the fallback font has a different advance, so
+    // the grid would be fitted to the wrong column width and lines wrap a few chars short — and (b) the
+    // native WindowInsets bridge has pushed the real safe-area padding, which shrinks this box. Both
+    // resolve asynchronously; re-measuring on fonts.ready and after a couple of frames re-fits the grid
+    // to the true width. (document.fonts.ready is the same guard SharpMUSH.Client's metrics use.)
+    const refire = () => {
+        const cs2 = getComputedStyle(element);
+        const px = parseFloat(cs2.paddingLeft || '0') + parseFloat(cs2.paddingRight || '0');
+        const py = parseFloat(cs2.paddingTop || '0') + parseFloat(cs2.paddingBottom || '0');
+        const w = Math.floor(element.clientWidth - px);
+        const h = Math.floor(element.clientHeight - py);
+        if (w > 0) {
+            dotNetRef.invokeMethodAsync('OnResized', w, h);
+        }
+    };
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(refire);
+    }
+    requestAnimationFrame(() => requestAnimationFrame(refire));
+
     // Return the *content-box* size (padding excluded) to match what the ResizeObserver reports via
     // contentRect, so the initial NAWS/font calc and subsequent resizes use the same basis.
     const cs = getComputedStyle(element);

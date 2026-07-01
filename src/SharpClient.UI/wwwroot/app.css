@@ -31,6 +31,11 @@ html, body {
     height: 100%;
     width: 100%;
     overflow-x: hidden;
+    /* Stop the Android WebView from auto-inflating ("boosting") text in block containers based on the
+       system font-size setting — it renders lines wider than the size measureGrid fitted the column
+       grid to, breaking the NAWS column math and forcing horizontal overflow. Keep text at the CSS px. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 body {
@@ -74,14 +79,7 @@ body {
 /* ── OutputView component classes (.sc-output / .sc-line) ──────── */
 .sc-output {
     display: block;
-    /* Hold a floor of --sc-cols character columns. The track width is published in pixels by
-       measureGrid as --sc-cols-width, measured from a real glyph run on the SAME basis the font was
-       fitted to — NOT the CSS `ch` unit, whose single-glyph rounding ran ~2px wider than the fit and
-       produced a spurious horizontal scrollbar even when the columns fit. In the fitting case the
-       track stays inside the box, so lines wrap at the column edge with no scroll; only on a screen
-       too narrow to fit the columns at the minimum font does it exceed the box and scroll. */
     font-size: var(--out-fs);
-    min-width: var(--sc-cols-width, 0px);
 }
 
 .sc-line {
@@ -387,11 +385,13 @@ body {
 .sc-output-area {
     flex: 1;
     overflow-y: auto;
-    /* Horizontal scroll when the --sc-cols track is wider than the viewport (narrow screen at min
-       font), so NAWS-width lines are shown intact rather than wrapped. */
-    overflow-x: auto;
+    /* Never scroll horizontally — output wraps at the fitted column width instead. Any sub-pixel or
+       font-boosting excess is clipped rather than turned into a left/right scrollbar. */
+    overflow-x: hidden;
     background: var(--outbg);
-    padding: 0.75rem 1rem;
+    /* Tight horizontal inset so the column grid uses nearly the full screen width (a wide inset here
+       wasted ~5 columns at the fitted font size). Vertical padding stays comfortable. */
+    padding: 0.75rem 4px;
 }
 
 /* ── Empty State ───────────────────────────────────────────────── */
@@ -583,6 +583,11 @@ body {
     color: var(--acc2);
     text-decoration: underline;
     text-underline-offset: 2px;
+    /* A clickable command link is an inline-block button; let its text wrap (and break long tokens)
+       so it can never be the one element that refuses to wrap and forces horizontal overflow. */
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
 }
 .sc-link:hover {
     color: var(--acc);
@@ -606,8 +611,8 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    padding: 8px 0 7px;
+    gap: 2px;
+    padding: 4px 0 3px;
     color: var(--faint);
     text-decoration: none;
     font-family: var(--ui);
@@ -617,7 +622,7 @@ body {
     margin-top: -1px;
     transition: color .12s ease;
 }
-.sc-nav-link svg { width: 21px; height: 21px; display: block; }
+.sc-nav-link svg { width: 19px; height: 19px; display: block; }
 .sc-nav-link:hover { color: var(--dim); }
 .sc-nav-link.active { color: var(--acc2); border-top-color: var(--acc2); }
 
