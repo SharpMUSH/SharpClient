@@ -22,7 +22,19 @@ internal sealed class ConnectionKeepAliveCoordinator : IDisposable
         _sessions = sessions;
         _keepAlive = keepAlive;
         _sessions.Changed += OnSessionsChanged;
+        NetworkChangeSignal.Changed += OnNetworkChanged;
         OnSessionsChanged();
+    }
+
+    // The device's default network changed (raised on Android by the keep-alive service). Every
+    // session's socket is now dead, so force each one to reconnect immediately rather than waiting
+    // out the Core backoff. ForceReconnectAsync is a no-op for intentionally-disconnected sessions.
+    private void OnNetworkChanged()
+    {
+        foreach (var session in _sessions.Sessions)
+        {
+            _ = session.ForceReconnectAsync();
+        }
     }
 
     private void OnSessionsChanged()
@@ -78,6 +90,7 @@ internal sealed class ConnectionKeepAliveCoordinator : IDisposable
 
     public void Dispose()
     {
+        NetworkChangeSignal.Changed -= OnNetworkChanged;
         lock (_gate)
         {
             _sessions.Changed -= OnSessionsChanged;

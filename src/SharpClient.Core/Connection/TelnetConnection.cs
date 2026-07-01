@@ -21,6 +21,17 @@ public sealed class TelnetConnection : ITelnetConnection
     private int _port;
     private bool _intentionalDisconnect;
 
+    private CancellationTokenSource? _heartbeatCts;
+    private Task? _heartbeatTask;
+
+    // Telnet NOP (IAC NOP). Sent periodically as an application-level heartbeat: it keeps the MUSH
+    // from idle-timing us out and forces a small write, so a silently-dead socket surfaces quickly.
+    private static readonly byte[] s_iacNop = [255, 241];
+
+    // Heartbeat cadence. Short enough to detect a dead peer and keep the server session alive on a
+    // long-running (e.g. in-car) connection, without meaningful battery cost.
+    private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(45);
+
     public TelnetConnection(ITelnetInterpreterFactory factory, ReconnectOptions? reconnectOptions = null)
     {
         _factory = factory;
@@ -66,6 +77,27 @@ public sealed class TelnetConnection : ITelnetConnection
             SetState(ConnectionState.Error);
             throw;
         }
+
+        StartHeartbeat();
+    }
+
+    /// <summary>
+    /// Immediately (re)connects to the last endpoint, tearing down the current — possibly dead —
+    /// socket and any in-flight reconnect backoff first. Intended for external "the network just
+    /// changed / came back" signals (e.g. an Android connectivity callback) so a session recovers
+    /// at once instead of waiting out the backoff, and resumes even after auto-reconnect gave up
+    /// (<see cref="ConnectionState.Error"/>). No-op if the user intentionally disconnected or the
+    /// connection was never established.
+    /// </summary>
+    public async Task ForceReconnectAsync()
+    {
+        var host = _host;
+        if (_intentionalDisconnect || host is null)
+        {
+            return;
+        }
+
+        await ConnectAsync(host, _port);
     }
 
     public async Task SendAsync(string line)
@@ -101,6 +133,8 @@ public sealed class TelnetConnection : ITelnetConnection
         _intentionalDisconnect = true;
         _reconnectCts?.Cancel();
 
+        await StopHeartbeatAsync();
+
         if (_interpreter is not null)
         {
             await _interpreter.DisposeAsync();
@@ -132,6 +166,66 @@ public sealed class TelnetConnection : ITelnetConnection
 
     public async ValueTask DisposeAsync() => await DisconnectAsync();
 
+    private static void TrySetTcpKeepAlive(Socket socket)
+    {
+        // Each option is best-effort: not every platform supports all three. Values are in seconds:
+        // start probing after 30s idle, probe every 10s, drop after 3 unanswered probes (~60s to death).
+        try { socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, 30); } catch { }
+        try { socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 10); } catch { }
+        try { socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, 3); } catch { }
+    }
+
+    // Application-level heartbeat: spans the whole connect lifetime (including auto-reconnect gaps),
+    // sending a telnet NOP while Connected. Started on connect, stopped on intentional disconnect.
+    private void StartHeartbeat()
+    {
+        _heartbeatCts = new CancellationTokenSource();
+        _heartbeatTask = HeartbeatLoopAsync(_heartbeatCts.Token);
+    }
+
+    private async Task StopHeartbeatAsync()
+    {
+        _heartbeatCts?.Cancel();
+        if (_heartbeatTask is not null)
+        {
+            await AwaitQuietlyAsync(_heartbeatTask);
+            _heartbeatTask = null;
+        }
+        _heartbeatCts?.Dispose();
+        _heartbeatCts = null;
+    }
+
+    private async Task HeartbeatLoopAsync(CancellationToken token)
+    {
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                await Task.Delay(HeartbeatInterval, token);
+
+                // Only probe an established connection; during Reconnecting/Error the socket is gone.
+                if (State != ConnectionState.Connected || _interpreter is null)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    await _interpreter.WriteToNetworkAsync(s_iacNop, CancellationToken.None);
+                }
+                catch
+                {
+                    // The write failed — the socket is dead. Tear it down so the read loop completes
+                    // and the monitor drives an auto-reconnect.
+                    _client?.Dispose();
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
     // Performs the actual TCP connect + telnet negotiation and starts the read-loop
     // monitor. Used both for the initial connect and for each reconnect attempt.
     private async Task EstablishConnectionAsync(string host, int port, CancellationToken cancellationToken)
@@ -140,6 +234,9 @@ public sealed class TelnetConnection : ITelnetConnection
         // SO_KEEPALIVE lets the OS probe a silently-dead peer so a half-open socket
         // eventually surfaces as a read-loop completion instead of hanging forever.
         client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+        // Tune the keepalive so a dead peer surfaces in ~1 minute instead of the OS default
+        // (often ~2h idle) — important on mobile networks that change while moving.
+        TrySetTcpKeepAlive(client.Client);
         await client.ConnectAsync(host, port, cancellationToken);
 
         var (interpreter, readTask) = await _factory.CreateBuilder()

@@ -28,6 +28,12 @@ public interface ISession : IAsyncDisposable
 
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default);
 
+    /// <summary>Intentionally drop the connection (stops auto-reconnect) while keeping the session.</summary>
+    public Task DisconnectAsync() => Task.CompletedTask;
+
+    /// <summary>Force an immediate reconnect to the same endpoint (e.g. after a network change).</summary>
+    public Task ForceReconnectAsync() => Task.CompletedTask;
+
     public Task SendAsync(string line);
 
     public Task SendWindowSizeAsync(int cols, int rows) => Task.CompletedTask;

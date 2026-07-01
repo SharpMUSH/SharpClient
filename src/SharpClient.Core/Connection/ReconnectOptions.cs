@@ -8,8 +8,14 @@ namespace SharpClient.Core.Connection;
 /// </summary>
 public sealed record ReconnectOptions
 {
-    /// <summary>Maximum number of reconnect attempts before giving up with <see cref="ConnectionState.Error"/>.</summary>
-    public int MaxAttempts { get; init; } = 6;
+    /// <summary>
+    /// Maximum number of reconnect attempts before giving up with <see cref="ConnectionState.Error"/>.
+    /// Defaults high so a session survives long connectivity gaps (tunnels, rural dead zones on a
+    /// drive): with the backoff capped at <see cref="MaxDelay"/>, ~60 attempts is roughly half an
+    /// hour of retrying. A returning network can also resume sooner via
+    /// <see cref="TelnetConnection.ForceReconnectAsync"/> (e.g. driven by an Android connectivity callback).
+    /// </summary>
+    public int MaxAttempts { get; init; } = 60;
 
     /// <summary>Delay before the first reconnect attempt.</summary>
     public TimeSpan InitialDelay { get; init; } = TimeSpan.FromSeconds(1);
