@@ -388,6 +388,12 @@ body {
     /* Never scroll horizontally — output wraps at the fitted column width instead. Any sub-pixel or
        font-boosting excess is clipped rather than turned into a left/right scrollbar. */
     overflow-x: hidden;
+    /* Reserve the vertical scrollbar's space up front so the content width is STABLE whether or not
+       the scrollbar is showing. Without this, measureGrid fits the font while the area is still empty
+       (full width), then the scrollbar appears once output fills it and steals ~15px — so an
+       advertised MinColumns (e.g. 81) no longer fits and wraps. With the gutter reserved, measureGrid
+       always measures the true content width. (Overlay scrollbars reserve 0, so this is a no-op there.) */
+    scrollbar-gutter: stable;
     background: var(--outbg);
     /* Tight horizontal inset so the column grid uses nearly the full screen width (a wide inset here
        wasted ~5 columns at the fitted font size). Vertical padding stays comfortable. */
