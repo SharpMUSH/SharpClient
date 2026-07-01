@@ -10,6 +10,7 @@
 [![Latest release](https://img.shields.io/github/v/release/SharpMUSH/SharpClient?include_prereleases&sort=semver&color=00b894&label=release)](https://github.com/SharpMUSH/SharpClient/releases)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com)
 [![Platforms](https://img.shields.io/badge/platforms-Android%20%C2%B7%20Web-00b894)](#install)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 </div>
 
@@ -135,8 +136,7 @@ every push.
 
 ## License
 
-No `LICENSE` file has been added yet, so the work is under standard copyright (all rights reserved)
-until the maintainers choose a license.
+Licensed under the [Apache License 2.0](LICENSE).
 
 ## Acknowledgements
 
