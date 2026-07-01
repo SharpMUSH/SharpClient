@@ -1,0 +1,77 @@
+/* Self-hosted fonts (SIL Open Font License) — no external CDN, works offline.
+   woff2 files live alongside this file under _content/SharpClient.UI/fonts/; the url()s are relative
+   to this stylesheet. Latin subset only (Fontsource) — non-latin glyphs fall back to the system
+   monospace/sans in the --mono/--ui stacks. Weights match what the UI uses: mono 400/700 (bold ANSI),
+   Space Grotesk 400/500/600 (UI chrome). font-display:swap so text paints immediately with the
+   fallback and re-lays out when the webfont loads. */
+
+/* JetBrains Mono — default output font */
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('fonts/jetbrains-mono-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('fonts/jetbrains-mono-700.woff2') format('woff2');
+}
+
+/* IBM Plex Mono — output font option */
+@font-face {
+    font-family: 'IBM Plex Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('fonts/ibm-plex-mono-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'IBM Plex Mono';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('fonts/ibm-plex-mono-700.woff2') format('woff2');
+}
+
+/* Space Mono — output font option */
+@font-face {
+    font-family: 'Space Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('fonts/space-mono-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Space Mono';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('fonts/space-mono-700.woff2') format('woff2');
+}
+
+/* Space Grotesk — UI font */
+@font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('fonts/space-grotesk-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('fonts/space-grotesk-500.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('fonts/space-grotesk-600.woff2') format('woff2');
+}
