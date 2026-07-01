@@ -69,11 +69,13 @@
         <!--
             App icon — SharpMUSH logo (fetched from SharpMUSH/SharpMUSH, Solution Files/).
             appicon.svg    : Logo.svg     — the full teal (#00f5b7) logo, used as the icon base.
-            appiconfg.svg  : LogoBlackFg.svg — dark (#111) foreground variant for adaptive icons.
-            Color="#0b0e12": near-black background complements the teal logo on adaptive-icon
-                             aware launchers; also used as the legacy icon background.
+            appiconfg.svg  : LogoBlackFg.svg — dark (#111) adaptive-icon foreground.
+            Color="#00f5b7": SharpMUSH brand green background. The dark foreground mark reads
+                             cleanly on it (adaptive icons, Android 8+); the teal base blends into
+                             the matching green so the background looks solid. Previously #0b0e12,
+                             which put the dark mark on near-black and rendered as "black on grey".
         -->
-        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#0b0e12" />
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#00f5b7" />
 
         <!-- Splash Screen -->
         <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />

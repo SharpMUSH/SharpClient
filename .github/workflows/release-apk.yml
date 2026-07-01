@@ -68,6 +68,35 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$KEYSTORE_PATH"
           echo "Decoded keystore to $KEYSTORE_PATH"
 
+      # Derive the Android versionName + versionCode from the release tag so the
+      # installed APK reports the same version the GitHub Release advertises.
+      # Without this, every build ships the csproj defaults (versionName 1.0,
+      # versionCode 1): Obtainium then shows "1.0" against a "v0.2" release, and
+      # Android refuses in-place updates because the versionCode never changes.
+      #   versionName = tag with any leading 'v' and pre-release suffix stripped
+      #   versionCode = major*1000000 + minor*10000 + patch*100 (monotonic with semver)
+      # Manual (workflow_dispatch) runs have no tag: fall back to 0.0.0 + run_number.
+      - name: Compute version from release tag
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"      # v0.2.1 -> 0.2.1
+            VERSION="${VERSION%%-*}"    # 0.2.1-rc1 -> 0.2.1
+          else
+            VERSION="0.0.0"
+          fi
+          IFS='.' read -r MAJ MIN PAT <<< "$VERSION"
+          MAJ=${MAJ:-0}; MIN=${MIN:-0}; PAT=${PAT:-0}
+          if [ "${{ github.event_name }}" = "release" ]; then
+            CODE=$(( 10#$MAJ * 1000000 + 10#$MIN * 10000 + 10#$PAT * 100 ))
+          else
+            CODE=${{ github.run_number }}
+          fi
+          echo "display=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Resolved versionName=$VERSION versionCode=$CODE"
+
       # Publish a SIGNED .apk (sideload). AndroidKeyStore=true + the signing
       # properties make dotnet sign with our release keystore instead of the
       # auto-generated debug key. AndroidPackageFormat=apk is the default but is
@@ -80,6 +109,8 @@ jobs:
           -p:JavaSdkDirectory="$JAVA_HOME"
           -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
           -p:AcceptAndroidSdkLicenses=True
+          -p:ApplicationDisplayVersion=${{ steps.ver.outputs.display }}
+          -p:ApplicationVersion=${{ steps.ver.outputs.code }}
           -p:AndroidPackageFormat=apk
           -p:AndroidKeyStore=true
           -p:AndroidSigningKeyStore="$KEYSTORE_PATH"
@@ -97,6 +128,8 @@ jobs:
           -p:JavaSdkDirectory="$JAVA_HOME"
           -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT"
           -p:AcceptAndroidSdkLicenses=True
+          -p:ApplicationDisplayVersion=${{ steps.ver.outputs.display }}
+          -p:ApplicationVersion=${{ steps.ver.outputs.code }}
           -p:AndroidPackageFormat=aab
           -p:AndroidKeyStore=true
           -p:AndroidSigningKeyStore="$KEYSTORE_PATH"

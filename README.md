@@ -5,6 +5,28 @@ over telnet, using [TelnetNegotiationCore](https://www.nuget.org/packages/Telnet
 Android-primary. See [`docs/superpowers/specs`](docs/superpowers/specs) for the
 design spec and visual-design brief.
 
+## Installing on Android
+
+Signed APKs are attached to every [GitHub Release](https://github.com/SharpMUSH/SharpClient/releases).
+You can sideload the `.apk` directly, but the easiest way to install **and stay
+updated** is [Obtainium](https://github.com/ImranR98/Obtainium), which tracks this
+repo's releases for you:
+
+1. Install Obtainium.
+2. Add an app with this source URL:
+   ```
+   https://github.com/SharpMUSH/SharpClient
+   ```
+   or use the deep link [obtainium://add/https://github.com/SharpMUSH/SharpClient](obtainium://add/https://github.com/SharpMUSH/SharpClient).
+3. Obtainium picks up the universal signed APK from each release and notifies you
+   when a new version ships.
+
+Each release ships a single universal APK, so no ABI/architecture filter is
+needed. The APK's `versionName`/`versionCode` are derived from the release tag
+(e.g. `v0.2` → `0.2`), so Obtainium and Android both see the correct version and
+can update in place. If a release is marked **pre-release** on GitHub, enable
+"include prereleases" for the app in Obtainium or it will be skipped.
+
 ## Solution layout
 
 | Project | Kind | Purpose |
