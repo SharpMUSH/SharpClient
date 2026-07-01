@@ -32,7 +32,7 @@ public sealed class WorldManagerTests
     }
 
     [Test]
-    public async Task ExpandingWorldShowsCharacterAndConnectButton()
+    public async Task ExpandingWorldShowsClickableCharacterLabel()
     {
         var vm = await BuildSeededVmAsync();
         using var ctx = new BunitContext();
@@ -41,7 +41,8 @@ public sealed class WorldManagerTests
         cut.Find(".sc-world-row").Click();
 
         await Assert.That(cut.Markup).Contains("Vesper");
-        await Assert.That(cut.FindAll(".sc-connect-btn")).IsNotEmpty();
+        // Connecting is now driven by clicking the character's label area, not a separate button.
+        await Assert.That(cut.FindAll(".sc-char-main")).IsNotEmpty();
     }
 
     [Test]
@@ -60,7 +61,7 @@ public sealed class WorldManagerTests
         var cut = ctx.Render<WorldManager>(p => p.Add(c => c.Vm, vm));
 
         cut.Find(".sc-world-row").Click();
-        cut.Find(".sc-connect-btn").Click();
+        cut.Find(".sc-char-main").Click();
 
         // The failure surfaces as a banner instead of throwing.
         await Assert.That(cut.FindAll(".sc-wm-error")).IsNotEmpty();

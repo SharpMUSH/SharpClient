@@ -68,25 +68,16 @@
                         @foreach (var character in world.Characters)
                         {
                             var activeSession = Vm.ActiveSessionFor(character);
+                            var charState = activeSession?.State ?? ConnectionState.Disconnected;
+                            // The label area is the primary click target: open the running session if
+                            // there is one, otherwise connect. A single coloured dot shows the state.
                             <div class="sc-char-row">
-                                <div class="sc-char-badge">@Initial(character.Name)</div>
-                                <div class="sc-char-name">@character.Name</div>
-                                @if (activeSession is not null)
-                                {
-                                    <button type="button" class="sc-connect-btn sc-open-btn"
-                                            @onclick="() => OpenSession(character)"
-                                            title="Switch to active session">
-                                        Open
-                                    </button>
-                                    <span class="sc-state-pill" style="background:@StateColor(activeSession.State)"
-                                          title="@activeSession.State">
-                                        @activeSession.State
-                                    </span>
-                                }
-                                else
-                                {
-                                    <button type="button" class="sc-connect-btn" @onclick="() => ConnectAsync(world, character)">Connect</button>
-                                }
+                                <div class="sc-char-main" @onclick="() => PrimaryActionAsync(world, character)"
+                                     title="@(activeSession is not null ? "Open session" : "Connect")">
+                                    <div class="sc-char-badge">@Initial(character.Name)</div>
+                                    <div class="sc-char-name">@character.Name</div>
+                                    <span class="sc-state-dot" style="background:@StateColor(charState)" title="@charState"></span>
+                                </div>
                                 <button type="button" class="sc-icon-btn" title="Edit character" @onclick="() => OpenEditCharacter(world, character)">✎</button>
                                 <button type="button" class="sc-icon-btn sc-icon-btn-danger" title="Delete character" @onclick="() => DeleteCharacterAsync(world, character)">🗑</button>
                             </div>
@@ -224,6 +215,19 @@
 
     private async Task ConnectAsync(World world, Character character) =>
         await Vm.ConnectAsync(world, character);
+
+    // Clicking a character's label switches to its live session if one exists, otherwise connects it.
+    private async Task PrimaryActionAsync(World world, Character character)
+    {
+        if (Vm.ActiveSessionFor(character) is not null)
+        {
+            OpenSession(character);
+        }
+        else
+        {
+            await ConnectAsync(world, character);
+        }
+    }
 
     private async Task OpenRulesAsync(Guid worldId) => await OnOpenRules.InvokeAsync(worldId);
 
