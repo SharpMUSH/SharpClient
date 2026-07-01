@@ -37,6 +37,8 @@ internal sealed class ConnectionKeepAliveService : Service
     private PowerManager.WakeLock? _wakeLock;
     private ConnectivityManager? _connectivity;
     private ConnectivityManager.NetworkCallback? _networkCallback;
+    private Network? _boundNetwork;
+    private bool _haveSeenNetwork;
 
     // ── Service lifecycle ─────────────────────────────────────────────────────
 
@@ -101,9 +103,11 @@ internal sealed class ConnectionKeepAliveService : Service
 
     // ── Connectivity monitoring ───────────────────────────────────────────────
     //
-    // Telnet reconnection itself is owned by the Core layer's auto-reconnect; this callback only
-    // refreshes the persistent notification when connectivity returns so the user sees the service
-    // is healthy and the process stays alive across network transitions.
+    // Watches the device's DEFAULT network. When it changes on the move (WiFi↔cellular, tower
+    // handoff, coming out of a dead zone) the old sockets are silently dead. We (a) pin the process
+    // to the new network so reconnects use the live interface at once, and (b) raise a signal that
+    // the coordinator turns into an immediate ForceReconnect on every session — instead of waiting
+    // out the Core backoff / keepalive.
 
     private void RegisterNetworkCallback()
     {
@@ -119,10 +123,9 @@ internal sealed class ConnectionKeepAliveService : Service
         }
 
         _networkCallback = new KeepAliveNetworkCallback(this);
-        var request = new NetworkRequest.Builder()
-            .AddCapability(NetCapability.Internet)!
-            .Build();
-        _connectivity.RegisterNetworkCallback(request!, _networkCallback);
+        // Default-network callback (API 24+): fires OnAvailable when the default network changes and
+        // OnLost when it drops — exactly the transitions that kill a moving connection.
+        _connectivity.RegisterDefaultNetworkCallback(_networkCallback);
     }
 
     private void UnregisterNetworkCallback()
@@ -139,15 +142,45 @@ internal sealed class ConnectionKeepAliveService : Service
             }
         }
 
+        // Release any network binding so the process isn't pinned once we stop.
+        if (_boundNetwork is not null)
+        {
+            try { _connectivity?.BindProcessToNetwork(null); } catch (Java.Lang.Exception) { }
+            _boundNetwork = null;
+        }
+        _haveSeenNetwork = false;
+
         _networkCallback?.Dispose();
         _networkCallback = null;
         _connectivity = null;
     }
 
-    private void OnNetworkAvailable()
+    private void OnNetworkAvailable(Network network)
     {
+        // Pin the process to the new default network so reconnects use the live interface immediately.
+        try { _connectivity?.BindProcessToNetwork(network); } catch (Java.Lang.Exception) { }
+        _boundNetwork = network;
+
+        // The first callback is the network we're already connected on (service just started) — don't
+        // churn. Any later one is a genuine change/return, so kick every session to reconnect now.
+        if (_haveSeenNetwork)
+        {
+            Services.NetworkChangeSignal.RaiseChanged();
+        }
+        _haveSeenNetwork = true;
+
         var nm = (NotificationManager?)GetSystemService(NotificationService);
         nm?.Notify(NotificationId, BuildNotification("Connected"));
+    }
+
+    private void OnNetworkLost(Network network)
+    {
+        // Drop the binding to the dead network so a new default can be used once it appears.
+        if (_boundNetwork is not null)
+        {
+            try { _connectivity?.BindProcessToNetwork(null); } catch (Java.Lang.Exception) { }
+            _boundNetwork = null;
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -173,6 +206,7 @@ internal sealed class ConnectionKeepAliveService : Service
     private sealed class KeepAliveNetworkCallback(ConnectionKeepAliveService service)
         : ConnectivityManager.NetworkCallback
     {
-        public override void OnAvailable(Network network) => service.OnNetworkAvailable();
+        public override void OnAvailable(Network network) => service.OnNetworkAvailable(network);
+        public override void OnLost(Network network) => service.OnNetworkLost(network);
     }
 }

@@ -236,6 +236,33 @@ body {
     background: var(--acc-soft);
 }
 
+/* Disconnect button — same footprint as the protocol toggle, red-tinted on hover to signal "stop". */
+.sc-disconnect-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid var(--bd2);
+    color: var(--dim);
+    cursor: pointer;
+    transition: color .12s, border-color .12s, background .12s;
+}
+
+.sc-disconnect-btn svg {
+    width: 17px;
+    height: 17px;
+    display: block;
+}
+
+.sc-disconnect-btn:hover {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+    background: rgba(255, 107, 107, .08);
+}
+
 /* ── Protocol panel (negotiation + GMCP inspector) ─────────────── */
 .sc-protocol-panel {
     flex-shrink: 0;

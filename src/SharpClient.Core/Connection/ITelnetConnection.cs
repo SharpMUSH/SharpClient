@@ -17,6 +17,13 @@ public interface ITelnetConnection : IAsyncDisposable
 
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Immediately (re)connects to the last endpoint, dropping the current socket and any reconnect
+    /// backoff. Used to recover fast when an external signal (e.g. an Android network-change
+    /// callback) indicates connectivity returned. No-op after an intentional disconnect.
+    /// </summary>
+    public Task ForceReconnectAsync();
+
     public Task SendAsync(string line);
 
     public Task DisconnectAsync();
