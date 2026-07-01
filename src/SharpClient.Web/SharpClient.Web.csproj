@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="TelnetNegotiationCore" Version="2.5.2" />
+    <PackageReference Include="TelnetNegotiationCore" Version="2.5.3" />
   </ItemGroup>
 
   <ItemGroup>
