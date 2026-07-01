@@ -175,6 +175,33 @@ public sealed class TelnetConnection : ITelnetConnection
         try { socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, 3); } catch { }
     }
 
+    // Milliseconds of unacknowledged, in-flight data before the OS fails the connection. Catches a
+    // half-open peer where a sent command/heartbeat is never acked (the "I sent a command and nothing
+    // came back" hang). Only trips on genuinely unacked bytes, so a slow-but-alive server never fires it.
+    private const int TcpUserTimeoutMs = 20_000;
+
+    private static void TrySetTcpUserTimeout(Socket socket)
+    {
+        // TCP_USER_TIMEOUT is a Linux/Android option (there is no cross-platform SocketOptionName for it).
+        if (!OperatingSystem.IsLinux() && !OperatingSystem.IsAndroid())
+        {
+            return;
+        }
+
+        try
+        {
+            const int ipprotoTcp = 6;    // IPPROTO_TCP
+            const int tcpUserTimeout = 18; // TCP_USER_TIMEOUT
+            Span<byte> value = stackalloc byte[sizeof(int)];
+            BitConverter.TryWriteBytes(value, TcpUserTimeoutMs); // native byte order, as the option expects
+            socket.SetRawSocketOption(ipprotoTcp, tcpUserTimeout, value);
+        }
+        catch
+        {
+            // Best-effort — keepalive still provides eventual detection.
+        }
+    }
+
     // Application-level heartbeat: spans the whole connect lifetime (including auto-reconnect gaps),
     // sending a telnet NOP while Connected. Started on connect, stopped on intentional disconnect.
     private void StartHeartbeat()
@@ -237,6 +264,11 @@ public sealed class TelnetConnection : ITelnetConnection
         // Tune the keepalive so a dead peer surfaces in ~1 minute instead of the OS default
         // (often ~2h idle) — important on mobile networks that change while moving.
         TrySetTcpKeepAlive(client.Client);
+        // Also bound retransmission of unacknowledged data. Keepalive only probes an IDLE socket;
+        // when a command (or the NOP heartbeat) is in flight but never acked — a half-open peer —
+        // TCP would otherwise retransmit for ~15 min before failing, so the client sits "connected"
+        // with no responses. This makes that surface in ~20s instead.
+        TrySetTcpUserTimeout(client.Client);
         await client.ConnectAsync(host, port, cancellationToken);
 
         var (interpreter, readTask) = await _factory.CreateBuilder()
