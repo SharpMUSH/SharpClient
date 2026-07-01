@@ -100,7 +100,7 @@ public sealed class SettingsViewTests
     }
 
     [Test]
-    public async Task MinColumnsSliderRendersWithCorrectValue()
+    public async Task MinColumnsStepperRendersWithCorrectValue()
     {
         using var ctx = NewContext();
         var vm = MakeVm();
@@ -108,9 +108,26 @@ public sealed class SettingsViewTests
 
         var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
 
-        // The slider for MinColumns should have value="90"
-        var slider = cut.Find("input[type='range'][min='60']");
-        await Assert.That(slider.GetAttribute("value")).IsEqualTo("90");
+        // Min columns is now a typeable number stepper (not a slider).
+        var input = cut.Find("input.sc-stepper-input");
+        await Assert.That(input.GetAttribute("value")).IsEqualTo("90");
+    }
+
+    [Test]
+    public async Task MinColumnsStepperButtonsAdjustValue()
+    {
+        using var ctx = NewContext();
+        var vm = MakeVm();
+        vm.MinColumns = 90;
+
+        var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
+
+        var buttons = cut.FindAll(".sc-stepper-btn");
+        buttons[1].Click(); // "+"
+        await Assert.That(vm.MinColumns).IsEqualTo(91);
+        buttons[0].Click(); // "−"
+        buttons[0].Click();
+        await Assert.That(vm.MinColumns).IsEqualTo(89);
     }
 
     [Test]

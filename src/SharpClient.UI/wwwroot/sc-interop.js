@@ -167,7 +167,26 @@ export function measureGrid(element, targetCols, minFont, maxFont) {
     element.style.setProperty('--out-fs', fontPx + 'px');
     element.style.setProperty('--sc-cols', String(cols));
 
-    return { cols, rows: clampGrid(Math.floor(contentH / (lineRatio * fontPx))) };
+    // Columns that ACTUALLY fit at the fitted font in the current content box. If this is less than
+    // targetCols, the advertised width can't be shown and lines will wrap — the diagnostic the caller
+    // logs so wrap issues can be traced from the exported log.
+    const advancePx = advanceRatio * fontPx;
+    const actualCols = advancePx > 0 ? Math.floor(contentW / advancePx) : 0;
+    const vscroll = element.scrollHeight > element.clientHeight;
+
+    return {
+        cols,
+        rows: clampGrid(Math.floor(contentH / (lineRatio * fontPx))),
+        // diagnostics (see SessionScreen logging)
+        fontPx: Math.round(fontPx * 100) / 100,
+        clientW: element.clientWidth,
+        contentW,
+        padX,
+        advanceRatio: Math.round(advanceRatio * 10000) / 10000,
+        targetCols,
+        actualCols,
+        vscroll,
+    };
 }
 
 /**
