@@ -100,6 +100,22 @@ public sealed class TelnetConnection : ITelnetConnection
         await ConnectAsync(host, _port);
     }
 
+    /// <summary>
+    /// User-initiated reconnect to the last endpoint. Unlike <see cref="ForceReconnectAsync"/> (the
+    /// automatic network-change path), this deliberately reconnects even after an intentional
+    /// <see cref="DisconnectAsync"/> — it backs the header's Connect button. No-op if we never connected.
+    /// </summary>
+    public async Task ReconnectAsync()
+    {
+        var host = _host;
+        if (host is null)
+        {
+            return;
+        }
+
+        await ConnectAsync(host, _port);
+    }
+
     public async Task SendAsync(string line)
     {
         if (_interpreter is null)

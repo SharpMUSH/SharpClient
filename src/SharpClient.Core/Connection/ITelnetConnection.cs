@@ -24,6 +24,9 @@ public interface ITelnetConnection : IAsyncDisposable
     /// </summary>
     public Task ForceReconnectAsync();
 
+    /// <summary>User-initiated reconnect to the last endpoint; works even after an intentional disconnect.</summary>
+    public Task ReconnectAsync();
+
     public Task SendAsync(string line);
 
     public Task DisconnectAsync();

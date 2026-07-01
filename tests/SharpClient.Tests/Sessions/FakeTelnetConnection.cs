@@ -29,6 +29,15 @@ public sealed class FakeTelnetConnection : ITelnetConnection
         return Task.CompletedTask;
     }
 
+    public int ReconnectCount { get; private set; }
+
+    public Task ReconnectAsync()
+    {
+        ReconnectCount++;
+        RaiseState(ConnectionState.Connected);
+        return Task.CompletedTask;
+    }
+
     public Task SendAsync(string line)
     {
         Sent.Add(line);

@@ -88,6 +88,17 @@ public sealed class SessionStateTests
     }
 
     [Test]
+    public async Task SessionReconnectDelegatesToConnection()
+    {
+        var fake = new FakeTelnetConnection();
+        await using var session = new Session(fake);
+
+        await session.ReconnectAsync();
+
+        await Assert.That(fake.ReconnectCount).IsEqualTo(1);
+    }
+
+    [Test]
     public async Task ReconnectingAndErrorAreDistinctStates()
     {
         var reconnecting = ConnectionState.Reconnecting;
