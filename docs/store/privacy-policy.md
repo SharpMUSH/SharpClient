@@ -7,9 +7,11 @@ SharpMUSH project ("we", "us").
 ## Summary
 
 SharpClient is a client for connecting to text-based multiplayer games (MUD/MUSH
-servers). **We do not collect, transmit, or receive any personal data.** The app
-has no analytics, no advertising, no tracking, no user accounts with us, and no
-third-party SDKs. All data the app stores stays **on your device**.
+servers). **We do not collect or receive any of your personal data.** The app
+sends what you type only to the game server you choose to connect to — never to
+us or any third party. It has no analytics, no advertising, no tracking, no user
+accounts with us, and no third-party SDKs. All data the app stores stays **on
+your device**.
 
 ## What the app stores on your device
 

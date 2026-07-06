@@ -7,8 +7,7 @@ first). Ordered; each step's prerequisites are the steps above it.
 
 - [ ] A Google Play Developer account (one-time US$25 registration).
 - [ ] Decide the **package name is final**: `com.sharpmush.sharpclient`. This is
-      permanent once uploaded and can never be changed. (Renamed from
-      `…​.sharpclient.app` — see the applicationId change.)
+      permanent once uploaded and can never be changed.
 
 ## 1. Land the code changes
 
@@ -41,16 +40,11 @@ must be done before tagging. Full details in
 tag (`vMAJOR.MINOR.PATCH`):
 `versionCode = major*100000000 + minor*10000 + patch`.
 
-- [ ] Choose the version by **continuing the existing release line**, not
-      restarting. The Obtainium/GitHub releases run `v0.1 … v1.3`, and v1.3 shipped
-      `versionName 1.3 / versionCode 100030000`. So the next release is **`v1.4`**
-      (→ versionCode `100040000`), keeping one coherent version line across
-      Obtainium and Play. A `v0.x` reset would derive a *lower* code and is wrong.
-      - Note on the rename: Play tracks versionCodes **per package**, and this is a
-        brand-new package (`com.sharpmush.sharpclient`), so Play has no prior code to
-        exceed — but continuing at `v1.4` keeps the human version consistent with the
-        `…​.app` builds users already have. A Play `versionCode` can never be reused
-        or decreased *within* a package.
+- [ ] Choose the version by **continuing the existing release-tag line**, not
+      restarting. The GitHub release tags run `v0.1 … v1.3` (v1.3 =
+      `versionName 1.3 / versionCode 100030000`), so the next release is **`v1.4`**
+      (→ versionCode `100040000`). A `v0.x` reset would derive a *lower* code and is
+      wrong. A Play `versionCode` can never be reused or decreased.
 - [ ] Publish a **GitHub Release** with that tag. This triggers the workflow,
       which builds and attaches a **signed `.aab`** (for Play) and a signed `.apk`
       (for sideloading) to the release.
