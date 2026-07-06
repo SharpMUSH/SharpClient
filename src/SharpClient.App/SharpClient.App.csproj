@@ -32,7 +32,7 @@
         <ApplicationTitle>SharpClient</ApplicationTitle>
 
         <!-- App Identifier -->
-        <ApplicationId>com.sharpmush.sharpclient.app</ApplicationId>
+        <ApplicationId>com.sharpmush.sharpclient</ApplicationId>
 
         <!-- Versions -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -74,8 +74,16 @@
                              cleanly on it (adaptive icons, Android 8+); the teal base blends into
                              the matching green so the background looks solid. Previously #0b0e12,
                              which put the dark mark on near-black and rendered as "black on grey".
+            ForegroundScale="0.65": the logo SVG fills its whole viewport (peaks/legs run edge to
+                             edge). Android adaptive icons reserve the outer 18dp of the 108dp layer
+                             for the launcher mask (circle/squircle/rounded-square/teardrop), so a
+                             full-bleed foreground gets its peaks and outer legs clipped. 0.65 is the
+                             stock MAUI/Google template value: it shrinks + centers the foreground
+                             into the safe zone so the whole M survives every mask. MAUI does NOT
+                             apply this inset automatically — omitting it renders full-bleed (the
+                             prior cropping). We never bake the mask shape ourselves; the OS does.
         -->
-        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#00f5b7" />
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" ForegroundScale="0.65" Color="#00f5b7" />
 
         <!-- Splash Screen -->
         <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />

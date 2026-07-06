@@ -15,13 +15,13 @@ namespace SharpClient.App;
 //   semantically correct type. Crucially, connectedDevice has NO 6-hour time cap (unlike dataSync
 //   which is capped at 6 h/24 h on Android 15+), which matters for sessions that last all day.
 //
-// The Name is pinned to the real ApplicationId (com.sharpmush.sharpclient.app) so the static
+// The Name is pinned to the real ApplicationId (com.sharpmush.sharpclient) so the static
 // AndroidManifest.xml can reference this service with a stable android:name to attach the
 // foregroundServiceType attribute (which cannot be set via the C# ServiceAttribute). It MUST stay
 // in lock-step with <ApplicationId> in SharpClient.App.csproj and the <service> entry in the
 // manifest, otherwise the merger emits two distinct services and startForeground throws.
 //
-[Service(Exported = false, Name = "com.sharpmush.sharpclient.app.ConnectionKeepAliveService")]
+[Service(Exported = false, Name = "com.sharpmush.sharpclient.ConnectionKeepAliveService")]
 [SupportedOSPlatform("android26.0")] // Foreground services + NotificationChannel require API 26
 internal sealed class ConnectionKeepAliveService : Service
 {
