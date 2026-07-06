@@ -34,14 +34,12 @@
         <!-- App Identifier -->
         <ApplicationId>com.sharpmush.sharpclient</ApplicationId>
 
-        <!-- Versions — baseline aligned with the live GitHub/Obtainium release line.
-             Releases override these from the git tag in release-apk.yml
-             (versionCode = major*100000000 + minor*10000 + patch), so v1.3 shipped
-             versionName 1.3 / versionCode 100030000. These defaults track the latest
-             released version so untagged/dev builds don't report the stale template 1.0/1.
-             Bump both together when the release line moves. -->
-        <ApplicationDisplayVersion>1.3</ApplicationDisplayVersion>
-        <ApplicationVersion>100030000</ApplicationVersion>
+        <!-- Versions — placeholders for local/dev builds ONLY. The git tag is the
+             single source of truth: release-apk.yml derives and overrides both from
+             the tag (versionCode = major*100000000 + minor*10000 + patch). Do NOT
+             bump these per release; leave them as a neutral dev marker. -->
+        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <ApplicationVersion>1</ApplicationVersion>
 
         <!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
         <WindowsPackageType>None</WindowsPackageType>
