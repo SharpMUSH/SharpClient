@@ -34,10 +34,7 @@
         <!-- App Identifier -->
         <ApplicationId>com.sharpmush.sharpclient</ApplicationId>
 
-        <!-- Versions — placeholders for local/dev builds ONLY. The git tag is the
-             single source of truth: release-apk.yml derives and overrides both from
-             the tag (versionCode = major*100000000 + minor*10000 + patch). Do NOT
-             bump these per release; leave them as a neutral dev marker. -->
+        <!-- Versions (release-apk.yml overrides these from the git tag). -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
 
@@ -77,14 +74,8 @@
                              cleanly on it (adaptive icons, Android 8+); the teal base blends into
                              the matching green so the background looks solid. Previously #0b0e12,
                              which put the dark mark on near-black and rendered as "black on grey".
-            ForegroundScale="0.65": the logo SVG fills its whole viewport (peaks/legs run edge to
-                             edge). Android adaptive icons reserve the outer 18dp of the 108dp layer
-                             for the launcher mask (circle/squircle/rounded-square/teardrop), so a
-                             full-bleed foreground gets its peaks and outer legs clipped. 0.65 is the
-                             stock MAUI/Google template value: it shrinks + centers the foreground
-                             into the safe zone so the whole M survives every mask. MAUI does NOT
-                             apply this inset automatically — omitting it renders full-bleed (the
-                             prior cropping). We never bake the mask shape ourselves; the OS does.
+            ForegroundScale="0.65" insets the foreground into the adaptive-icon safe zone
+                             (MAUI renders it full-bleed otherwise, so launcher masks crop the mark).
         -->
         <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" ForegroundScale="0.65" Color="#00f5b7" />
 
