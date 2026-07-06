@@ -41,10 +41,16 @@ must be done before tagging. Full details in
 tag (`vMAJOR.MINOR.PATCH`):
 `versionCode = major*100000000 + minor*10000 + patch`.
 
-- [ ] Choose the first version. **Recommended: `v0.1.0`** for the initial
-      internal-testing build (versionCode `10000`), leaving room to iterate before
-      a `v1.0.0` public launch. (`v1.0.0` → versionCode `100000000` is also fine.)
-      Remember: a Play `versionCode` can never be reused or decreased.
+- [ ] Choose the version by **continuing the existing release line**, not
+      restarting. The Obtainium/GitHub releases run `v0.1 … v1.3`, and v1.3 shipped
+      `versionName 1.3 / versionCode 100030000`. So the next release is **`v1.4`**
+      (→ versionCode `100040000`), keeping one coherent version line across
+      Obtainium and Play. A `v0.x` reset would derive a *lower* code and is wrong.
+      - Note on the rename: Play tracks versionCodes **per package**, and this is a
+        brand-new package (`com.sharpmush.sharpclient`), so Play has no prior code to
+        exceed — but continuing at `v1.4` keeps the human version consistent with the
+        `…​.app` builds users already have. A Play `versionCode` can never be reused
+        or decreased *within* a package.
 - [ ] Publish a **GitHub Release** with that tag. This triggers the workflow,
       which builds and attaches a **signed `.aab`** (for Play) and a signed `.apk`
       (for sideloading) to the release.
@@ -91,5 +97,6 @@ tag (`vMAJOR.MINOR.PATCH`):
 ### Still needs a human decision / action
 
 - Keystore generation + secret upload (step 2).
-- Version choice + tagging (step 3) — **held pending your confirmation.**
+- Version choice + tagging (step 3) — next in line is **`v1.4`**; held pending
+  keystore secrets + your go-ahead.
 - Play Console account, listing copy, feature graphic, content rating (steps 4–6).
