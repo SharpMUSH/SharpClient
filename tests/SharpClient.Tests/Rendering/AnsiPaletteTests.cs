@@ -39,8 +39,6 @@ public sealed class AnsiPaletteTests
         await Assert.That(AnsiPalette.ToHex(999)).IsEqualTo("#c4d1c8");
     }
 
-    // ── New tests ────────────────────────────────────────────────────────────
-
     [Test]
     public async Task GrayscaleRampEndsAtIndex255()
     {

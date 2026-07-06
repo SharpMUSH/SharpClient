@@ -37,8 +37,6 @@ public sealed class RuntimeWiringTests
         }
     }
 
-    // ── Task 1: ISession identity ─────────────────────────────────────────────
-
     [Test]
     public async Task SessionExposesWorldIdAndCharacterId()
     {
@@ -71,8 +69,6 @@ public sealed class RuntimeWiringTests
         await Assert.That(session.WorldId).IsEqualTo(Guid.Empty);
         await Assert.That(session.CharacterId).IsEqualTo(Guid.Empty);
     }
-
-    // ── Task 2: World↔session correlation ────────────────────────────────────
 
     [Test]
     public async Task ActiveSessionForMatchesByCharacterId()
@@ -182,8 +178,6 @@ public sealed class RuntimeWiringTests
         await Assert.That(vm.IsWorldLive(vm.Worlds[0])).IsFalse();
     }
 
-    // ── Task 3: NAWS forwarding ───────────────────────────────────────────────
-
     [Test]
     public async Task SendWindowSizeAsyncForwardsNawsToConnection()
     {
@@ -196,8 +190,6 @@ public sealed class RuntimeWiringTests
         await Assert.That(conn.NawsSent[0].Width).IsEqualTo(80);
         await Assert.That(conn.NawsSent[0].Height).IsEqualTo(24);
     }
-
-    // ── Task 4: Alias expansion ───────────────────────────────────────────────
 
     [Test]
     public async Task SendAsyncExpandsAliasBeforeSending()
@@ -232,8 +224,6 @@ public sealed class RuntimeWiringTests
 
         await Assert.That(conn.Sent).Contains("look");
     }
-
-    // ── Task 5: Trigger application ───────────────────────────────────────────
 
     [Test]
     public async Task IncomingLineAppliesTriggerSendCommand()
@@ -310,8 +300,6 @@ public sealed class RuntimeWiringTests
         await Assert.That(session.Scrollback[0].Segments[0].Text).IsEqualTo("plain text");
     }
 
-    // ── Task 6: Session history ───────────────────────────────────────────────
-
     [Test]
     public async Task IncomingLineCallsHistoryAppendAsync()
     {
@@ -331,8 +319,6 @@ public sealed class RuntimeWiringTests
         await Assert.That(history.Appended[0].CharacterId).IsEqualTo(charId);
         await Assert.That(history.Appended[0].Line).IsEqualTo("The goblin attacks!");
     }
-
-    // ── Task 7: Error state on failed connect ─────────────────────────────────
 
     [Test]
     public async Task ConnectToUnreachableHostSetsErrorState()

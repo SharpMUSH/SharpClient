@@ -19,8 +19,6 @@ public sealed class SessionHistory : ISessionHistory
         _dbPath = storage.GetDatabasePath();
     }
 
-    // ── ISessionHistory ──────────────────────────────────────────────────────
-
     public async Task AppendAsync(Guid characterId, string line, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqliteConnection($"Data Source={_dbPath}");
@@ -63,8 +61,6 @@ public sealed class SessionHistory : ISessionHistory
 
         return results;
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Creates the FTS5 table if it does not yet exist.

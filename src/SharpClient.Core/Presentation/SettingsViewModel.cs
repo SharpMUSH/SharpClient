@@ -4,7 +4,6 @@ namespace SharpClient.Core.Presentation;
 
 public sealed class SettingsViewModel
 {
-    // ── Lookup tables ────────────────────────────────────────────────────────
     public static readonly string[] FontOptions =
     [
         "JetBrains Mono",
@@ -42,7 +41,6 @@ public sealed class SettingsViewModel
             ["Courier"]        = "Courier,'Courier New',monospace",
         };
 
-    // ── State ────────────────────────────────────────────────────────────────
     private readonly IPreferences _prefs;
     private string _outputFont;
     private int    _minColumns;
@@ -53,7 +51,6 @@ public sealed class SettingsViewModel
 
     public event Action? Changed;
 
-    // ── Constructor ──────────────────────────────────────────────────────────
     public SettingsViewModel(IPreferences prefs)
     {
         _prefs       = prefs;
@@ -72,7 +69,6 @@ public sealed class SettingsViewModel
         }
     }
 
-    // ── Properties ───────────────────────────────────────────────────────────
     public string OutputFont
     {
         get => _outputFont;
@@ -109,7 +105,6 @@ public sealed class SettingsViewModel
         set { _scanlines = value; _prefs.SetBool("Scanlines", value); Changed?.Invoke(); }
     }
 
-    // ── Computed ─────────────────────────────────────────────────────────────
     public string FontFamily =>
         s_fontFamilies.TryGetValue(_outputFont, out var f) ? f
             : "'JetBrains Mono',ui-monospace,monospace";
