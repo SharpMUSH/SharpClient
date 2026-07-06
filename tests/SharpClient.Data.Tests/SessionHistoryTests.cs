@@ -12,8 +12,6 @@ public sealed class SessionHistoryTests
     [After(Test)]
     public void Teardown() => _storage.Delete();
 
-    // ── Append + Search ──────────────────────────────────────────────────────
-
     [Test]
     public async Task AppendThenSearchReturnsMatchingLinesWithCorrectCharacterId()
     {
@@ -30,8 +28,6 @@ public sealed class SessionHistoryTests
         await Assert.That(hits[0].CharacterId).IsEqualTo(charId);
         await Assert.That(hits[0].Line).IsEqualTo("the quick brown fox");
     }
-
-    // ── Multi-word search ────────────────────────────────────────────────────
 
     [Test]
     public async Task MultiWordSearchMatchesLinesContainingAllTerms()
@@ -50,8 +46,6 @@ public sealed class SessionHistoryTests
         await Assert.That(hits.Any(h => h.Line == "quick brown fox leaps")).IsTrue();
         await Assert.That(hits.Any(h => h.Line == "the fox is quick")).IsTrue();
     }
-
-    // ── Multi-character search ────────────────────────────────────────────────
 
     [Test]
     public async Task SearchAcrossTwoCharactersReturnsCorrectCharacterIds()
@@ -73,8 +67,6 @@ public sealed class SessionHistoryTests
         await Assert.That(hitForB.CharacterId).IsEqualTo(charB);
     }
 
-    // ── Limit ────────────────────────────────────────────────────────────────
-
     [Test]
     public async Task LimitIsRespectedWhenMoreMatchesExist()
     {
@@ -88,8 +80,6 @@ public sealed class SessionHistoryTests
 
         await Assert.That(hits).Count().IsEqualTo(3);
     }
-
-    // ── No-match / empty ─────────────────────────────────────────────────────
 
     [Test]
     public async Task SearchWithNoMatchReturnsEmptyList()
@@ -118,8 +108,6 @@ public sealed class SessionHistoryTests
         await Assert.That(hitsWhitespace).Count().IsEqualTo(0);
     }
 
-    // ── FTS-special characters ───────────────────────────────────────────────
-
     [Test]
     public async Task QueryWithFtsSpecialCharactersDoesNotThrow()
     {
@@ -141,8 +129,6 @@ public sealed class SessionHistoryTests
         await Assert.That(result2).Count().IsEqualTo(0);
         await Assert.That(result3).Count().IsEqualTo(0);
     }
-
-    // ── Sequence is monotonically from rowid ─────────────────────────────────
 
     [Test]
     public async Task SequenceValuesArePositiveAndDistinctPerAppend()

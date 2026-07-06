@@ -7,8 +7,6 @@ using System.Runtime.Versioning;
 
 namespace SharpClient.App;
 
-// ── Foreground-service declaration ────────────────────────────────────────────
-//
 // foregroundServiceType = "connectedDevice"
 //   Android docs: "remote device connected through Bluetooth, NFC, IR, USB, or network."
 //   A MUSH telnet server is a remote device connected over the network — connectedDevice is the
@@ -20,27 +18,20 @@ namespace SharpClient.App;
 // foregroundServiceType attribute (which cannot be set via the C# ServiceAttribute). It MUST stay
 // in lock-step with <ApplicationId> in SharpClient.App.csproj and the <service> entry in the
 // manifest, otherwise the merger emits two distinct services and startForeground throws.
-//
 [Service(Exported = false, Name = "com.sharpmush.sharpclient.app.ConnectionKeepAliveService")]
 [SupportedOSPlatform("android26.0")] // Foreground services + NotificationChannel require API 26
 internal sealed class ConnectionKeepAliveService : Service
 {
-    // ── Notification constants ────────────────────────────────────────────────
-
     private const string ChannelId      = "sharpclient_keepalive";
     private const string ChannelName    = "Connection Keep-Alive";
     private const int    NotificationId = 1_001;
     private const string WakeLockTag    = "SharpClient::KeepAlive";
-
-    // ── Runtime state ─────────────────────────────────────────────────────────
 
     private PowerManager.WakeLock? _wakeLock;
     private ConnectivityManager? _connectivity;
     private ConnectivityManager.NetworkCallback? _networkCallback;
     private Network? _boundNetwork;
     private bool _haveSeenNetwork;
-
-    // ── Service lifecycle ─────────────────────────────────────────────────────
 
     public override IBinder? OnBind(Intent? intent) => null;
 
@@ -72,8 +63,6 @@ internal sealed class ConnectionKeepAliveService : Service
         base.OnDestroy();
     }
 
-    // ── Wake lock ─────────────────────────────────────────────────────────────
-    //
     // A PARTIAL_WAKE_LOCK keeps the CPU running so the TCP socket and telnet-NOP keepalive keep
     // ticking while the screen is off / the device dozes. Released on OnDestroy (i.e. when the
     // coordinator Halts the service because no sessions remain connected).
@@ -101,8 +90,6 @@ internal sealed class ConnectionKeepAliveService : Service
         _wakeLock = null;
     }
 
-    // ── Connectivity monitoring ───────────────────────────────────────────────
-    //
     // Watches the device's DEFAULT network. When it changes on the move (WiFi↔cellular, tower
     // handoff, coming out of a dead zone) the old sockets are silently dead. We (a) pin the process
     // to the new network so reconnects use the live interface at once, and (b) raise a signal that
@@ -182,8 +169,6 @@ internal sealed class ConnectionKeepAliveService : Service
             _boundNetwork = null;
         }
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void EnsureNotificationChannel()
     {

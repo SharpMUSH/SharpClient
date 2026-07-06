@@ -24,7 +24,6 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         ServiceLifetime perViewLifetime)
     {
-        // ── Shared-lifetime view models (Singleton in both hosts) ────────────
         services.AddSingleton<SessionsViewModel>(sp =>
             new SessionsViewModel(sp.GetRequiredService<ISessionManager>()));
         services.AddSingleton<ProtocolPanelViewModel>(sp =>
@@ -32,7 +31,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<SettingsViewModel>(sp =>
             new SettingsViewModel(sp.GetRequiredService<IPreferences>()));
 
-        // ── Per-view view models (Transient in MAUI, Scoped in Web) ──────────
         services.Add(new ServiceDescriptor(
             typeof(WorldManagerViewModel),
             sp => new WorldManagerViewModel(

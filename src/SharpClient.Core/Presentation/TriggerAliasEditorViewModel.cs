@@ -12,8 +12,6 @@ public sealed class TriggerAliasEditorViewModel
 
     public TriggerAliasEditorViewModel(IWorldStore store) => _store = store;
 
-    // ── Scope ─────────────────────────────────────────────────────────────
-
     /// <summary>null means world scope; non-null is the character's Id.</summary>
     public Guid? CharacterScopeId => _characterScopeId;
 
@@ -42,14 +40,10 @@ public sealed class TriggerAliasEditorViewModel
         RaiseChanged();
     }
 
-    // ── Exposed lists ─────────────────────────────────────────────────────
-
     public IReadOnlyList<TriggerRule> Triggers => ScopedTriggers;
     public IReadOnlyList<AliasRule> Aliases => ScopedAliases;
 
     public event Action? Changed;
-
-    // ── Load / Set ────────────────────────────────────────────────────────
 
     public async Task LoadAsync(Guid worldId, CancellationToken ct = default)
     {
@@ -71,8 +65,6 @@ public sealed class TriggerAliasEditorViewModel
             _characterScopeId = null;
         RaiseChanged();
     }
-
-    // ── Triggers ──────────────────────────────────────────────────────────
 
     public async Task AddTriggerAsync(TriggerRule rule, CancellationToken ct = default)
     {
@@ -109,8 +101,6 @@ public sealed class TriggerAliasEditorViewModel
         await _store.UpdateWorldAsync(_world, ct);
         await LoadAsync(_worldId, ct);
     }
-
-    // ── Aliases ───────────────────────────────────────────────────────────
 
     public async Task AddAliasAsync(AliasRule rule, CancellationToken ct = default)
     {

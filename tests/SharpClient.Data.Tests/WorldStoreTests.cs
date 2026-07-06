@@ -32,8 +32,6 @@ public sealed class WorldStoreTests
     [After(Test)]
     public void Teardown() => _storage.Delete();
 
-    // ── Add + Get ────────────────────────────────────────────────────────────
-
     [Test]
     public async Task AddWorldThenGetWorldsReturnsFullyPopulatedGraph()
     {
@@ -129,8 +127,6 @@ public sealed class WorldStoreTests
         await Assert.That(loaded.ConnectSecretKey).IsEqualTo("vault:hero-key");
     }
 
-    // ── Update ───────────────────────────────────────────────────────────────
-
     [Test]
     public async Task UpdateWorldRenameAndAddCharacterReflectedInGetWorlds()
     {
@@ -171,8 +167,6 @@ public sealed class WorldStoreTests
         await Assert.That(worlds[0].Characters).Count().IsEqualTo(1);
         await Assert.That(worlds[0].Characters[0].Name).IsEqualTo("CharA");
     }
-
-    // ── Delete ───────────────────────────────────────────────────────────────
 
     [Test]
     public async Task DeleteWorldGetWorldsReturnsEmpty()
@@ -249,8 +243,6 @@ public sealed class WorldStoreTests
         await Assert.That(await db2.TriggerRules.CountAsync()).IsEqualTo(1); // world-scoped only
         await Assert.That(await db2.AliasRules.CountAsync()).IsEqualTo(1);   // world-scoped only
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static World BuildSampleWorld()
     {

@@ -63,8 +63,6 @@ public sealed class SessionManagerTests
         await Assert.That(mgr.Active).IsNull();
     }
 
-    // ── New tests ────────────────────────────────────────────────────────────
-
     [Test]
     public async Task CloseNonActiveSessionKeepsCurrentActive()
     {
