@@ -275,8 +275,6 @@ public sealed class TriggerEngineTests
         await Assert.That(outcome.SendCommands).Contains("loot");
     }
 
-    // ── New tests ────────────────────────────────────────────────────────────
-
     [Test]
     public async Task HighlightOutOfRangeActionValueSkippedFirstColourKept()
     {

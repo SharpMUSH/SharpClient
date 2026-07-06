@@ -39,7 +39,6 @@ public static class MauiProgram
 
         builder.Services.AddMauiBlazorWebView();
 
-        // ── Crash / diagnostics file logging ──────────────────────────────
         // A single FileLogStore is the sink for both ILogger output (via FileLoggerProvider — this
         // captures Blazor's own Error-level log for an unhandled component exception, the "An
         // unhandled error has occurred" case) and the global unhandled-exception hooks below. The
@@ -69,7 +68,6 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        // ── TNC telnet runtime ─────────────────────────────────────────────
         // AddTelnetClient() is an extension method from TelnetNegotiationCore and
         // registers ITelnetInterpreterFactory. The TNC package IS referenced in
         // App.csproj so AddTelnetClient() resolves, but direct use of
@@ -79,7 +77,6 @@ public static class MauiProgram
         builder.Services.AddTelnetClient();
         builder.Services.AddSingleton<ITelnetConnectionFactory, TelnetConnectionFactory>();
 
-        // ── Platform services ─────────────────────────────────────────────
 #if ANDROID
         builder.Services.AddSingleton<IConnectionKeepAlive, AndroidConnectionKeepAlive>();
 #else
@@ -92,7 +89,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<INotifier, MauiNotifier>();
         builder.Services.AddSingleton<SharpClient.Core.Platform.IPreferences, MauiPreferences>();
 
-        // ── Data / persistence ────────────────────────────────────────────
         // AppDbContext is transient so each call gets a fresh context; this
         // avoids cross-thread SQLite issues and mirrors the Web's per-request
         // scoped pattern without requiring HTTP request scopes in MAUI.
@@ -100,20 +96,16 @@ public static class MauiProgram
         builder.Services.AddTransient<IWorldStore, WorldStore>();
         builder.Services.AddTransient<ISessionHistory, SessionHistory>();
 
-        // ── Session management ────────────────────────────────────────────
         builder.Services.AddSingleton<SessionManager>();
         builder.Services.AddSingleton<ISessionManager>(sp =>
             sp.GetRequiredService<SessionManager>());
 
-        // ── Session launcher (real telnet) ────────────────────────────────
         builder.Services.AddTransient<ISessionLauncher, SharpClient.Core.Sessions.TelnetSessionLauncher>();
 
-        // ── View models ───────────────────────────────────────────────────
         // Registered via the shared extension so MAUI and Web stay in lockstep (no host drift).
         // Per-view view models are Transient here to match MAUI's per-request-less lifetime model.
         builder.Services.AddSharpClientViewModels(ServiceLifetime.Transient);
 
-        // ── Trigger / alias engines (stateless) ──────────────────────────
         builder.Services.AddSingleton<ITriggerEngine, TriggerEngine>();
         builder.Services.AddSingleton<IAliasEngine, AliasEngine>();
 

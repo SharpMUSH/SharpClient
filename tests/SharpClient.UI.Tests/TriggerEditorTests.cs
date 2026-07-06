@@ -154,8 +154,6 @@ public sealed class TriggerEditorTests
         await Assert.That(cut.Markup).Contains("Aliases");
     }
 
-    // ── Inline edit tests ──────────────────────────────────────────────────
-
     [Test]
     public async Task EditButtonIsRenderedPerTriggerRow()
     {

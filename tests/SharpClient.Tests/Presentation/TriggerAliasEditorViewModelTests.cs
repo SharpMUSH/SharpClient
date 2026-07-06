@@ -210,8 +210,6 @@ public sealed class TriggerAliasEditorViewModelTests
         await Assert.That(vm.Aliases).IsEmpty();
     }
 
-    // ── Character-scope tests ─────────────────────────────────────────────
-
     private static async Task<(TriggerAliasEditorViewModel vm, FakeWorldStore store, World world, Character character)>
         BuildWithCharacterAsync()
     {

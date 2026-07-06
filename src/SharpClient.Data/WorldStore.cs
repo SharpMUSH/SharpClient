@@ -14,8 +14,6 @@ public sealed class WorldStore : IWorldStore
 
     public WorldStore(AppDbContext db) => _db = db;
 
-    // ── IWorldStore ──────────────────────────────────────────────────────────
-
     public async Task<IReadOnlyList<World>> GetWorldsAsync(CancellationToken cancellationToken = default)
     {
         await EnsureSchemaAsync(cancellationToken);
@@ -102,8 +100,6 @@ public sealed class WorldStore : IWorldStore
             await _db.SaveChangesAsync(cancellationToken);
         }
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private async Task EnsureSchemaAsync(CancellationToken cancellationToken)
     {
