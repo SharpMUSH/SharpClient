@@ -63,7 +63,7 @@
               components. Explicit declaration required for Android 12+ (API 31).
         -->
         <service
-            android:name="com.sharpmush.sharpclient.app.ConnectionKeepAliveService"
+            android:name="com.sharpmush.sharpclient.ConnectionKeepAliveService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
 

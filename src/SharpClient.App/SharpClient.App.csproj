@@ -32,9 +32,9 @@
         <ApplicationTitle>SharpClient</ApplicationTitle>
 
         <!-- App Identifier -->
-        <ApplicationId>com.sharpmush.sharpclient.app</ApplicationId>
+        <ApplicationId>com.sharpmush.sharpclient</ApplicationId>
 
-        <!-- Versions -->
+        <!-- Versions (release-apk.yml overrides these from the git tag). -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
 
@@ -74,8 +74,10 @@
                              cleanly on it (adaptive icons, Android 8+); the teal base blends into
                              the matching green so the background looks solid. Previously #0b0e12,
                              which put the dark mark on near-black and rendered as "black on grey".
+            ForegroundScale="0.65" insets the foreground into the adaptive-icon safe zone
+                             (MAUI renders it full-bleed otherwise, so launcher masks crop the mark).
         -->
-        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#00f5b7" />
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" ForegroundScale="0.65" Color="#00f5b7" />
 
         <!-- Splash Screen -->
         <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
