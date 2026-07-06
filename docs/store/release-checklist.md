@@ -67,8 +67,8 @@ tag (`vMAJOR.MINOR.PATCH`):
 ## 5. Play Console — required listing content
 
 - [ ] **App icon:** `docs/store/play-listing-icon-512.png` (512×512).
-- [ ] **Feature graphic:** 1024×500 PNG/JPG — *required* for the listing. Not yet
-      generated; can be produced from the logo on request.
+- [ ] **Feature graphic:** `docs/store/play-feature-graphic-1024x500.png`
+      (1024×500, required) — green M on near-black with a terminal-prompt tagline.
 - [ ] **Screenshots:** at least 2 phone screenshots (existing shots live in
       `.github/assets/` and may be reused/resized).
 - [ ] **Short + full description.**
