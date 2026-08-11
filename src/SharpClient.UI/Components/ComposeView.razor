@@ -1,0 +1,102 @@
+@using SharpClient.Core.Connection
+@using SharpClient.Core.Formatting
+@using SharpClient.Core.Presentation
+@implements IDisposable
+
+<div class="sc-compose">
+    <div class="sc-compose-prefixes">
+        @foreach (var option in PrefixOptions)
+        {
+            var value = option.Value;
+            <button type="button"
+                    class="sc-compose-chip @(Vm.SelectedPrefix == value ? "sc-compose-chip-active" : "")"
+                    @onclick="() => Vm.SelectedPrefix = value">@option.Label</button>
+        }
+    </div>
+
+    @if (Vm.SelectedPrefix == PosePrefix.Custom)
+    {
+        <input class="sc-compose-custom" type="text"
+               value="@Vm.CustomPrefix"
+               placeholder="page Bob="
+               @oninput="e => Vm.CustomPrefix = e.Value?.ToString() ?? string.Empty" />
+    }
+
+    <div class="sc-compose-body">
+        @if (_previewing)
+        {
+            <pre class="sc-compose-preview">@Vm.Preview</pre>
+        }
+        else
+        {
+            <textarea class="sc-compose-input"
+                      placeholder="Write your pose…"
+                      value="@Vm.Body"
+                      @oninput="OnBodyInput"
+                      @onkeydown="OnKeyDown"></textarea>
+        }
+    </div>
+
+    <div class="sc-compose-footer">
+        <span class="sc-compose-count">@Vm.Preview.Length chars</span>
+        @if (Vm.Active?.State != ConnectionState.Connected)
+        {
+            <a class="sc-compose-hint" href="/session">No connected session</a>
+        }
+        <div class="sc-compose-actions">
+            <button type="button" class="sc-rules-btn sc-compose-clear" @onclick="Clear">Clear</button>
+            <button type="button" class="sc-rules-btn sc-compose-toggle" @onclick="TogglePreview">
+                @(_previewing ? "Edit" : "Preview")
+            </button>
+            <button type="button" class="sc-send-btn" disabled="@(!Vm.CanSend)" @onclick="SendAsync">Send</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public ComposeViewModel Vm { get; set; } = null!;
+
+    private static readonly (string Label, PosePrefix Value)[] PrefixOptions =
+    [
+        ("say", PosePrefix.Say),
+        ("pose", PosePrefix.Pose),
+        ("semipose", PosePrefix.Semipose),
+        ("@emit", PosePrefix.Emit),
+        ("custom", PosePrefix.Custom),
+    ];
+
+    private bool _previewing;
+
+    protected override void OnInitialized() => Vm.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnBodyInput(ChangeEventArgs e) => Vm.Body = e.Value?.ToString() ?? string.Empty;
+
+    private void TogglePreview() => _previewing = !_previewing;
+
+    private void Clear()
+    {
+        Vm.Clear();
+        _previewing = false;
+    }
+
+    // Ctrl/Cmd+Enter sends; a bare Enter has to stay a newline in a multi-line composer.
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && (e.CtrlKey || e.MetaKey))
+        {
+            await SendAsync();
+        }
+    }
+
+    private async Task SendAsync()
+    {
+        await Vm.SendAsync();
+        _previewing = false;
+        StateHasChanged();
+    }
+
+    public void Dispose() => Vm.Changed -= OnChanged;
+}

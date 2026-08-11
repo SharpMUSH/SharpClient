@@ -824,3 +824,21 @@ body {
 .sc-toggle::before { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--dim); transition: transform .15s, background .15s; }
 .sc-toggle:checked { background: var(--acc); border-color: var(--acc-line); }
 .sc-toggle:checked::before { transform: translateX(16px); background: #fff; }
+
+/* ── Compose page ──────────────────────────────────────────────── */
+.sc-compose { height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 12px 12px 0; }
+.sc-compose-prefixes { display: flex; flex-wrap: wrap; gap: 6px; }
+.sc-compose-chip { font-family: var(--mono); font-size: 12px; color: var(--dim); background: var(--panel); border: 1px solid var(--bd); border-radius: 8px; padding: 6px 11px; cursor: pointer; }
+.sc-compose-chip-active { color: var(--acc2); background: var(--acc-soft); border-color: var(--acc-line); }
+.sc-compose-custom { font-family: var(--mono); font-size: 12px; color: var(--tx); background: var(--outbg); border: 1px solid var(--bd2); border-radius: 8px; padding: 8px 10px; }
+.sc-compose-body { flex: 1; min-height: 0; display: flex; }
+.sc-compose-input,
+.sc-compose-preview { flex: 1; min-width: 0; font-family: var(--mono); font-size: var(--out-fs); line-height: 1.5; color: var(--tx); background: var(--outbg); border: 1px solid var(--bd2); border-radius: 10px; padding: 10px 12px; overflow-y: auto; }
+.sc-compose-input { resize: none; }
+.sc-compose-preview { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--pho); }
+.sc-compose-input:focus,
+.sc-compose-custom:focus { outline: none; border-color: var(--acc-line); }
+.sc-compose-footer { display: flex; align-items: center; gap: 10px; padding: 10px 0 12px; }
+.sc-compose-count { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.sc-compose-hint { font-family: var(--mono); font-size: 11px; color: var(--dim); text-decoration: none; }
+.sc-compose-actions { margin-left: auto; display: flex; gap: 8px; }
