@@ -1,6 +1,7 @@
 @using SharpClient.Core.Presentation
 @using SharpClient.Core.Diagnostics
 @inject ILogExporter LogExporter
+@inject ILogReader LogReader
 @implements IDisposable
 
 <div class="sc-settings">
@@ -86,16 +87,26 @@
         </div>
     </div>
 
-    @if (LogExporter.IsAvailable)
+    @if (LogReader.IsAvailable || LogExporter.IsAvailable)
     {
         <div class="sc-settings-section">
             <div class="sc-settings-section-header">Diagnostics</div>
-            <div class="sc-setting">
-                <span class="sc-setting-label">Crash &amp; error log</span>
-                <button type="button" class="sc-rules-btn" @onclick="ExportLogAsync">
-                    @(_exporting ? "Opening…" : "Export log")
-                </button>
-            </div>
+            @if (LogReader.IsAvailable)
+            {
+                <div class="sc-setting">
+                    <span class="sc-setting-label">View log</span>
+                    <a class="sc-rules-btn" href="/diagnostics">Open</a>
+                </div>
+            }
+            @if (LogExporter.IsAvailable)
+            {
+                <div class="sc-setting">
+                    <span class="sc-setting-label">Crash &amp; error log</span>
+                    <button type="button" class="sc-rules-btn" @onclick="ExportLogAsync">
+                        @(_exporting ? "Opening…" : "Export log")
+                    </button>
+                </div>
+            }
         </div>
     }
 </div>

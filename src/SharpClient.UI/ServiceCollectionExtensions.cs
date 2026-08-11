@@ -16,7 +16,7 @@ namespace SharpClient.UI;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers all six presentation view models. The three session/settings view models are always
+    /// Registers all seven presentation view models. The four session/settings/compose view models are always
     /// singletons; the three per-view view models use <paramref name="perViewLifetime"/> (Transient
     /// in MAUI, Scoped in Web). All constructor dependencies must already be registered by the host.
     /// </summary>
@@ -30,6 +30,10 @@ public static class ServiceCollectionExtensions
             new ProtocolPanelViewModel(sp.GetRequiredService<ISessionManager>()));
         services.AddSingleton<SettingsViewModel>(sp =>
             new SettingsViewModel(sp.GetRequiredService<IPreferences>()));
+        services.AddSingleton<ComposeViewModel>(sp =>
+            new ComposeViewModel(
+                sp.GetRequiredService<ISessionManager>(),
+                sp.GetRequiredService<IPreferences>()));
 
         services.Add(new ServiceDescriptor(
             typeof(WorldManagerViewModel),

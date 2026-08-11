@@ -9,6 +9,8 @@
 <div class="sc-shell @(SettingsVm.Glow ? "sc-glow" : "") @(SettingsVm.Scanlines ? "sc-scanlines" : "")"
      style="@SettingsVm.RootStyleVariables">
 
+    <CrashBanner />
+
     <div class="sc-content">
         @Body
     </div>
@@ -29,6 +31,13 @@
                 <line x1="10.6" y1="12.4" x2="14" y2="12.4" stroke-linecap="round" />
             </svg>
             <span>Session</span>
+        </NavLink>
+        <NavLink class="sc-nav-link" href="/compose" Match="NavLinkMatch.Prefix">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <path d="M13.2 3.6l3.2 3.2-8.6 8.6-4 .8.8-4z" stroke-linecap="round" stroke-linejoin="round" />
+                <line x1="11.6" y1="5.2" x2="14.8" y2="8.4" stroke-linecap="round" />
+            </svg>
+            <span>Compose</span>
         </NavLink>
         <NavLink class="sc-nav-link" href="/history" Match="NavLinkMatch.Prefix">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">

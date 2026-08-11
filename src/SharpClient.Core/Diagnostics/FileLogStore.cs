@@ -1,15 +1,14 @@
 using System.Globalization;
 using System.Text;
-using Microsoft.Maui.Storage;
 
-namespace SharpClient.App.Services;
+namespace SharpClient.Core.Diagnostics;
 
 /// <summary>
-/// Thread-safe, append-only diagnostics log written to a file under the app's private data directory,
-/// with simple size-based rotation (current file + one rolled backup). It is the single sink for both
+/// Thread-safe, append-only diagnostics log written to a caller-supplied directory, with simple
+/// size-based rotation (current file + one rolled backup). It is the single sink for both
 /// <see cref="FileLoggerProvider"/> (framework/app <c>ILogger</c> output) and the global
 /// unhandled-exception hooks, so a crash that takes the process down still leaves its stack trace on
-/// disk for the user to export and hand back.
+/// disk.
 /// </summary>
 public sealed class FileLogStore
 {
@@ -21,15 +20,36 @@ public sealed class FileLogStore
     /// <summary>Absolute path to the active log file.</summary>
     public string FilePath { get; }
 
-    public FileLogStore()
+    /// <summary>Absolute path to the single rolled-over backup.</summary>
+    public string BackupPath { get; }
+
+    /// <summary>
+    /// Sidecar holding the most recent crash block. Checking one small file at launch is cheaper than
+    /// scanning the log, and it survives rotation.
+    /// </summary>
+    public string CrashMarkerPath { get; }
+
+    public FileLogStore(string logDirectory)
     {
-        var dir = Path.Combine(FileSystem.AppDataDirectory, "logs");
-        Directory.CreateDirectory(dir);
-        FilePath = Path.Combine(dir, "sharpclient.log");
+        Directory.CreateDirectory(logDirectory);
+        FilePath = Path.Combine(logDirectory, "sharpclient.log");
+        BackupPath = FilePath + ".1";
+        CrashMarkerPath = Path.Combine(logDirectory, "last-crash.txt");
     }
 
     /// <summary>Appends a single timestamped entry. Never throws — logging must not crash the app.</summary>
     public void Append(string level, string category, string message, Exception? ex = null)
+        => Write(FormatEntry(level, category, message, ex));
+
+    /// <summary>Records an unhandled exception captured by one of the global hooks.</summary>
+    public void WriteException(string source, Exception? ex)
+    {
+        var block = FormatEntry("CRASH", source, ex?.Message ?? "(no exception object)", ex);
+        Write(block);
+        WriteCrashMarker(block);
+    }
+
+    private static string FormatEntry(string level, string category, string message, Exception? ex)
     {
         var sb = new StringBuilder(256);
         sb.Append(DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss.fff zzz", CultureInfo.InvariantCulture));
@@ -38,18 +58,16 @@ public sealed class FileLogStore
         {
             sb.Append(category).Append(": ");
         }
+
         sb.Append(message);
         if (ex is not null)
         {
             sb.Append('\n').Append(ex);
         }
-        sb.Append('\n');
-        Write(sb.ToString());
-    }
 
-    /// <summary>Records an unhandled exception captured by one of the global hooks.</summary>
-    public void WriteException(string source, Exception? ex)
-        => Append("CRASH", source, ex?.Message ?? "(no exception object)", ex);
+        sb.Append('\n');
+        return sb.ToString();
+    }
 
     private void Write(string text)
     {
@@ -67,6 +85,18 @@ public sealed class FileLogStore
         }
     }
 
+    private void WriteCrashMarker(string block)
+    {
+        try
+        {
+            File.WriteAllText(CrashMarkerPath, block);
+        }
+        catch
+        {
+            // Same contract as the log write: recording a crash must not cause another one.
+        }
+    }
+
     private void RotateIfNeeded()
     {
         try
@@ -77,12 +107,12 @@ public sealed class FileLogStore
                 return;
             }
 
-            var backup = FilePath + ".1";
-            if (File.Exists(backup))
+            if (File.Exists(BackupPath))
             {
-                File.Delete(backup);
+                File.Delete(BackupPath);
             }
-            File.Move(FilePath, backup);
+
+            File.Move(FilePath, BackupPath);
         }
         catch
         {

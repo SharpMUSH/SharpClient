@@ -31,6 +31,7 @@ builder.Services.AddSingleton<INotifier, WebNotifier>();
 // The Web preview has no persistent file log; the no-op exporter keeps SettingsView's
 // ILogExporter injection satisfiable and hides the export affordance (IsAvailable == false).
 builder.Services.AddSingleton<ILogExporter, NoopLogExporter>();
+builder.Services.AddSingleton<ILogReader, NoopLogReader>();
 
 builder.Services.AddSingleton<SessionManager>();
 builder.Services.AddSingleton<ISessionManager>(sp => sp.GetRequiredService<SessionManager>());

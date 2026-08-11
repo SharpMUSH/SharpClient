@@ -15,6 +15,9 @@
   <ItemGroup>
     <PackageReference Include="bunit" Version="2.7.2" />
     <PackageReference Include="TUnit" Version="1.57.0" />
+    <!-- bunit 2.7.2 pulls AngleSharp 1.4.0, which carries GHSA-pgww-w46g-26qg; pin the patched
+         version directly so NuGet audit (warnings-as-errors) passes. -->
+    <PackageReference Include="AngleSharp" Version="1.5.2" />
   </ItemGroup>
 
 </Project>

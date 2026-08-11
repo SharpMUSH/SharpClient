@@ -1,0 +1,187 @@
+@using Microsoft.JSInterop
+@using SharpClient.Core.Diagnostics
+@inject ILogReader Reader
+@inject ILogExporter Exporter
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="sc-diag">
+    <div class="sc-diag-bar">
+        @foreach (var option in FilterOptions)
+        {
+            var value = option.Value;
+            <button type="button"
+                    class="sc-diag-chip @(_filter == value ? "sc-diag-chip-active" : "")"
+                    @onclick="() => _filter = value">@option.Label</button>
+        }
+        <div class="sc-diag-actions">
+            <button type="button" class="sc-rules-btn sc-diag-refresh" @onclick="RefreshAsync">Refresh</button>
+            <button type="button" class="sc-rules-btn sc-diag-copy" @onclick="CopyAsync">Copy</button>
+            <button type="button" class="sc-rules-btn sc-diag-share" @onclick="ShareAsync">Share</button>
+            <button type="button" class="sc-rules-btn sc-diag-clear" @onclick="ClearAsync">
+                @(_confirmingClear ? "Confirm clear" : "Clear")
+            </button>
+        </div>
+    </div>
+
+    <div class="sc-diag-list">
+        @if (Visible.Count == 0)
+        {
+            <div class="sc-diag-empty">No log entries recorded yet.</div>
+        }
+        else
+        {
+            @foreach (var entry in Visible)
+            {
+                <div class="sc-diag-entry">
+                    <div class="sc-diag-entry-head">
+                        <span class="sc-diag-time">@entry.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                        <span class="sc-diag-level sc-diag-level-@entry.Level.ToLowerInvariant()">@entry.Level</span>
+                        @if (entry.Category.Length > 0)
+                        {
+                            <span class="sc-diag-category">@entry.Category</span>
+                        }
+                    </div>
+                    <div class="sc-diag-message">@entry.Message</div>
+                    @if (entry.Detail is not null)
+                    {
+                        <details class="sc-diag-detail">
+                            <summary>Detail</summary>
+                            <pre>@entry.Detail</pre>
+                        </details>
+                    }
+                </div>
+            }
+            @if (_truncated)
+            {
+                <div class="sc-diag-empty">Older entries were truncated.</div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private const int MaxEntries = 500;
+
+    [Parameter]
+    public string? InitialFilter { get; set; }
+
+    private enum LogFilter { All, Errors, Crashes }
+
+    private static readonly (string Label, LogFilter Value)[] FilterOptions =
+    [
+        ("All", LogFilter.All),
+        ("Errors", LogFilter.Errors),
+        ("Crashes", LogFilter.Crashes),
+    ];
+
+    private IReadOnlyList<LogEntry> _entries = [];
+    private LogFilter _filter = LogFilter.All;
+    private bool _confirmingClear;
+    private bool _truncated;
+    private IJSObjectReference? _interop;
+    private string? _appliedInitialFilter;
+
+    private List<LogEntry> Visible => _filter switch
+    {
+        LogFilter.Crashes => _entries.Where(IsCrash).ToList(),
+        LogFilter.Errors => _entries.Where(e => IsCrash(e) || IsError(e)).ToList(),
+        _ => _entries.ToList(),
+    };
+
+    private static bool IsCrash(LogEntry e) => e.Level.Equals("CRASH", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsError(LogEntry e) =>
+        e.Level.Equals("Error", StringComparison.OrdinalIgnoreCase)
+        || e.Level.Equals("Critical", StringComparison.OrdinalIgnoreCase);
+
+    private static LogFilter ParseInitialFilter(string? initialFilter) => initialFilter switch
+    {
+        _ when string.Equals(initialFilter, "crashes", StringComparison.OrdinalIgnoreCase) => LogFilter.Crashes,
+        _ when string.Equals(initialFilter, "errors", StringComparison.OrdinalIgnoreCase) => LogFilter.Errors,
+        _ => LogFilter.All,
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _appliedInitialFilter = InitialFilter;
+        _filter = ParseInitialFilter(InitialFilter);
+
+        await RefreshAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(InitialFilter, _appliedInitialFilter, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _appliedInitialFilter = InitialFilter;
+        _filter = ParseInitialFilter(InitialFilter);
+    }
+
+    private async Task RefreshAsync()
+    {
+        _entries = await Reader.ReadAsync(MaxEntries);
+        _truncated = _entries.Count == MaxEntries;
+        _confirmingClear = false;
+    }
+
+    private async Task CopyAsync()
+    {
+        var text = string.Join('\n', Visible.Select(e =>
+            $"{e.Timestamp:yyyy-MM-dd HH:mm:ss} [{e.Level}] {e.Category}: {e.Message}"
+            + (e.Detail is null ? string.Empty : "\n" + e.Detail)));
+
+        try
+        {
+            _interop ??= await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/SharpClient.UI/sc-interop.js");
+            await _interop.InvokeVoidAsync("copyText", text);
+        }
+        catch
+        {
+            // Copying is best-effort; never let a denied clipboard permission crash the diagnostics screen.
+        }
+    }
+
+    private async Task ShareAsync()
+    {
+        if (!Exporter.IsAvailable)
+        {
+            return;
+        }
+
+        try
+        {
+            await Exporter.ShareAsync();
+        }
+        catch
+        {
+            // Sharing is best-effort; never let a failed share crash the diagnostics screen.
+        }
+    }
+
+    // Two-step rather than a JS confirm(): a modal dialog inside the Android WebView blocks the
+    // Blazor circuit.
+    private async Task ClearAsync()
+    {
+        if (!_confirmingClear)
+        {
+            _confirmingClear = true;
+            return;
+        }
+
+        await Reader.ClearAsync();
+        await RefreshAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_interop is not null)
+        {
+            await _interop.DisposeAsync();
+        }
+    }
+}

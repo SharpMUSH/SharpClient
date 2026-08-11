@@ -20,14 +20,23 @@ file sealed class LocalFakePrefs : SharpClient.Core.Platform.IPreferences
 
 public sealed class SettingsViewTests
 {
+    private sealed class AvailableLogExporter : ILogExporter
+    {
+        public bool IsAvailable => true;
+        public string? LogPath => null;
+        public Task ShareAsync() => Task.CompletedTask;
+    }
+
     private static SettingsViewModel MakeVm() => new(new LocalFakePrefs());
 
-    // SettingsView injects ILogExporter; register a no-op so renders resolve. IsAvailable == false
-    // hides the Diagnostics section, leaving the assertions below (font/accent/slider counts) intact.
-    private static BunitContext NewContext()
+    // SettingsView injects ILogExporter and ILogReader; register no-ops so renders resolve.
+    // IsAvailable == false on both hides the Diagnostics section, leaving the assertions below
+    // (font/accent/slider counts) intact.
+    private static BunitContext NewContext(ILogReader? reader = null, ILogExporter? exporter = null)
     {
         var ctx = new BunitContext();
-        ctx.Services.AddSingleton<ILogExporter>(new NoopLogExporter());
+        ctx.Services.AddSingleton<ILogExporter>(exporter ?? new NoopLogExporter());
+        ctx.Services.AddSingleton<ILogReader>(reader ?? new NoopLogReader());
         return ctx;
     }
 
@@ -141,5 +150,58 @@ public sealed class SettingsViewTests
 
         var slider = cut.Find("input[type='range'][min='6']");
         await Assert.That(slider.GetAttribute("value")).IsEqualTo("16");
+    }
+
+    [Test]
+    public async Task ViewLogRowAppearsWhenLogReaderIsAvailable()
+    {
+        using var ctx = NewContext(reader: new UiFakeLogReader());
+        var vm = MakeVm();
+
+        var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
+
+        await Assert.That(cut.FindAll(".sc-settings-section-header").Select(e => e.TextContent))
+            .Contains("Diagnostics");
+        await Assert.That(cut.Find("a.sc-rules-btn").TextContent.Trim()).IsEqualTo("Open");
+    }
+
+    [Test]
+    public async Task ViewLogRowIsAbsentWhenLogReaderIsUnavailable()
+    {
+        using var ctx = NewContext();
+        var vm = MakeVm();
+
+        var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
+
+        await Assert.That(cut.FindAll("a.sc-rules-btn")).IsEmpty();
+    }
+
+    [Test]
+    public async Task ReaderAvailableExporterUnavailableShowsOnlyViewLog()
+    {
+        using var ctx = NewContext(reader: new UiFakeLogReader());
+        var vm = MakeVm();
+
+        var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
+
+        await Assert.That(cut.FindAll("a.sc-rules-btn")).Count().IsEqualTo(1);
+        await Assert.That(cut.Find("a.sc-rules-btn").TextContent.Trim()).IsEqualTo("Open");
+        await Assert.That(cut.FindAll(".sc-setting-label").Select(e => e.TextContent))
+            .DoesNotContain("Crash & error log");
+    }
+
+    [Test]
+    public async Task ExporterAvailableReaderUnavailableShowsOnlyExportLog()
+    {
+        using var ctx = NewContext(exporter: new AvailableLogExporter());
+        var vm = MakeVm();
+
+        var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
+
+        await Assert.That(cut.FindAll("a.sc-rules-btn")).IsEmpty();
+        await Assert.That(cut.FindAll(".sc-setting-label").Select(e => e.TextContent))
+            .DoesNotContain("View log");
+        await Assert.That(cut.FindAll("button.sc-rules-btn").Select(e => e.TextContent.Trim()))
+            .Contains("Export log");
     }
 }

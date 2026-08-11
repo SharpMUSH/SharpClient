@@ -42,11 +42,13 @@ public static class MauiProgram
         // A single FileLogStore is the sink for both ILogger output (via FileLoggerProvider — this
         // captures Blazor's own Error-level log for an unhandled component exception, the "An
         // unhandled error has occurred" case) and the global unhandled-exception hooks below. The
-        // log lives under the app's private data dir and is exported via MauiLogExporter (Settings →
-        // Diagnostics → Export log) so the user can hand the stack trace back for diagnosis.
-        var logStore = new FileLogStore();
+        // log lives under the app's private data dir (passed in here since FileLogStore itself is
+        // platform-agnostic) and is exported via MauiLogExporter (Settings → Diagnostics → Export
+        // log) so the user can hand the stack trace back for diagnosis.
+        var logStore = new FileLogStore(Path.Combine(FileSystem.AppDataDirectory, "logs"));
         builder.Services.AddSingleton(logStore);
         builder.Services.AddSingleton<ILogExporter>(_ => new MauiLogExporter(logStore));
+        builder.Services.AddSingleton<ILogReader>(_ => new FileLogReader(logStore));
         builder.Logging.AddProvider(new FileLoggerProvider(logStore));
 
         logStore.Append("Information", "App", "SharpClient starting; file logging active.");

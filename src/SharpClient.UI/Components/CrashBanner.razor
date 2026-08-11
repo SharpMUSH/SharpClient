@@ -1,0 +1,28 @@
+@using SharpClient.Core.Diagnostics
+@inject ILogReader Reader
+@inject NavigationManager Nav
+
+@if (_report is not null)
+{
+    <div class="sc-crash-banner" role="status">
+        <span class="sc-crash-text">
+            SharpClient crashed last run (@_report.Timestamp.ToString("yyyy-MM-dd HH:mm"))
+        </span>
+        <button type="button" class="sc-crash-view" @onclick="View">View</button>
+        <button type="button" class="sc-crash-dismiss" aria-label="Dismiss" @onclick="DismissAsync">✕</button>
+    </div>
+}
+
+@code {
+    private CrashReport? _report;
+
+    protected override async Task OnInitializedAsync() => _report = await Reader.GetPendingCrashAsync();
+
+    private void View() => Nav.NavigateTo("/diagnostics?filter=crashes");
+
+    private async Task DismissAsync()
+    {
+        await Reader.DismissCrashAsync();
+        _report = null;
+    }
+}
