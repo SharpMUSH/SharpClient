@@ -1,0 +1,11 @@
+@page "/diagnostics"
+
+<PageTitle>SharpClient &middot; Diagnostics</PageTitle>
+
+<DiagnosticsView InitialFilter="@Filter" />
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "filter")]
+    public string? Filter { get; set; }
+}

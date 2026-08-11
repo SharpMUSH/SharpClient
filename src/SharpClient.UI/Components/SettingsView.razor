@@ -91,6 +91,10 @@
         <div class="sc-settings-section">
             <div class="sc-settings-section-header">Diagnostics</div>
             <div class="sc-setting">
+                <span class="sc-setting-label">View log</span>
+                <a class="sc-rules-btn" href="/diagnostics">Open</a>
+            </div>
+            <div class="sc-setting">
                 <span class="sc-setting-label">Crash &amp; error log</span>
                 <button type="button" class="sc-rules-btn" @onclick="ExportLogAsync">
                     @(_exporting ? "Opening…" : "Export log")

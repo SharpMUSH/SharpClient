@@ -842,3 +842,22 @@ body {
 .sc-compose-count { font-family: var(--mono); font-size: 11px; color: var(--faint); }
 .sc-compose-hint { font-family: var(--mono); font-size: 11px; color: var(--dim); text-decoration: none; }
 .sc-compose-actions { margin-left: auto; display: flex; gap: 8px; }
+
+/* ── Diagnostics page ──────────────────────────────────────────── */
+.sc-diag { height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 12px 12px 0; }
+.sc-diag-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sc-diag-chip { font-family: var(--mono); font-size: 12px; color: var(--dim); background: var(--panel); border: 1px solid var(--bd); border-radius: 8px; padding: 6px 11px; cursor: pointer; }
+.sc-diag-chip-active { color: var(--acc2); background: var(--acc-soft); border-color: var(--acc-line); }
+.sc-diag-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px; }
+.sc-diag-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; }
+.sc-diag-entry { background: var(--panel); border: 1px solid var(--bd); border-radius: 10px; padding: 9px 11px; }
+.sc-diag-entry-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
+.sc-diag-time { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.sc-diag-level { font-family: var(--mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); border: 1px solid var(--bd2); border-radius: 6px; padding: 1px 6px; }
+.sc-diag-level-error, .sc-diag-level-critical, .sc-diag-level-crash { color: #e88; border-color: rgba(238,136,136,.45); }
+.sc-diag-category { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.sc-diag-message { font-family: var(--mono); font-size: 12px; color: var(--tx); overflow-wrap: anywhere; }
+.sc-diag-detail { margin-top: 6px; }
+.sc-diag-detail summary { font-family: var(--mono); font-size: 11px; color: var(--dim); cursor: pointer; }
+.sc-diag-detail pre { margin-top: 6px; font-family: var(--mono); font-size: 11px; color: var(--dim); white-space: pre-wrap; overflow-wrap: anywhere; }
+.sc-diag-empty { font-family: var(--mono); font-size: 12px; color: var(--faint); padding: 14px 2px; }

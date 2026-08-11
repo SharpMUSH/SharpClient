@@ -260,3 +260,14 @@ export function stopObserving(element) {
         _observers.delete(element);
     }
 }
+
+/**
+ * Copies text to the clipboard, if the Clipboard API is available.
+ * @param {string} text
+ */
+export function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+    }
+    return Promise.resolve();
+}
