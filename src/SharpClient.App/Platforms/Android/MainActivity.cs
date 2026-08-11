@@ -3,7 +3,7 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Runtime;
 using Android.Views;
-using SharpClient.App.Services;
+using SharpClient.Core.Diagnostics;
 
 namespace SharpClient.App;
 

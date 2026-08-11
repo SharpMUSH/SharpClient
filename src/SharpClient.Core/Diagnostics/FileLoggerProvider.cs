@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace SharpClient.App.Services;
+namespace SharpClient.Core.Diagnostics;
 
 /// <summary>
 /// Routes <c>ILogger</c> output (including Blazor's framework logs — an unhandled component exception
