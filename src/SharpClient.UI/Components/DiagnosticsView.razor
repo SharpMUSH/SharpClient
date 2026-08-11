@@ -121,16 +121,32 @@
             $"{e.Timestamp:yyyy-MM-dd HH:mm:ss} [{e.Level}] {e.Category}: {e.Message}"
             + (e.Detail is null ? string.Empty : "\n" + e.Detail)));
 
-        _interop ??= await JS.InvokeAsync<IJSObjectReference>(
-            "import", "./_content/SharpClient.UI/sc-interop.js");
-        await _interop.InvokeVoidAsync("copyText", text);
+        try
+        {
+            _interop ??= await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/SharpClient.UI/sc-interop.js");
+            await _interop.InvokeVoidAsync("copyText", text);
+        }
+        catch
+        {
+            // Copying is best-effort; never let a denied clipboard permission crash the diagnostics screen.
+        }
     }
 
     private async Task ShareAsync()
     {
-        if (Exporter.IsAvailable)
+        if (!Exporter.IsAvailable)
+        {
+            return;
+        }
+
+        try
         {
             await Exporter.ShareAsync();
+        }
+        catch
+        {
+            // Sharing is best-effort; never let a failed share crash the diagnostics screen.
         }
     }
 

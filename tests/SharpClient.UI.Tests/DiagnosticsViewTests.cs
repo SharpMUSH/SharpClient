@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.JSInterop;
 using SharpClient.Core.Diagnostics;
 using SharpClient.UI.Components;
 
@@ -10,14 +11,21 @@ public sealed class DiagnosticsViewTests
 {
     private static readonly DateTimeOffset Base = new(2026, 8, 10, 23, 41, 0, TimeSpan.Zero);
 
-    private static (BunitContext ctx, UiFakeLogReader reader) NewContext()
+    private static (BunitContext ctx, UiFakeLogReader reader) NewContext(ILogExporter? exporter = null)
     {
         var ctx = new BunitContext();
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         var reader = new UiFakeLogReader();
         ctx.Services.AddSingleton<ILogReader>(reader);
-        ctx.Services.AddSingleton<ILogExporter>(new NoopLogExporter());
+        ctx.Services.AddSingleton<ILogExporter>(exporter ?? new NoopLogExporter());
         return (ctx, reader);
+    }
+
+    private sealed class ThrowingLogExporter : ILogExporter
+    {
+        public bool IsAvailable => true;
+        public string? LogPath => null;
+        public Task ShareAsync() => throw new InvalidOperationException("share failed");
     }
 
     private static void Seed(UiFakeLogReader reader)
@@ -119,5 +127,34 @@ public sealed class DiagnosticsViewTests
 
         await Assert.That(reader.ClearCalls).IsEqualTo(1);
         await Assert.That(cut.FindAll(".sc-diag-entry")).IsEmpty();
+    }
+
+    [Test]
+    public async Task ShareFailureDoesNotCrashTheView()
+    {
+        var (ctx, reader) = NewContext(new ThrowingLogExporter());
+        using var _ = ctx;
+        Seed(reader);
+
+        var cut = ctx.Render<DiagnosticsView>();
+        await cut.Find(".sc-diag-share").ClickAsync(new MouseEventArgs());
+
+        await Assert.That(cut.FindAll(".sc-diag-entry")).Count().IsEqualTo(3);
+    }
+
+    [Test]
+    public async Task CopyFailureDoesNotCrashTheView()
+    {
+        var (ctx, reader) = NewContext();
+        using var _ = ctx;
+        Seed(reader);
+
+        var module = ctx.JSInterop.SetupModule("./_content/SharpClient.UI/sc-interop.js");
+        module.SetupVoid("copyText", _ => true).SetException(new JSException("clipboard denied"));
+
+        var cut = ctx.Render<DiagnosticsView>();
+        await cut.Find(".sc-diag-copy").ClickAsync(new MouseEventArgs());
+
+        await Assert.That(cut.FindAll(".sc-diag-entry")).Count().IsEqualTo(3);
     }
 }
