@@ -38,13 +38,19 @@ public static partial class LogEntryParser
             var header = HeaderPattern().Match(raw);
             if (header.Success)
             {
+                if (!DateTimeOffset.TryParseExact(
+                    header.Groups["ts"].Value, TimestampFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedTimestamp))
+                {
+                    // Skip lines that match the header pattern but have invalid timestamps (corruption).
+                    continue;
+                }
+
                 if (open)
                 {
                     entries.Add(Build(timestamp, level, category, message, detail));
                 }
 
-                timestamp = DateTimeOffset.ParseExact(
-                    header.Groups["ts"].Value, TimestampFormat, CultureInfo.InvariantCulture);
+                timestamp = parsedTimestamp;
                 level = header.Groups["level"].Value;
                 var rest = header.Groups["rest"].Value;
                 var split = CategoryPattern().Match(rest);

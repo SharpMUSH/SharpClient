@@ -99,4 +99,21 @@ public sealed class LogEntryParserTests
     {
         await Assert.That(LogEntryParser.Parse(string.Empty)).IsEmpty();
     }
+
+    [Test]
+    public async Task CorruptTimestampIsSkippedWithoutThrowing()
+    {
+        const string text = """
+            2026-08-10 23:41:02.123 -05:00 [Information] App: valid before
+            2026-13-01 10:00:00.000 +00:00 [Information] App: corrupt month
+            2026-08-11 12:00:00.456 +02:00 [Warning] Log: valid after
+
+            """;
+
+        var entries = LogEntryParser.Parse(text);
+
+        await Assert.That(entries).Count().IsEqualTo(2);
+        await Assert.That(entries[0].Message).IsEqualTo("valid before");
+        await Assert.That(entries[1].Message).IsEqualTo("valid after");
+    }
 }
