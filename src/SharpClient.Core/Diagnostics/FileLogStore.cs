@@ -23,11 +23,18 @@ public sealed class FileLogStore
     /// <summary>Absolute path to the single rolled-over backup.</summary>
     public string BackupPath { get; }
 
+    /// <summary>
+    /// Sidecar holding the most recent crash block. Checking one small file at launch is cheaper than
+    /// scanning the log, and it survives rotation.
+    /// </summary>
+    public string CrashMarkerPath { get; }
+
     public FileLogStore(string logDirectory)
     {
         Directory.CreateDirectory(logDirectory);
         FilePath = Path.Combine(logDirectory, "sharpclient.log");
         BackupPath = FilePath + ".1";
+        CrashMarkerPath = Path.Combine(logDirectory, "last-crash.txt");
     }
 
     /// <summary>Appends a single timestamped entry. Never throws — logging must not crash the app.</summary>
@@ -36,7 +43,11 @@ public sealed class FileLogStore
 
     /// <summary>Records an unhandled exception captured by one of the global hooks.</summary>
     public void WriteException(string source, Exception? ex)
-        => Write(FormatEntry("CRASH", source, ex?.Message ?? "(no exception object)", ex));
+    {
+        var block = FormatEntry("CRASH", source, ex?.Message ?? "(no exception object)", ex);
+        Write(block);
+        WriteCrashMarker(block);
+    }
 
     private static string FormatEntry(string level, string category, string message, Exception? ex)
     {
@@ -71,6 +82,18 @@ public sealed class FileLogStore
             {
                 // Swallow: a failed log write must never propagate into the running app.
             }
+        }
+    }
+
+    private void WriteCrashMarker(string block)
+    {
+        try
+        {
+            File.WriteAllText(CrashMarkerPath, block);
+        }
+        catch
+        {
+            // Same contract as the log write: recording a crash must not cause another one.
         }
     }
 

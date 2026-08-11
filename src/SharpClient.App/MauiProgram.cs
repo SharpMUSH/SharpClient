@@ -48,6 +48,7 @@ public static class MauiProgram
         var logStore = new FileLogStore(Path.Combine(FileSystem.AppDataDirectory, "logs"));
         builder.Services.AddSingleton(logStore);
         builder.Services.AddSingleton<ILogExporter>(_ => new MauiLogExporter(logStore));
+        builder.Services.AddSingleton<ILogReader>(_ => new FileLogReader(logStore));
         builder.Logging.AddProvider(new FileLoggerProvider(logStore));
 
         logStore.Append("Information", "App", "SharpClient starting; file logging active.");
