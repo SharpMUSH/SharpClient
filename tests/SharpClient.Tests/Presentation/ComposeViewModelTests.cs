@@ -210,6 +210,20 @@ public sealed class ComposeViewModelTests
     }
 
     [Test]
+    public async Task ClearWithNoSessionEmptiesThePendingDraftAndPreventsAdoption()
+    {
+        var (vm, mgr, _) = Build();
+        vm.Body = "waiting to connect";
+
+        vm.Clear();
+        await Assert.That(vm.Body).IsEqualTo(string.Empty);
+
+        mgr.Add(new FakeSession { State = ConnectionState.Connected });
+
+        await Assert.That(vm.Body).IsEqualTo(string.Empty);
+    }
+
+    [Test]
     public async Task ClearEmptiesOnlyTheActiveDraft()
     {
         var (vm, mgr, _) = Build();

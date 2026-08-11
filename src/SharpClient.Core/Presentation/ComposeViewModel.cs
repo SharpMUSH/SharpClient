@@ -107,6 +107,8 @@ public sealed class ComposeViewModel
     {
         if (Active is null)
         {
+            _pendingDraft = string.Empty;
+            Changed?.Invoke();
             return;
         }
 

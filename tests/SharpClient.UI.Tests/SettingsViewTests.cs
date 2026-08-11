@@ -20,6 +20,13 @@ file sealed class LocalFakePrefs : SharpClient.Core.Platform.IPreferences
 
 public sealed class SettingsViewTests
 {
+    private sealed class AvailableLogExporter : ILogExporter
+    {
+        public bool IsAvailable => true;
+        public string? LogPath => null;
+        public Task ShareAsync() => Task.CompletedTask;
+    }
+
     private static SettingsViewModel MakeVm() => new(new LocalFakePrefs());
 
     // SettingsView injects ILogExporter and ILogReader; register no-ops so renders resolve.
@@ -167,5 +174,34 @@ public sealed class SettingsViewTests
         var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
 
         await Assert.That(cut.FindAll("a.sc-rules-btn")).IsEmpty();
+    }
+
+    [Test]
+    public async Task ReaderAvailableExporterUnavailableShowsOnlyViewLog()
+    {
+        using var ctx = NewContext(reader: new UiFakeLogReader());
+        var vm = MakeVm();
+
+        var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
+
+        await Assert.That(cut.FindAll("a.sc-rules-btn")).Count().IsEqualTo(1);
+        await Assert.That(cut.Find("a.sc-rules-btn").TextContent.Trim()).IsEqualTo("Open");
+        await Assert.That(cut.FindAll(".sc-setting-label").Select(e => e.TextContent))
+            .DoesNotContain("Crash & error log");
+    }
+
+    [Test]
+    public async Task ExporterAvailableReaderUnavailableShowsOnlyExportLog()
+    {
+        using var ctx = NewContext(exporter: new AvailableLogExporter());
+        var vm = MakeVm();
+
+        var cut = ctx.Render<SettingsView>(p => p.Add(c => c.Vm, vm));
+
+        await Assert.That(cut.FindAll("a.sc-rules-btn")).IsEmpty();
+        await Assert.That(cut.FindAll(".sc-setting-label").Select(e => e.TextContent))
+            .DoesNotContain("View log");
+        await Assert.That(cut.FindAll("button.sc-rules-btn").Select(e => e.TextContent.Trim()))
+            .Contains("Export log");
     }
 }
