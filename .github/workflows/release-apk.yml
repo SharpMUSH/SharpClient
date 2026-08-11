@@ -38,6 +38,12 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # global.json pins the SDK *feature band* (rollForward: latestPatch), not
+      # just the major version. A release must not silently jump onto a band the
+      # code has never been built against: when 10.0.400 first appeared, its
+      # baseline maui manifest (10.0.0) regressed XAML source generation and this
+      # workflow failed with MAUIX2000 while CI on 10.0.302 was green. Bump the
+      # band deliberately — see docs/store/release-checklist.md.
       - name: Set up .NET (from global.json)
         uses: actions/setup-dotnet@v4
         with:

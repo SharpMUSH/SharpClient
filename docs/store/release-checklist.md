@@ -41,9 +41,9 @@ tag (`vMAJOR.MINOR.PATCH`):
 `versionCode = major*100000000 + minor*10000 + patch`.
 
 - [ ] Choose the version by **continuing the existing release-tag line**, not
-      restarting. The GitHub release tags run `v0.1 … v1.3` (v1.3 =
-      `versionName 1.3 / versionCode 100030000`), so the next release is **`v1.4`**
-      (→ versionCode `100040000`). A `v0.x` reset would derive a *lower* code and is
+      restarting. The GitHub release tags run `v0.1 … v1.5` (v1.5 =
+      `versionName 1.5 / versionCode 100050000`), so the next release is **`v1.6`**
+      (→ versionCode `100060000`). A `v0.x` reset would derive a *lower* code and is
       wrong. A Play `versionCode` can never be reused or decreased.
 - [ ] Publish a **GitHub Release** with that tag. This triggers the workflow,
       which builds and attaches a **signed `.aab`** (for Play) and a signed `.apk`
@@ -80,17 +80,35 @@ tag (`vMAJOR.MINOR.PATCH`):
 
 ---
 
+### Toolchain pinning (why the release build is reproducible)
+
+`global.json` pins the SDK **feature band**, not just the major version:
+
+```json
+{ "sdk": { "version": "10.0.300", "rollForward": "latestPatch" } }
+```
+
+`latestPatch` accepts 10.0.3xx and nothing higher. This matters because
+`dotnet workload restore` resolves the MAUI manifest per band: a band with no
+published workload set yet falls back to the SDK's *baseline* manifest, which can
+be far older than the band suggests. That is exactly how `v1.5` failed — the
+10.0.400 band appeared mid-afternoon, its baseline maui manifest (10.0.0)
+regressed XAML source generation (`MAUIX2000: Cannot resolve type ...:Routes`),
+and the release build broke minutes after CI had been green on 10.0.302.
+
+To move bands, bump `version` **and** get a green Android head build on the new
+band first — never by loosening `rollForward`.
+
 ### What's already done in-repo
 
 - Signed `.aab` + `.apk` CI pipeline (`release-apk.yml`), tag→version derivation.
+- Keystore generated + repository secrets uploaded (step 2).
 - Target API 35 (net10 android default), minSdk 24, `allowBackup=false`.
 - Final package name `com.sharpmush.sharpclient`.
 - Adaptive icon fixed (`ForegroundScale=0.65`) + 512 listing icon.
 - Privacy policy + data-safety content.
+- Releases `v1.0` … `v1.5` tagged and built (step 3).
 
 ### Still needs a human decision / action
 
-- Keystore generation + secret upload (step 2).
-- Version choice + tagging (step 3) — next in line is **`v1.4`**; held pending
-  keystore secrets + your go-ahead.
 - Play Console account, listing copy, feature graphic, content rating (steps 4–6).
