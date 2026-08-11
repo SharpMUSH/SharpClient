@@ -2035,26 +2035,22 @@ git commit -m "feat(diagnostics): ILogReader with crash marker and rotated-file 
 - Create: `src/SharpClient.UI/Pages/DiagnosticsPage.razor`
 - Modify: `src/SharpClient.UI/Components/SettingsView.razor`
 - Modify: `src/SharpClient.UI/wwwroot/sc-interop.js`, `src/SharpClient.UI/wwwroot/app.css`
-- Test: `tests/SharpClient.UI.Tests/DiagnosticsViewTests.cs`
+- Test: `tests/SharpClient.UI.Tests/UiFakeLogReader.cs`, `tests/SharpClient.UI.Tests/DiagnosticsViewTests.cs`
 
 **Interfaces:**
 - Consumes: `ILogReader`, `LogEntry` (Tasks 5–6), the existing `ILogExporter`.
-- Produces: component `DiagnosticsView` with `[Parameter] string? InitialFilter`; route `/diagnostics` accepting `?filter=crashes`; CSS classes `.sc-diag`, `.sc-diag-bar`, `.sc-diag-chip`, `.sc-diag-chip-active`, `.sc-diag-list`, `.sc-diag-entry`, `.sc-diag-empty`, `.sc-diag-clear`; JS export `copyText(text)`.
+- Produces: component `DiagnosticsView` with `[Parameter] string? InitialFilter`; route `/diagnostics` accepting `?filter=crashes`; CSS classes `.sc-diag`, `.sc-diag-bar`, `.sc-diag-chip`, `.sc-diag-chip-active`, `.sc-diag-list`, `.sc-diag-entry`, `.sc-diag-empty`, `.sc-diag-clear`; JS export `copyText(text)`; test double `UiFakeLogReader` reused by Task 8.
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Write the shared test double**
 
-Create `tests/SharpClient.UI.Tests/DiagnosticsViewTests.cs`:
+Create `tests/SharpClient.UI.Tests/UiFakeLogReader.cs`, matching the naming of the existing `UiFakeSession.cs` / `UiFakeWorldStore.cs`. Task 8 reuses this type, so it is not file-scoped.
 
 ```csharp
-using Bunit;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.Extensions.DependencyInjection;
 using SharpClient.Core.Diagnostics;
-using SharpClient.UI.Components;
 
 namespace SharpClient.UI.Tests;
 
-file sealed class FakeLogReader : ILogReader
+public sealed class UiFakeLogReader : ILogReader
 {
     public List<LogEntry> Entries { get; } = [];
     public CrashReport? Pending { get; set; }
@@ -2082,22 +2078,36 @@ file sealed class FakeLogReader : ILogReader
         return Task.CompletedTask;
     }
 }
+```
+
+- [ ] **Step 2: Write the failing tests**
+
+Create `tests/SharpClient.UI.Tests/DiagnosticsViewTests.cs`:
+
+```csharp
+using Bunit;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
+using SharpClient.Core.Diagnostics;
+using SharpClient.UI.Components;
+
+namespace SharpClient.UI.Tests;
 
 public sealed class DiagnosticsViewTests
 {
     private static readonly DateTimeOffset Base = new(2026, 8, 10, 23, 41, 0, TimeSpan.Zero);
 
-    private static (BunitContext ctx, FakeLogReader reader) NewContext()
+    private static (BunitContext ctx, UiFakeLogReader reader) NewContext()
     {
         var ctx = new BunitContext();
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-        var reader = new FakeLogReader();
+        var reader = new UiFakeLogReader();
         ctx.Services.AddSingleton<ILogReader>(reader);
         ctx.Services.AddSingleton<ILogExporter>(new NoopLogExporter());
         return (ctx, reader);
     }
 
-    private static void Seed(FakeLogReader reader)
+    private static void Seed(UiFakeLogReader reader)
     {
         reader.Entries.Add(new LogEntry(Base.AddSeconds(2), "CRASH", "AppDomain", "boom", "stack frame here"));
         reader.Entries.Add(new LogEntry(Base.AddSeconds(1), "Error", "Session", "send failed", null));
@@ -2200,13 +2210,13 @@ public sealed class DiagnosticsViewTests
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [ ] **Step 3: Run the tests to verify they fail**
 
 Run: `dotnet run --project tests/SharpClient.UI.Tests/SharpClient.UI.Tests.csproj -c Release -- --treenode-filter "/*/*/DiagnosticsViewTests/*"`
 
 Expected: build failure — `DiagnosticsView` does not exist.
 
-- [ ] **Step 3: Add the clipboard interop export**
+- [ ] **Step 4: Add the clipboard interop export**
 
 Append to `src/SharpClient.UI/wwwroot/sc-interop.js`:
 
@@ -2219,7 +2229,7 @@ export function copyText(text) {
 }
 ```
 
-- [ ] **Step 4: Write the component**
+- [ ] **Step 5: Write the component**
 
 Create `src/SharpClient.UI/Components/DiagnosticsView.razor`:
 
@@ -2384,7 +2394,7 @@ Create `src/SharpClient.UI/Components/DiagnosticsView.razor`:
 }
 ```
 
-- [ ] **Step 5: Write the page**
+- [ ] **Step 6: Write the page**
 
 Create `src/SharpClient.UI/Pages/DiagnosticsPage.razor`:
 
@@ -2402,7 +2412,7 @@ Create `src/SharpClient.UI/Pages/DiagnosticsPage.razor`:
 }
 ```
 
-- [ ] **Step 6: Link it from Settings**
+- [ ] **Step 7: Link it from Settings**
 
 In `src/SharpClient.UI/Components/SettingsView.razor`, inside the Diagnostics section, add a row above the existing export row:
 
@@ -2413,7 +2423,7 @@ In `src/SharpClient.UI/Components/SettingsView.razor`, inside the Diagnostics se
             </div>
 ```
 
-- [ ] **Step 7: Add the styles**
+- [ ] **Step 8: Add the styles**
 
 Append to `src/SharpClient.UI/wwwroot/app.css`:
 
@@ -2438,19 +2448,19 @@ Append to `src/SharpClient.UI/wwwroot/app.css`:
 .sc-diag-empty { font-family: var(--mono); font-size: 12px; color: var(--faint); padding: 14px 2px; }
 ```
 
-- [ ] **Step 8: Run the tests to verify they pass**
+- [ ] **Step 9: Run the tests to verify they pass**
 
 Run: `dotnet run --project tests/SharpClient.UI.Tests/SharpClient.UI.Tests.csproj -c Release -- --treenode-filter "/*/*/DiagnosticsViewTests/*"`
 
 Expected: all 7 tests pass.
 
-- [ ] **Step 9: Confirm SettingsView tests still pass**
+- [ ] **Step 10: Confirm SettingsView tests still pass**
 
 Run: `dotnet run --project tests/SharpClient.UI.Tests/SharpClient.UI.Tests.csproj -c Release -- --treenode-filter "/*/*/SettingsViewTests/*"`
 
 Expected: all pass. Those tests register `NoopLogExporter`, whose `IsAvailable` is false, so the whole Diagnostics section including the new row stays hidden.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
 git add src/SharpClient.UI/Components/DiagnosticsView.razor src/SharpClient.UI/Pages/DiagnosticsPage.razor src/SharpClient.UI/Components/SettingsView.razor src/SharpClient.UI/wwwroot/sc-interop.js src/SharpClient.UI/wwwroot/app.css tests/SharpClient.UI.Tests/DiagnosticsViewTests.cs
@@ -2467,12 +2477,12 @@ git commit -m "feat(diagnostics): in-app log viewer with level filters"
 - Test: `tests/SharpClient.UI.Tests/CrashBannerTests.cs`
 
 **Interfaces:**
-- Consumes: `ILogReader.GetPendingCrashAsync()`, `ILogReader.DismissCrashAsync()`, `CrashReport` (Task 6).
+- Consumes: `ILogReader.GetPendingCrashAsync()`, `ILogReader.DismissCrashAsync()`, `CrashReport` (Task 6), `UiFakeLogReader` (Task 7).
 - Produces: component `CrashBanner` (no parameters); CSS classes `.sc-crash-banner`, `.sc-crash-view`, `.sc-crash-dismiss`.
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `tests/SharpClient.UI.Tests/CrashBannerTests.cs`:
+Create `tests/SharpClient.UI.Tests/CrashBannerTests.cs`, reusing the `UiFakeLogReader` that Task 7 added — do not define a second `ILogReader` double.
 
 ```csharp
 using Bunit;
@@ -2483,34 +2493,12 @@ using SharpClient.UI.Components;
 
 namespace SharpClient.UI.Tests;
 
-file sealed class BannerLogReader : ILogReader
-{
-    public CrashReport? Pending { get; set; }
-    public int DismissCalls { get; private set; }
-
-    public bool IsAvailable => true;
-
-    public Task<IReadOnlyList<LogEntry>> ReadAsync(int maxEntries = 500) =>
-        Task.FromResult<IReadOnlyList<LogEntry>>([]);
-
-    public Task<CrashReport?> GetPendingCrashAsync() => Task.FromResult(Pending);
-
-    public Task DismissCrashAsync()
-    {
-        DismissCalls++;
-        Pending = null;
-        return Task.CompletedTask;
-    }
-
-    public Task ClearAsync() => Task.CompletedTask;
-}
-
 public sealed class CrashBannerTests
 {
-    private static (BunitContext ctx, BannerLogReader reader) NewContext(CrashReport? pending)
+    private static (BunitContext ctx, UiFakeLogReader reader) NewContext(CrashReport? pending)
     {
         var ctx = new BunitContext();
-        var reader = new BannerLogReader { Pending = pending };
+        var reader = new UiFakeLogReader { Pending = pending };
         ctx.Services.AddSingleton<ILogReader>(reader);
         return (ctx, reader);
     }
