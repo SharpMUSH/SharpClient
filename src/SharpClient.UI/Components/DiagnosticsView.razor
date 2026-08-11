@@ -80,6 +80,7 @@
     private bool _confirmingClear;
     private bool _truncated;
     private IJSObjectReference? _interop;
+    private string? _appliedInitialFilter;
 
     private List<LogEntry> Visible => _filter switch
     {
@@ -94,18 +95,30 @@
         e.Level.Equals("Error", StringComparison.OrdinalIgnoreCase)
         || e.Level.Equals("Critical", StringComparison.OrdinalIgnoreCase);
 
+    private static LogFilter ParseInitialFilter(string? initialFilter) => initialFilter switch
+    {
+        _ when string.Equals(initialFilter, "crashes", StringComparison.OrdinalIgnoreCase) => LogFilter.Crashes,
+        _ when string.Equals(initialFilter, "errors", StringComparison.OrdinalIgnoreCase) => LogFilter.Errors,
+        _ => LogFilter.All,
+    };
+
     protected override async Task OnInitializedAsync()
     {
-        if (string.Equals(InitialFilter, "crashes", StringComparison.OrdinalIgnoreCase))
-        {
-            _filter = LogFilter.Crashes;
-        }
-        else if (string.Equals(InitialFilter, "errors", StringComparison.OrdinalIgnoreCase))
-        {
-            _filter = LogFilter.Errors;
-        }
+        _appliedInitialFilter = InitialFilter;
+        _filter = ParseInitialFilter(InitialFilter);
 
         await RefreshAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(InitialFilter, _appliedInitialFilter, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _appliedInitialFilter = InitialFilter;
+        _filter = ParseInitialFilter(InitialFilter);
     }
 
     private async Task RefreshAsync()

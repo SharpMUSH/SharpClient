@@ -190,6 +190,26 @@ public sealed class ComposeViewModelTests
     }
 
     [Test]
+    public async Task TextTypedWithNoSessionSurvivesReadBack()
+    {
+        var (vm, _, _) = Build();
+        vm.Body = "waiting to connect";
+
+        await Assert.That(vm.Body).IsEqualTo("waiting to connect");
+    }
+
+    [Test]
+    public async Task TextTypedWithNoSessionIsAdoptedByFirstActiveSession()
+    {
+        var (vm, mgr, _) = Build();
+        vm.Body = "waiting to connect";
+
+        mgr.Add(new FakeSession { State = ConnectionState.Connected });
+
+        await Assert.That(vm.Body).IsEqualTo("waiting to connect");
+    }
+
+    [Test]
     public async Task ClearEmptiesOnlyTheActiveDraft()
     {
         var (vm, mgr, _) = Build();

@@ -87,6 +87,38 @@ public sealed class DiagnosticsViewTests
     }
 
     [Test]
+    public async Task ReRenderingWithChangedInitialFilterSwitchesVisibleEntries()
+    {
+        var (ctx, reader) = NewContext();
+        using var _ = ctx;
+        Seed(reader);
+
+        var cut = ctx.Render<DiagnosticsView>();
+        await Assert.That(cut.FindAll(".sc-diag-entry")).Count().IsEqualTo(3);
+
+        cut.Render(p => p.Add(c => c.InitialFilter, "crashes"));
+
+        await Assert.That(cut.FindAll(".sc-diag-entry")).Count().IsEqualTo(1);
+        await Assert.That(cut.Find(".sc-diag-entry").TextContent).Contains("boom");
+    }
+
+    [Test]
+    public async Task ManuallyChosenFilterIsNotClobberedByUnchangedInitialFilter()
+    {
+        var (ctx, reader) = NewContext();
+        using var _ = ctx;
+        Seed(reader);
+
+        var cut = ctx.Render<DiagnosticsView>(p => p.Add(c => c.InitialFilter, "crashes"));
+        await cut.FindAll(".sc-diag-chip")[0].ClickAsync(new MouseEventArgs());
+        await Assert.That(cut.FindAll(".sc-diag-entry")).Count().IsEqualTo(3);
+
+        cut.Render(p => p.Add(c => c.InitialFilter, "crashes"));
+
+        await Assert.That(cut.FindAll(".sc-diag-entry")).Count().IsEqualTo(3);
+    }
+
+    [Test]
     public async Task DetailIsRenderedForEntriesThatHaveIt()
     {
         var (ctx, reader) = NewContext();

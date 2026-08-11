@@ -13,6 +13,7 @@ public sealed class ComposeViewModel
     private ISession? _activeSession;
     private PosePrefix _selectedPrefix = PosePrefix.Pose;
     private string _customPrefix = string.Empty;
+    private string _pendingDraft = string.Empty;
 
     public ComposeViewModel(ISessionManager manager, IPreferences prefs)
     {
@@ -55,11 +56,21 @@ public sealed class ComposeViewModel
 
     public string Body
     {
-        get => Active is not null && _drafts.TryGetValue(Active, out var draft) ? draft : string.Empty;
+        get
+        {
+            if (Active is null)
+            {
+                return _pendingDraft;
+            }
+
+            return _drafts.TryGetValue(Active, out var draft) ? draft : string.Empty;
+        }
         set
         {
             if (Active is null)
             {
+                _pendingDraft = value;
+                Changed?.Invoke();
                 return;
             }
 
@@ -124,6 +135,8 @@ public sealed class ComposeViewModel
             return;
         }
 
+        var hadNoActiveSession = _activeSession is null;
+
         if (_activeSession is not null)
         {
             _activeSession.StateChanged -= OnActiveStateChanged;
@@ -135,6 +148,12 @@ public sealed class ComposeViewModel
         {
             _activeSession.StateChanged += OnActiveStateChanged;
             _customPrefix = _prefs.GetString(CustomPrefixKey(_activeSession.WorldId), string.Empty);
+
+            if (hadNoActiveSession && _pendingDraft.Length > 0 && !_drafts.ContainsKey(_activeSession))
+            {
+                _drafts[_activeSession] = _pendingDraft;
+                _pendingDraft = string.Empty;
+            }
         }
     }
 
