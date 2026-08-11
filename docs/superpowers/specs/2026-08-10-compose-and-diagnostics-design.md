@@ -35,8 +35,8 @@ Steps, in this order:
 
 1. Normalise line endings: `\r\n` and lone `\r` become `\n`.
 2. Escape `%` → `%%`.
-3. Trim trailing whitespace from each line; drop trailing blank lines. Interior blank
-   lines are preserved and become consecutive `%r`s.
+3. Trim trailing whitespace from each line; drop leading and trailing blank lines.
+   Interior blank lines are preserved and become consecutive `%r`s.
 4. Replace `\n` → `%r`. This runs **after** step 2 so the inserted `%r` markers are not
    themselves escaped.
 5. Join prefix and body with the separator rule below.
@@ -196,7 +196,8 @@ button next to the existing **Export log**, and the whole section stays hidden w
 visible only when `GetPendingCrashAsync` returns a report: *"SharpClient crashed last run
 (timestamp)"* with **View** and a dismiss **×**. View navigates to
 `/diagnostics?filter=crashes`; dismiss calls `DismissCrashAsync`. The report is fetched in
-`OnAfterRenderAsync(firstRender)` so a slow or failed file read never blocks first paint.
+`OnInitializedAsync`; the read is one small file and `FileLogReader` swallows any IO failure,
+so it cannot block or break first paint.
 
 ### Out of scope
 
