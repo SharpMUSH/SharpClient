@@ -853,7 +853,7 @@ public sealed class ComposeViewTests
 
         await cut.Find(".sc-compose-toggle").ClickAsync(new MouseEventArgs());
 
-        await Assert.That(cut.FindAll(".sc-compose-input")).HasCount().EqualTo(1);
+        await Assert.That(cut.FindAll(".sc-compose-input")).Count().IsEqualTo(1);
         await Assert.That(vm.Body).IsEqualTo("grins");
     }
 
@@ -885,7 +885,7 @@ public sealed class ComposeViewTests
         var customChip = cut.FindAll(".sc-compose-chip")[4];
         await customChip.ClickAsync(new MouseEventArgs());
 
-        await Assert.That(cut.FindAll(".sc-compose-custom")).HasCount().EqualTo(1);
+        await Assert.That(cut.FindAll(".sc-compose-custom")).Count().IsEqualTo(1);
     }
 
     [Test]
@@ -898,7 +898,7 @@ public sealed class ComposeViewTests
 
         var cut = ctx.Render<ComposeView>(p => p.Add(c => c.Vm, vm));
 
-        await Assert.That(cut.FindAll(".sc-compose-hint")).HasCount().EqualTo(1);
+        await Assert.That(cut.FindAll(".sc-compose-hint")).Count().IsEqualTo(1);
     }
 
     [Test]
@@ -1431,7 +1431,7 @@ public sealed class LogEntryParserTests
     {
         var entries = LogEntryParser.Parse("2026-08-10 23:41:02.123 -05:00 [Information] App: started\n");
 
-        await Assert.That(entries).HasCount().EqualTo(1);
+        await Assert.That(entries).Count().IsEqualTo(1);
         await Assert.That(entries[0].Level).IsEqualTo("Information");
         await Assert.That(entries[0].Category).IsEqualTo("App");
         await Assert.That(entries[0].Message).IsEqualTo("started");
@@ -1471,7 +1471,7 @@ public sealed class LogEntryParserTests
 
         var entries = LogEntryParser.Parse(text);
 
-        await Assert.That(entries).HasCount().EqualTo(1);
+        await Assert.That(entries).Count().IsEqualTo(1);
         await Assert.That(entries[0].Message).IsEqualTo("boom");
         await Assert.That(entries[0].Detail).Contains("System.InvalidOperationException: boom");
         await Assert.That(entries[0].Detail).Contains("at SharpClient.UI.Components.InputBar.SendAsync()");
@@ -1488,7 +1488,7 @@ public sealed class LogEntryParserTests
 
         var entries = LogEntryParser.Parse(text);
 
-        await Assert.That(entries).HasCount().EqualTo(2);
+        await Assert.That(entries).Count().IsEqualTo(2);
         await Assert.That(entries[0].Message).IsEqualTo("first");
         await Assert.That(entries[1].Message).IsEqualTo("second");
     }
@@ -1504,7 +1504,7 @@ public sealed class LogEntryParserTests
 
         var entries = LogEntryParser.Parse(text);
 
-        await Assert.That(entries).HasCount().EqualTo(1);
+        await Assert.That(entries).Count().IsEqualTo(1);
         await Assert.That(entries[0].Message).IsEqualTo("real entry");
     }
 
@@ -1703,7 +1703,7 @@ public sealed class FileLogReaderTests
 
         var entries = await reader.ReadAsync();
 
-        await Assert.That(entries).HasCount().EqualTo(2);
+        await Assert.That(entries).Count().IsEqualTo(2);
         await Assert.That(entries[0].Message).IsEqualTo("second");
         await Assert.That(entries[1].Message).IsEqualTo("first");
     }
@@ -1741,7 +1741,7 @@ public sealed class FileLogReaderTests
 
         var entries = await reader.ReadAsync(maxEntries: 3);
 
-        await Assert.That(entries).HasCount().EqualTo(3);
+        await Assert.That(entries).Count().IsEqualTo(3);
         await Assert.That(entries[0].Message).IsEqualTo("entry 9");
         await Assert.That(entries[2].Message).IsEqualTo("entry 7");
     }
@@ -2123,7 +2123,7 @@ public sealed class DiagnosticsViewTests
 
         var cut = ctx.Render<DiagnosticsView>();
 
-        await Assert.That(cut.FindAll(".sc-diag-entry")).HasCount().EqualTo(3);
+        await Assert.That(cut.FindAll(".sc-diag-entry")).Count().IsEqualTo(3);
     }
 
     [Test]
@@ -2136,7 +2136,7 @@ public sealed class DiagnosticsViewTests
         var cut = ctx.Render<DiagnosticsView>();
         await cut.FindAll(".sc-diag-chip")[2].ClickAsync(new MouseEventArgs());
 
-        await Assert.That(cut.FindAll(".sc-diag-entry")).HasCount().EqualTo(1);
+        await Assert.That(cut.FindAll(".sc-diag-entry")).Count().IsEqualTo(1);
         await Assert.That(cut.Find(".sc-diag-entry").TextContent).Contains("boom");
     }
 
@@ -2150,7 +2150,7 @@ public sealed class DiagnosticsViewTests
         var cut = ctx.Render<DiagnosticsView>();
         await cut.FindAll(".sc-diag-chip")[1].ClickAsync(new MouseEventArgs());
 
-        await Assert.That(cut.FindAll(".sc-diag-entry")).HasCount().EqualTo(2);
+        await Assert.That(cut.FindAll(".sc-diag-entry")).Count().IsEqualTo(2);
     }
 
     [Test]
@@ -2162,7 +2162,7 @@ public sealed class DiagnosticsViewTests
 
         var cut = ctx.Render<DiagnosticsView>(p => p.Add(c => c.InitialFilter, "crashes"));
 
-        await Assert.That(cut.FindAll(".sc-diag-entry")).HasCount().EqualTo(1);
+        await Assert.That(cut.FindAll(".sc-diag-entry")).Count().IsEqualTo(1);
     }
 
     [Test]
@@ -2174,7 +2174,7 @@ public sealed class DiagnosticsViewTests
 
         var cut = ctx.Render<DiagnosticsView>();
 
-        await Assert.That(cut.FindAll("details")).HasCount().EqualTo(1);
+        await Assert.That(cut.FindAll("details")).Count().IsEqualTo(1);
         await Assert.That(cut.Find("details").TextContent).Contains("stack frame here");
     }
 
@@ -2186,7 +2186,7 @@ public sealed class DiagnosticsViewTests
 
         var cut = ctx.Render<DiagnosticsView>();
 
-        await Assert.That(cut.FindAll(".sc-diag-empty")).HasCount().EqualTo(1);
+        await Assert.That(cut.FindAll(".sc-diag-empty")).Count().IsEqualTo(1);
     }
 
     [Test]
@@ -2524,7 +2524,7 @@ public sealed class CrashBannerTests
 
         var cut = ctx.Render<CrashBanner>();
 
-        await Assert.That(cut.FindAll(".sc-crash-banner")).HasCount().EqualTo(1);
+        await Assert.That(cut.FindAll(".sc-crash-banner")).Count().IsEqualTo(1);
         await Assert.That(cut.Find(".sc-crash-banner").TextContent).Contains("2026-08-09 23:41");
     }
 
