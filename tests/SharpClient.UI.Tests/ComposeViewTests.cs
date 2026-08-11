@@ -67,6 +67,34 @@ public sealed class ComposeViewTests
     }
 
     [Test]
+    public async Task CtrlEnterInTheEditorSendsAndClearsTheDraft()
+    {
+        using var ctx = new BunitContext();
+        var (vm, session) = Connected();
+        vm.Body = "grins";
+
+        var cut = ctx.Render<ComposeView>(p => p.Add(c => c.Vm, vm));
+        await cut.Find(".sc-compose-input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter", CtrlKey = true });
+
+        await Assert.That(session.Sent).Contains("pose grins");
+        await Assert.That(vm.Body).IsEqualTo(string.Empty);
+    }
+
+    [Test]
+    public async Task BareEnterInTheEditorDoesNotSend()
+    {
+        using var ctx = new BunitContext();
+        var (vm, session) = Connected();
+        vm.Body = "grins";
+
+        var cut = ctx.Render<ComposeView>(p => p.Add(c => c.Vm, vm));
+        await cut.Find(".sc-compose-input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+
+        await Assert.That(session.Sent).IsEmpty();
+        await Assert.That(vm.Body).IsEqualTo("grins");
+    }
+
+    [Test]
     public async Task PreviewToggleShowsTheWireTextThenReturnsToTheEditor()
     {
         using var ctx = new BunitContext();

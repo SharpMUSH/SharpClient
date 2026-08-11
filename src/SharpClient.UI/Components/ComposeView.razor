@@ -33,7 +33,8 @@
                       placeholder="Write your pose…"
                       value="@Vm.Body"
                       @oninput="OnBodyInput"
-                      @onkeydown="OnKeyDown"></textarea>
+                      @onkeydown="OnKeyDown"
+                      @onkeydown:preventDefault="_expectSendChordNext"></textarea>
         }
     </div>
 
@@ -68,6 +69,14 @@
 
     private bool _previewing;
 
+    // @onkeydown:preventDefault is baked into the *previous* render, so it can't react to the
+    // current event's own CtrlKey/MetaKey — it can only suppress the browser's default action
+    // (inserting a newline) for whichever keydown follows a Ctrl/Cmd keydown. Arming it here from
+    // the modifier's own keydown, one event ahead, is what stops the send chord's Enter from ever
+    // reaching the textarea's default handling in the first place. Actually sending is still gated
+    // on the Enter event's own, always-accurate CtrlKey/MetaKey below.
+    private bool _expectSendChordNext;
+
     protected override void OnInitialized() => Vm.Changed += OnChanged;
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
@@ -85,7 +94,10 @@
     // Ctrl/Cmd+Enter sends; a bare Enter has to stay a newline in a multi-line composer.
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && (e.CtrlKey || e.MetaKey))
+        var isSendChord = e.Key == "Enter" && (e.CtrlKey || e.MetaKey);
+        _expectSendChordNext = e.Key is "Control" or "Meta";
+
+        if (isSendChord)
         {
             await SendAsync();
         }
