@@ -72,4 +72,18 @@ public sealed class OutputViewLinkTests
         cut.Find("button.sc-image-link").Click();
         await Assert.That(sent).IsEqualTo("look map");
     }
+
+    [Test]
+    public async Task ImagesOffRendersTheTextInstead()
+    {
+        using var ctx = new BunitContext();
+        var line = Line(new StyledSegment("a cat", TextStyle.Default) { ImageUrl = "https://h.example/cat.gif" });
+
+        var cut = ctx.Render<OutputView>(p => p
+            .Add(c => c.Lines, new[] { line })
+            .Add(c => c.ShowImages, false));
+
+        await Assert.That(cut.FindAll("img").Count).IsEqualTo(0);
+        await Assert.That(cut.Markup).Contains("a cat");
+    }
 }

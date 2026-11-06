@@ -21,6 +21,15 @@ public interface ITelnetConnection : IAsyncDisposable
 
     public ConnectionState State { get; }
 
+    /// <summary>Wrap the connection in TLS. Read on every connect and reconnect.</summary>
+    public bool UseTls { get; set; }
+
+    /// <summary>
+    /// Accept a TLS certificate that fails validation (self-signed, expired, wrong host). Many MUSHes
+    /// run TLS with a self-signed certificate, so this is a per-world opt-in, not the default.
+    /// </summary>
+    public bool AllowInvalidCertificate { get; set; }
+
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default);
 
     /// <summary>

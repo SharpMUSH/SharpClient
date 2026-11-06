@@ -1,5 +1,7 @@
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
+using SharpClient.Core.Rendering;
 using TelnetNegotiationCore.Builders;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Models;
@@ -13,6 +15,8 @@ public sealed class TelnetConnection : ITelnetConnection
     private readonly ReconnectOptions _reconnect;
 
     private TcpClient? _client;
+    // The client's stream, or the SslStream over it on a TLS world. Disposed with the client.
+    private Stream? _stream;
     private TelnetInterpreter? _interpreter;
     private Task? _readTask;
     private Task? _monitorTask;
@@ -33,6 +37,8 @@ public sealed class TelnetConnection : ITelnetConnection
     // Heartbeat cadence. Short enough to detect a dead peer and keep the server session alive on a
     // long-running (e.g. in-car) connection, without meaningful battery cost.
     private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(45);
+
+    private static readonly TimeSpan TlsHandshakeTimeout = TimeSpan.FromSeconds(20);
 
     // TNC names nobody unless told to: without this, TTYPE answers UNKNOWN and NEW-ENVIRON sends no
     // CLIENT_NAME. MTTS claims what AnsiParser renders: 16, 256 and 24-bit colour over UTF-8.
@@ -56,6 +62,12 @@ public sealed class TelnetConnection : ITelnetConnection
     public event Action? PuebloEnabled;
 
     public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
+
+    /// <inheritdoc />
+    public bool UseTls { get; set; }
+
+    /// <inheritdoc />
+    public bool AllowInvalidCertificate { get; set; }
 
     /// <summary>
     /// Telnet CHARSET (RFC 2066) preference order offered during negotiation, most
@@ -82,8 +94,7 @@ public sealed class TelnetConnection : ITelnetConnection
         }
         catch
         {
-            _client?.Dispose();
-            _client = null;
+            ReleaseTransport();
             _interpreter = null;
             SetState(ConnectionState.Error);
             throw;
@@ -173,8 +184,7 @@ public sealed class TelnetConnection : ITelnetConnection
             _interpreter = null;
         }
 
-        _client?.Dispose();
-        _client = null;
+        ReleaseTransport();
 
         if (_readTask is not null)
         {
@@ -301,15 +311,59 @@ public sealed class TelnetConnection : ITelnetConnection
         // TCP would otherwise retransmit for ~15 min before failing, so the client sits "connected"
         // with no responses. This makes that surface in ~20s instead.
         TrySetTcpUserTimeout(client.Client);
-        await client.ConnectAsync(host, port, cancellationToken);
+        Stream? stream = null;
+        try
+        {
+            await client.ConnectAsync(host, port, cancellationToken);
+            stream = client.GetStream();
+            if (UseTls)
+            {
+                var ssl = new SslStream(stream, leaveInnerStreamOpen: false, ValidateCertificate);
+                stream = ssl;
 
+                // A peer that accepts the TCP connection but never answers the ClientHello (a plain
+                // telnet port, say) would otherwise hold the connect, or a reconnect attempt, forever.
+                using var handshake = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                handshake.CancelAfter(TlsHandshakeTimeout);
+                await ssl.AuthenticateAsClientAsync(
+                    new SslClientAuthenticationOptions { TargetHost = host }, handshake.Token);
+            }
+
+            await StartInterpreterAsync(client, stream, host, port, cancellationToken);
+        }
+        catch
+        {
+            if (stream is not null)
+            {
+                await stream.DisposeAsync();
+            }
+
+            client.Dispose();
+            throw;
+        }
+    }
+
+    // Closes the TLS session (when there is one) and the socket under it.
+    private void ReleaseTransport()
+    {
+        _stream?.Dispose();
+        _stream = null;
+        _client?.Dispose();
+        _client = null;
+    }
+
+    private async Task StartInterpreterAsync(TcpClient client, Stream stream, string host, int port, CancellationToken cancellationToken)
+    {
         // The protocols AddDefaultMUDProtocols registers (NAWS, GMCP, MSDP, MSSP, TTYPE, CHARSET, EOR,
         // SGA, MXP), spelled out so NAWS can be WindowSizeProtocol: the helper always adds the base
-        // NAWSProtocol, and a second plugin for the same option is rejected. Plus Pueblo.
+        // NAWSProtocol, and a second plugin for the same option is rejected. Plus Pueblo, MCCP and
+        // NEW-ENVIRON.
         // Kept as locals because the server's banner (and so the Pueblo hello) can arrive before
         // BuildAndStartAsync returns and _interpreter is set.
         var mxp = new MXPProtocol();
-        mxp.OnMXPEnabled(OnMxpEnabledAsync);
+        mxp.OnMXPEnabled(OnMxpEnabledAsync)
+            .OnMxpSupportRequested(asked => OnMxpSupportRequestedAsync(mxp, asked))
+            .OnMxpVersionRequested(() => OnMxpVersionRequestedAsync(mxp));
         var pueblo = new PuebloProtocol();
         pueblo.OnPuebloOffered(() => OnPuebloOfferedAsync(pueblo, mxp)).OnPuebloEnabled(OnPuebloEnabledAsync);
 
@@ -326,9 +380,14 @@ public sealed class TelnetConnection : ITelnetConnection
             .AddPlugin<SuppressGoAheadProtocol>()
             .AddPlugin(mxp)
             .AddPlugin(pueblo)
-            .BuildAndStartAsync(client, cancellationToken);
+            // Both only answer the server: MCCP2 starts on the server's WILL, NEW-ENVIRON on its DO,
+            // and NEW-ENVIRON sends only what WithClientIdentity says (CLIENT_NAME, TERMINAL_TYPE, MTTS).
+            .AddPlugin<MCCPProtocol>().OnCompressionEnabled(OnCompressionAsync)
+            .AddPlugin<NewEnvironProtocol>()
+            .BuildAndStartAsync(stream, cancellationToken);
 
         _client = client;
+        _stream = stream;
         _interpreter = interpreter;
         _readTask = readTask;
         _host = host;
@@ -373,8 +432,7 @@ public sealed class TelnetConnection : ITelnetConnection
 
             // Tear down the dead client before the next attempt; keep the existing
             // state (Reconnecting) so we don't flicker through Disconnected.
-            _client?.Dispose();
-            _client = null;
+            ReleaseTransport();
             _interpreter = null;
 
             try
@@ -443,6 +501,44 @@ public sealed class TelnetConnection : ITelnetConnection
         {
             // The connection went away under the handshake; the reconnect starts it over.
         }
+    }
+
+    private bool ValidateCertificate(
+        object sender,
+        System.Security.Cryptography.X509Certificates.X509Certificate? certificate,
+        System.Security.Cryptography.X509Certificates.X509Chain? chain,
+        SslPolicyErrors errors) =>
+        errors == SslPolicyErrors.None || AllowInvalidCertificate;
+
+    private static async ValueTask OnMxpSupportRequestedAsync(MXPProtocol mxp, IReadOnlyList<string> asked)
+    {
+        var (supported, unsupported) = MxpTags.Answer(asked);
+        try
+        {
+            await mxp.SendSupportsAsync(supported, unsupported);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or ObjectDisposedException)
+        {
+            // The connection went away mid-answer.
+        }
+    }
+
+    private static async ValueTask OnMxpVersionRequestedAsync(MXPProtocol mxp)
+    {
+        try
+        {
+            await mxp.SendVersionAsync(new MxpVersion(MxpTags.MxpRevision, null, Identity.Name, null, null));
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or ObjectDisposedException)
+        {
+            // The connection went away mid-answer.
+        }
+    }
+
+    private ValueTask OnCompressionAsync(int version, bool enabled)
+    {
+        NegotiationReceived?.Invoke(new NegotiationEvent($"MCCP{version}", enabled ? "compressing" : "stopped"));
+        return ValueTask.CompletedTask;
     }
 
     private ValueTask OnPuebloEnabledAsync(PuebloClient client)

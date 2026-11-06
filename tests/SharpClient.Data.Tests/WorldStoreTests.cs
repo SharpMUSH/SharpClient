@@ -65,6 +65,45 @@ public sealed class WorldStoreTests
     }
 
     [Test]
+    public async Task TlsFlagsRoundTrip()
+    {
+        await using var db = new AppDbContext(_storage);
+        var store = new WorldStore(db);
+        await store.AddWorldAsync(new World { Name = "W", Host = "h", Port = 1, UseTls = true, AllowInvalidCertificate = true });
+
+        var loaded = (await store.GetWorldsAsync())[0];
+        await Assert.That(loaded.UseTls).IsTrue();
+        await Assert.That(loaded.AllowInvalidCertificate).IsTrue();
+    }
+
+    [Test]
+    public async Task DatabaseFromBeforeTlsColumnsIsUpgraded()
+    {
+        var id = Guid.NewGuid();
+        await using (var old = new AppDbContext(_storage))
+        {
+            await old.Database.EnsureCreatedAsync();
+            await old.Database.ExecuteSqlRawAsync("ALTER TABLE \"Worlds\" DROP COLUMN \"UseTls\"");
+            await old.Database.ExecuteSqlRawAsync("ALTER TABLE \"Worlds\" DROP COLUMN \"AllowInvalidCertificate\"");
+            await old.Database.ExecuteSqlRawAsync(
+                "INSERT INTO \"Worlds\" (\"Id\", \"Name\", \"Host\", \"Port\") VALUES ({0}, 'Old', 'old.example', 4201)", id.ToString().ToUpperInvariant());
+        }
+
+        await using var db = new AppDbContext(_storage);
+        var store = new WorldStore(db);
+        var worlds = await store.GetWorldsAsync();
+
+        await Assert.That(worlds).Count().IsEqualTo(1);
+        await Assert.That(worlds[0].Name).IsEqualTo("Old");
+        await Assert.That(worlds[0].UseTls).IsFalse();
+
+        var updated = worlds[0];
+        updated.UseTls = true;
+        await store.UpdateWorldAsync(updated);
+        await Assert.That((await store.GetWorldsAsync())[0].UseTls).IsTrue();
+    }
+
+    [Test]
     public async Task AddWorldRoundTripsTriggerRuleFields()
     {
         var world = new World { Name = "W", Host = "h", Port = 1 };
