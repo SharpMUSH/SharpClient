@@ -89,12 +89,12 @@
 
     <div class="sc-settings-section">
         <div class="sc-settings-section-header">Content</div>
-        <div class="sc-setting">
+        <label class="sc-setting">
             <span class="sc-setting-label">Show images from worlds</span>
             <input type="checkbox" class="sc-toggle sc-show-images"
                    checked="@Vm.ShowImages"
                    @onchange="e => Vm.ShowImages = (bool)e.Value!" />
-        </div>
+        </label>
     </div>
 
     @if (LogReader.IsAvailable || LogExporter.IsAvailable)

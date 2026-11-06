@@ -30,7 +30,7 @@
         @if (_useTls)
         {
             <label class="sc-setting">
-                <span class="sc-setting-label">Allow self-signed certificate</span>
+                <span class="sc-setting-label">Skip certificate checks (self-signed, expired or wrong host)</span>
                 <input type="checkbox" class="sc-toggle sc-world-invalid-cert" @bind="_allowInvalidCertificate" />
             </label>
         }

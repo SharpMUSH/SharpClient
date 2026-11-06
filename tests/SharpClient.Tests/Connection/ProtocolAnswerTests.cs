@@ -139,7 +139,7 @@ public sealed class ProtocolAnswerTests
 
         await server.SendBytesAsync(Encoding.ASCII.GetBytes("\e[1z<VERSION>\r\n"));
         var version = Encoding.ASCII.GetString(
-            await WireHelpers.ReadUntilAsync(server, Encoding.ASCII.GetBytes("CLIENT=SharpClient"), TimeSpan.FromSeconds(3)));
+            await WireHelpers.ReadUntilAsync(server, Encoding.ASCII.GetBytes("CLIENT=SharpClient>"), TimeSpan.FromSeconds(3)));
         await Assert.That(version).Contains("<VERSION MXP=1.0 CLIENT=SharpClient>");
     }
 }
