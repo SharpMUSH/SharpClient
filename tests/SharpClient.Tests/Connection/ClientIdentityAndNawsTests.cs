@@ -7,7 +7,7 @@ namespace SharpClient.Tests.Connection;
 
 /// <summary>
 /// Wire-level checks for what TNC 2.8+ stopped doing on our behalf: naming the client in TTYPE, and
-/// reporting the window size through the NAWS plugin once the server has asked for it.
+/// reporting the window size once the server has asked for it, including a size given earlier.
 /// </summary>
 public sealed class ClientIdentityAndNawsTests
 {
@@ -70,6 +70,26 @@ public sealed class ClientIdentityAndNawsTests
     }
 
     [Test]
+    public async Task SizeReportedBeforeDoNawsIsSentWhenTheServerAsks()
+    {
+        await using var server = new LoopbackServer();
+        await using var connection = new TelnetConnection(CreateFactory());
+
+        var accept = server.AcceptAsync();
+        await connection.ConnectAsync("127.0.0.1", server.Port);
+        await accept;
+
+        // The UI measures the screen before the server gets round to DO NAWS. RFC 1073 forbids
+        // sending it yet, so it must be held, not dropped.
+        await connection.SendNawsAsync(100, 30);
+        await DrainAsync(server, TimeSpan.FromMilliseconds(300));
+
+        await server.SendBytesAsync([Iac, Do, Naws]);
+        var report = await ReadUntilAsync(server, [Iac, Sb, Naws], TimeSpan.FromSeconds(3), requireEnd: true);
+        await Assert.That(ContainsSequence(report, [Iac, Sb, Naws, 0, 100, 0, 30, Iac, Se])).IsTrue();
+    }
+
+    [Test]
     public async Task NawsIsSentAfterDoNawsAndClampedToSixteenBits()
     {
         await using var server = new LoopbackServer();
@@ -80,14 +100,13 @@ public sealed class ClientIdentityAndNawsTests
         await accept;
 
         await server.SendBytesAsync([Iac, Do, Naws]);
-        // Let the client process DO NAWS before reporting; a report sent earlier is dropped (RFC 1073).
         await DrainAsync(server, TimeSpan.FromMilliseconds(300));
 
         await connection.SendNawsAsync(120, 40);
         var report = await ReadUntilAsync(server, [Iac, Sb, Naws], TimeSpan.FromSeconds(3), requireEnd: true);
         await Assert.That(ContainsSequence(report, [Iac, Sb, Naws, 0, 120, 0, 40, Iac, Se])).IsTrue();
 
-        // 70000 does not fit RFC 1073's unsigned 16-bit field; TNC throws, so we clamp to 65535,
+        // 70000 does not fit RFC 1073's unsigned 16-bit field; TNC throws, so it is clamped to 65535,
         // whose 0xFF bytes are doubled on the wire.
         await connection.SendNawsAsync(70_000, 24);
         report = await ReadUntilAsync(server, [Iac, Sb, Naws], TimeSpan.FromSeconds(3), requireEnd: true);

@@ -21,6 +21,7 @@ public sealed class TelnetConnection : ITelnetConnection
     private string? _host;
     private int _port;
     private bool _intentionalDisconnect;
+    private (int Width, int Height)? _windowSize;
 
     private CancellationTokenSource? _heartbeatCts;
     private Task? _heartbeatTask;
@@ -144,21 +145,17 @@ public sealed class TelnetConnection : ITelnetConnection
 
     public async Task SendNawsAsync(int width, int height)
     {
+        // Kept across reconnects: each new interpreter reports it once the server sends DO NAWS.
+        _windowSize = (width, height);
         if (_interpreter is null)
         {
             return;
         }
 
-        var naws = _interpreter.PluginManager?.GetPlugin<NAWSProtocol>();
-        if (naws is null)
+        if (_interpreter.PluginManager?.GetPlugin<NAWSProtocol>() is WindowSizeProtocol naws)
         {
-            return;
+            await naws.ReportAsync(width, height);
         }
-
-        // RFC 1073 fields are 16-bit unsigned and TNC throws outside that range rather than wrapping.
-        await naws.SendWindowSizeAsync(
-            Math.Clamp(width, 0, NAWSProtocol.MaxWindowDimension),
-            Math.Clamp(height, 0, NAWSProtocol.MaxWindowDimension));
     }
 
     public async Task DisconnectAsync()
@@ -306,14 +303,21 @@ public sealed class TelnetConnection : ITelnetConnection
         TrySetTcpUserTimeout(client.Client);
         await client.ConnectAsync(host, port, cancellationToken);
 
+        // The protocols AddDefaultMUDProtocols registers (NAWS, GMCP, MSDP, MSSP, TTYPE, CHARSET, EOR,
+        // SGA, MXP), spelled out so NAWS can be WindowSizeProtocol: the helper always adds the base
+        // NAWSProtocol, and a second plugin for the same option is rejected.
         var (interpreter, readTask) = await _factory.CreateBuilder()
             .OnSubmit(OnSubmitAsync)
-            .AddDefaultMUDProtocols(
-                onGMCPMessage: OnGmcpMessageAsync,
-                onMSSP: OnMsspAsync,
-                onMXPEnabled: OnMxpEnabledAsync,
-                charsetOrder: CharsetPreference)
             .WithClientIdentity(Identity)
+            .AddPlugin(new WindowSizeProtocol(_windowSize))
+            .AddPlugin<GMCPProtocol>().OnGMCPMessage(OnGmcpMessageAsync)
+            .AddPlugin<MSDPProtocol>()
+            .AddPlugin<MSSPProtocol>().OnMSSP(OnMsspAsync)
+            .AddPlugin<TerminalTypeProtocol>()
+            .AddPlugin<CharsetProtocol>().WithCharsetOrder(CharsetPreference)
+            .AddPlugin<EORProtocol>()
+            .AddPlugin<SuppressGoAheadProtocol>()
+            .AddPlugin<MXPProtocol>().OnMXPEnabled(OnMxpEnabledAsync)
             .BuildAndStartAsync(client, cancellationToken);
 
         _client = client;
