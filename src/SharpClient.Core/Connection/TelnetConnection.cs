@@ -3,6 +3,7 @@ using System.Text;
 using TelnetNegotiationCore.Builders;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Models;
+using TelnetNegotiationCore.Protocols;
 
 namespace SharpClient.Core.Connection;
 
@@ -31,6 +32,15 @@ public sealed class TelnetConnection : ITelnetConnection
     // Heartbeat cadence. Short enough to detect a dead peer and keep the server session alive on a
     // long-running (e.g. in-car) connection, without meaningful battery cost.
     private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(45);
+
+    // TNC names nobody unless told to: without this, TTYPE answers UNKNOWN and NEW-ENVIRON sends no
+    // CLIENT_NAME. MTTS claims only what AnsiParser renders: 16 and 256 colours over UTF-8. Truecolour
+    // is parsed but drawn as the default colour, so claiming it would make servers send colours we drop.
+    private static ClientIdentity Identity { get; } = new("SharpClient")
+    {
+        TerminalType = "XTERM",
+        Mtts = MttsCapabilities.Ansi | MttsCapabilities.Utf8 | MttsCapabilities.Colors256,
+    };
 
     public TelnetConnection(ITelnetInterpreterFactory factory, ReconnectOptions? reconnectOptions = null)
     {
@@ -139,7 +149,16 @@ public sealed class TelnetConnection : ITelnetConnection
             return;
         }
 
-        await _interpreter.SendNAWS((short)width, (short)height);
+        var naws = _interpreter.PluginManager?.GetPlugin<NAWSProtocol>();
+        if (naws is null)
+        {
+            return;
+        }
+
+        // RFC 1073 fields are 16-bit unsigned and TNC throws outside that range rather than wrapping.
+        await naws.SendWindowSizeAsync(
+            Math.Clamp(width, 0, NAWSProtocol.MaxWindowDimension),
+            Math.Clamp(height, 0, NAWSProtocol.MaxWindowDimension));
     }
 
     public async Task DisconnectAsync()
@@ -294,6 +313,7 @@ public sealed class TelnetConnection : ITelnetConnection
                 onMSSP: OnMsspAsync,
                 onMXPEnabled: OnMxpEnabledAsync,
                 charsetOrder: CharsetPreference)
+            .WithClientIdentity(Identity)
             .BuildAndStartAsync(client, cancellationToken);
 
         _client = client;
