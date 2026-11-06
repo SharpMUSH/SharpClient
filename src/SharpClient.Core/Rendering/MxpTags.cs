@@ -10,13 +10,17 @@ public static class MxpTags
     /// <summary>The MXP revision answered to <c>&lt;VERSION&gt;</c>.</summary>
     public const string MxpRevision = "1.0";
 
-    public static IReadOnlyList<string> Supported { get; } = ["send", "image"];
+    // Each rendered tag with the attributes the parser reads from it.
+    private static readonly (string Tag, string[] Attributes)[] s_rendered =
+    [
+        ("send", ["href", "hint"]),
+        ("image", ["fname", "url", "t"]),
+    ];
 
-    private static readonly Dictionary<string, string[]> s_attributes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["send"] = ["href", "hint"],
-        ["image"] = ["fname", "url", "t"],
-    };
+    public static IReadOnlyList<string> Supported { get; } = [.. s_rendered.Select(r => r.Tag)];
+
+    private static readonly Dictionary<string, string[]> s_attributes =
+        s_rendered.ToDictionary(r => r.Tag, r => r.Attributes, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// The answer to a <c>&lt;SUPPORT&gt;</c> naming <paramref name="asked"/>: every supported tag when
@@ -50,10 +54,11 @@ public static class MxpTags
 
             var tag = name[..dot];
             var attribute = name[(dot + 1)..];
-            var attributes = IsSupported(tag) && s_attributes.TryGetValue(tag, out var known) ? known : [];
+            var tagSupported = s_attributes.TryGetValue(tag, out var known);
+            var attributes = known ?? Array.Empty<string>();
             if (attribute == "*")
             {
-                if (IsSupported(tag))
+                if (tagSupported)
                 {
                     supported.AddRange(attributes.Select(a => $"{tag}.{a}"));
                 }
@@ -71,5 +76,5 @@ public static class MxpTags
         return (supported, unsupported);
     }
 
-    private static bool IsSupported(string tag) => Supported.Contains(tag, StringComparer.OrdinalIgnoreCase);
+    private static bool IsSupported(string tag) => s_attributes.ContainsKey(tag);
 }

@@ -156,7 +156,15 @@ public sealed class WorldStore : IWorldStore
 #pragma warning disable CA2100
                     alter.CommandText = $"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {definition}";
 #pragma warning restore CA2100
-                    await alter.ExecuteNonQueryAsync(cancellationToken);
+                    try
+                    {
+                        await alter.ExecuteNonQueryAsync(cancellationToken);
+                    }
+                    catch (System.Data.Common.DbException ex)
+                        when (ex.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Another store on the same database added it between the check and here.
+                    }
                 }
             }
         }
