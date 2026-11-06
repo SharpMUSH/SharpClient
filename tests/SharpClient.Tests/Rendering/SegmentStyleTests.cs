@@ -23,6 +23,18 @@ public sealed class SegmentStyleTests
     }
 
     [Test]
+    public async Task TruecolorForegroundAndBackgroundAreHex()
+    {
+        var css = SegmentStyle.ToCss(Seg(TextStyle.Default with
+        {
+            Foreground = AnsiColor.Rgb(255, 128, 0),
+            Background = AnsiColor.Rgb(1, 2, 3),
+        }));
+
+        await Assert.That(css).IsEqualTo("color:#ff8000;background:#010203;padding:0 2px;");
+    }
+
+    [Test]
     public async Task IndexedBackgroundAddsPadding()
     {
         var css = SegmentStyle.ToCss(Seg(TextStyle.Default with { Background = AnsiColor.Indexed(4) }));

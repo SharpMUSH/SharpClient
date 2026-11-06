@@ -88,22 +88,50 @@ public sealed class AnsiParserTests
     }
 
     [Test]
-    public async Task TruecolorForegroundDoesNotCorruptBackground()
+    public async Task TruecolorForegroundIsParsedAndLeavesBackgroundAlone()
     {
-        var segments = AnsiParser.Parse("\e[38;2;40;40;40mX");
+        var segments = AnsiParser.Parse("\e[38;2;40;50;60mX");
 
         await Assert.That(segments[0].Style.Background).IsEqualTo(AnsiColor.Default);
-        await Assert.That(segments[0].Style.Foreground).IsEqualTo(AnsiColor.Default);
+        await Assert.That(segments[0].Style.Foreground).IsEqualTo(AnsiColor.Rgb(40, 50, 60));
     }
 
     [Test]
-    public async Task TruecolorBackgroundIsConsumed()
+    public async Task TruecolorBackgroundIsParsed()
     {
         var segments = AnsiParser.Parse("\e[48;2;10;20;30mX");
 
         await Assert.That(segments[0].Style.Foreground).IsEqualTo(AnsiColor.Default);
-        await Assert.That(segments[0].Style.Background).IsEqualTo(AnsiColor.Default);
+        await Assert.That(segments[0].Style.Background).IsEqualTo(AnsiColor.Rgb(10, 20, 30));
         await Assert.That(segments[0].Text).IsEqualTo("X");
+    }
+
+    [Test]
+    public async Task TruecolorFollowedByOtherCodesAppliesBoth()
+    {
+        var segments = AnsiParser.Parse("\e[1;38;2;255;128;0;4mX");
+
+        await Assert.That(segments[0].Style.Foreground).IsEqualTo(AnsiColor.Rgb(255, 128, 0));
+        await Assert.That(segments[0].Style.Bold).IsTrue();
+        await Assert.That(segments[0].Style.Underline).IsTrue();
+    }
+
+    [Test]
+    public async Task TruncatedTruecolorIsConsumedWithoutColour()
+    {
+        // "38;2;40" is missing G and B: nothing is coloured, and "40" is not read as a background.
+        var segments = AnsiParser.Parse("\e[38;2;40mX");
+
+        await Assert.That(segments[0].Style.Foreground).IsEqualTo(AnsiColor.Default);
+        await Assert.That(segments[0].Style.Background).IsEqualTo(AnsiColor.Default);
+    }
+
+    [Test]
+    public async Task OutOfRangeTruecolorComponentsAreClamped()
+    {
+        var segments = AnsiParser.Parse("\e[38;2;300;-5;128mX");
+
+        await Assert.That(segments[0].Style.Foreground).IsEqualTo(AnsiColor.Rgb(255, 0, 128));
     }
 
     [Test]

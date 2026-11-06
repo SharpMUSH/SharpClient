@@ -7,7 +7,21 @@
         <div class="sc-line">
             @foreach (var segment in line.Segments)
             {
-                @if (segment.Command is not null && OnSendCommand is not null)
+                @if (segment.ImageUrl is not null)
+                {
+                    @* no-referrer: the image host learns nothing about where it was shown. *@
+                    @if (segment.Command is not null && OnSendCommand is not null)
+                    {
+                        <button type="button" class="sc-link sc-image-link"
+                                title="@(segment.Hint ?? segment.Command)"
+                                @onclick="() => OnSendCommand(segment.Command!)"><img class="sc-image" src="@segment.ImageUrl" alt="@segment.Text" loading="lazy" referrerpolicy="no-referrer" /></button>
+                    }
+                    else
+                    {
+                        <img class="sc-image" src="@segment.ImageUrl" alt="@segment.Text" title="@segment.Text" loading="lazy" referrerpolicy="no-referrer" />
+                    }
+                }
+                else if (segment.Command is not null && OnSendCommand is not null)
                 {
                     <button type="button" class="sc-link" style="@SegmentStyle.ToCss(segment)"
                             title="@(segment.Hint ?? segment.Command)"

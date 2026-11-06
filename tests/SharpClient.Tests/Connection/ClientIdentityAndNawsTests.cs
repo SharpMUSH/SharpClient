@@ -61,12 +61,11 @@ public sealed class ClientIdentityAndNawsTests
 
         await Assert.That(names[0]).IsEqualTo("SharpClient");
         await Assert.That(names[1]).IsEqualTo("XTERM");
-        // MTTS 1 (ANSI) | 4 (UTF-8) | 8 (256 colours) from SharpClient, plus whatever the library
-        // observes about its own stack; truecolour (256) must not be claimed.
+        // MTTS 1 (ANSI) | 4 (UTF-8) | 8 (256 colours) | 256 (truecolour) from SharpClient, plus
+        // whatever the library observes about its own stack.
         await Assert.That(names[2]).StartsWith("MTTS ");
         var bits = int.Parse(names[2]["MTTS ".Length..], System.Globalization.CultureInfo.InvariantCulture);
-        await Assert.That(bits & 13).IsEqualTo(13);
-        await Assert.That(bits & 256).IsEqualTo(0);
+        await Assert.That(bits & 269).IsEqualTo(269);
     }
 
     [Test]

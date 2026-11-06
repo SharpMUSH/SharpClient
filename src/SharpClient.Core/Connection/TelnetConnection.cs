@@ -35,12 +35,11 @@ public sealed class TelnetConnection : ITelnetConnection
     private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(45);
 
     // TNC names nobody unless told to: without this, TTYPE answers UNKNOWN and NEW-ENVIRON sends no
-    // CLIENT_NAME. MTTS claims only what AnsiParser renders: 16 and 256 colours over UTF-8. Truecolour
-    // is parsed but drawn as the default colour, so claiming it would make servers send colours we drop.
+    // CLIENT_NAME. MTTS claims what AnsiParser renders: 16, 256 and 24-bit colour over UTF-8.
     private static ClientIdentity Identity { get; } = new("SharpClient")
     {
         TerminalType = "XTERM",
-        Mtts = MttsCapabilities.Ansi | MttsCapabilities.Utf8 | MttsCapabilities.Colors256,
+        Mtts = MttsCapabilities.Ansi | MttsCapabilities.Utf8 | MttsCapabilities.Colors256 | MttsCapabilities.Truecolor,
     };
 
     public TelnetConnection(ITelnetInterpreterFactory factory, ReconnectOptions? reconnectOptions = null)
@@ -54,6 +53,7 @@ public sealed class TelnetConnection : ITelnetConnection
     public event Action<GmcpMessage>? GmcpReceived;
     public event Action<NegotiationEvent>? NegotiationReceived;
     public event Action? MxpEnabled;
+    public event Action? PuebloEnabled;
 
     public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
 
@@ -305,7 +305,14 @@ public sealed class TelnetConnection : ITelnetConnection
 
         // The protocols AddDefaultMUDProtocols registers (NAWS, GMCP, MSDP, MSSP, TTYPE, CHARSET, EOR,
         // SGA, MXP), spelled out so NAWS can be WindowSizeProtocol: the helper always adds the base
-        // NAWSProtocol, and a second plugin for the same option is rejected.
+        // NAWSProtocol, and a second plugin for the same option is rejected. Plus Pueblo.
+        // Kept as locals because the server's banner (and so the Pueblo hello) can arrive before
+        // BuildAndStartAsync returns and _interpreter is set.
+        var mxp = new MXPProtocol();
+        mxp.OnMXPEnabled(OnMxpEnabledAsync);
+        var pueblo = new PuebloProtocol();
+        pueblo.OnPuebloOffered(() => OnPuebloOfferedAsync(pueblo, mxp)).OnPuebloEnabled(OnPuebloEnabledAsync);
+
         var (interpreter, readTask) = await _factory.CreateBuilder()
             .OnSubmit(OnSubmitAsync)
             .WithClientIdentity(Identity)
@@ -317,7 +324,8 @@ public sealed class TelnetConnection : ITelnetConnection
             .AddPlugin<CharsetProtocol>().WithCharsetOrder(CharsetPreference)
             .AddPlugin<EORProtocol>()
             .AddPlugin<SuppressGoAheadProtocol>()
-            .AddPlugin<MXPProtocol>().OnMXPEnabled(OnMxpEnabledAsync)
+            .AddPlugin(mxp)
+            .AddPlugin(pueblo)
             .BuildAndStartAsync(client, cancellationToken);
 
         _client = client;
@@ -414,6 +422,33 @@ public sealed class TelnetConnection : ITelnetConnection
     {
         MxpEnabled?.Invoke();
         NegotiationReceived?.Invoke(new NegotiationEvent("MXP", "enabled"));
+        return ValueTask.CompletedTask;
+    }
+
+    // SharpMUSH offers MXP and Pueblo both. Answering the Pueblo hello switches the connection to
+    // Pueblo, and the server then sends no MXP, so a server that agreed MXP is left on MXP. That is
+    // the option (WILL MXP), which arrives before the banner; MXP mode itself may start later.
+    private static async ValueTask OnPuebloOfferedAsync(PuebloProtocol pueblo, MXPProtocol mxp)
+    {
+        if (mxp.IsMXPActive)
+        {
+            return;
+        }
+
+        try
+        {
+            await pueblo.AnnounceAsync();
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or ObjectDisposedException)
+        {
+            // The connection went away under the handshake; the reconnect starts it over.
+        }
+    }
+
+    private ValueTask OnPuebloEnabledAsync(PuebloClient client)
+    {
+        PuebloEnabled?.Invoke();
+        NegotiationReceived?.Invoke(new NegotiationEvent("Pueblo", $"enabled ({client.Version})"));
         return ValueTask.CompletedTask;
     }
 

@@ -36,6 +36,22 @@ public static class AnsiParser
             text.Clear();
         }
 
+        void AddImage(string? url, string label)
+        {
+            if (url is null)
+            {
+                return;
+            }
+
+            Flush();
+            segments.Add(new StyledSegment(label, style)
+            {
+                ImageUrl = url,
+                Command = pendingCommand,
+                Hint = pendingHint,
+            });
+        }
+
         void HandleTag(string raw)
         {
             var body = raw.Trim();
@@ -84,6 +100,21 @@ public static class AnsiParser
                         pendingHint = GetAttr(attrs, "xch_hint");
                         inAnchor = true;
                     }
+                }
+                else if (name == "image" && mxp!.IsMxpActive && mxp.IsSecure)
+                {
+                    // IMAGE is not an open tag, so like SEND it needs a Secure line.
+                    var fileName = GetAttr(attrs, "fname") ?? FirstPositional(attrs);
+                    var url = fileName is null
+                        ? null
+                        : ImageSource.ResolveMxp(fileName, GetAttr(attrs, "url"), GetAttr(attrs, "t"));
+                    AddImage(url, ImageSource.DisplayName(fileName));
+                }
+                else if (name == "img" && mxp!.IsPuebloActive)
+                {
+                    // <img xch_mode=...> is Pueblo's mode switch, not a picture: it has no src.
+                    var src = GetAttr(attrs, "src");
+                    AddImage(src is null ? null : ImageSource.ResolvePueblo(src), GetAttr(attrs, "alt") ?? ImageSource.DisplayName(src));
                 }
                 // Any other tag (or a non-command anchor) is stripped silently.
             }
@@ -244,6 +275,71 @@ public static class AnsiParser
             }
 
             from = idx + name.Length;
+        }
+
+        return null;
+    }
+
+    /// <summary>The first attribute given without a name (MXP allows <c>&lt;IMAGE map.png URL=...&gt;</c>).</summary>
+    private static string? FirstPositional(string body)
+    {
+        var i = 0;
+        while (i < body.Length)
+        {
+            while (i < body.Length && body[i] is ' ' or '\t')
+            {
+                i++;
+            }
+
+            if (i >= body.Length)
+            {
+                return null;
+            }
+
+            var quoted = body[i] is '"' or '\'';
+            var start = i;
+            if (quoted)
+            {
+                var quote = body[i++];
+                start = i;
+                while (i < body.Length && body[i] != quote)
+                {
+                    i++;
+                }
+
+                var value = body[start..i];
+                i++;
+                return DecodeEntities(value);
+            }
+
+            var isNamed = false;
+            while (i < body.Length && body[i] is not (' ' or '\t'))
+            {
+                if (body[i] == '=')
+                {
+                    isNamed = true;
+                    i++;
+                    if (i < body.Length && body[i] is '"' or '\'')
+                    {
+                        var quote = body[i++];
+                        while (i < body.Length && body[i] != quote)
+                        {
+                            i++;
+                        }
+
+                        i++;
+                    }
+
+                    continue;
+                }
+
+                i++;
+            }
+
+            if (!isNamed)
+            {
+                return DecodeEntities(body[start..i]);
+            }
         }
 
         return null;
@@ -475,9 +571,17 @@ public static class AnsiParser
 
         if (codes[i + 1] == "2")
         {
-            // Truecolor (24-bit): consume "2" + R + G + B components.
-            // Phase-1 scope: graceful degradation — colour stays AnsiColor.Default.
+            // Truecolor: "2" + R + G + B. A short or malformed sequence is still consumed, so its
+            // components are not read as SGR codes of their own, and leaves the colour at default.
             var remaining = codes.Length - 1 - i;
+            if (remaining >= 4
+                && int.TryParse(codes[i + 2], out var r)
+                && int.TryParse(codes[i + 3], out var g)
+                && int.TryParse(codes[i + 4], out var b))
+            {
+                colour = AnsiColor.Rgb(r, g, b);
+            }
+
             i += Math.Min(4, remaining);
             return true;
         }

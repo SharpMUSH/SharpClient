@@ -10,4 +10,10 @@ public readonly record struct StyledSegment(string Text, TextStyle Style)
 
     /// <summary>Optional tooltip for a command link. Null if unspecified.</summary>
     public string? Hint { get; init; }
+
+    /// <summary>
+    /// If non-null, this segment is an inline image (MXP &lt;IMAGE&gt; or Pueblo &lt;img&gt;) and
+    /// <see cref="Text"/> is its alternative text. Always an absolute http(s) URL or a data:image URI.
+    /// </summary>
+    public string? ImageUrl { get; init; }
 }

@@ -11,9 +11,9 @@ public static class SegmentStyle
     {
         var style = segment.Style;
         var fg = Resolve(style.Foreground, AnsiPalette.PhosphorDefault);
-        string? bg = style.Background.Kind == AnsiColorKind.Indexed
-            ? AnsiPalette.ToHex(style.Background.Index)
-            : null;
+        string? bg = style.Background.Kind == AnsiColorKind.Default
+            ? null
+            : Resolve(style.Background, AnsiPalette.PhosphorDefault);
 
         if (style.Inverse)
         {
@@ -41,8 +41,10 @@ public static class SegmentStyle
         return sb.ToString();
     }
 
-    private static string Resolve(AnsiColor color, string fallback) =>
-        color.Kind == AnsiColorKind.Indexed
-            ? AnsiPalette.ToHex(color.Index)
-            : fallback;
+    private static string Resolve(AnsiColor color, string fallback) => color.Kind switch
+    {
+        AnsiColorKind.Indexed => AnsiPalette.ToHex(color.Index),
+        AnsiColorKind.Rgb => $"#{color.Index & 0xFFFFFF:x6}",
+        _ => fallback,
+    };
 }

@@ -13,6 +13,12 @@ public interface ITelnetConnection : IAsyncDisposable
     /// <summary>Raised when MXP (telnet option 91) negotiation completes successfully.</summary>
     public event Action? MxpEnabled;
 
+    /// <summary>
+    /// Raised when the server switches this connection into Pueblo HTML mode, which it does only after
+    /// its own hello and our PUEBLOCLIENT answer. A hello quoted in a player's text starts nothing.
+    /// </summary>
+    public event Action? PuebloEnabled;
+
     public ConnectionState State { get; }
 
     public Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default);
