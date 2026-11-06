@@ -48,14 +48,15 @@
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     </PropertyGroup>
 
-    <!-- AOT is back on for Android Release: it was off only because TNC 2.x shipped
-         TelnetNegotiationCore.Functional.dll, whose FSharp.Core dependency the Mono AOT compiler
-         could not resolve. TNC 4.0 folded that assembly into C# and dropped FSharp.Core.
-
-         PublishTrimmed stays false. It was disabled for FSharp.Core's ILLink substitutions (IL2040 /
-         NETSDK1144), which are gone too, but EF Core and the Blazor WebView reach types by reflection
-         and a trimmed APK has not been run on a device yet. Turn it on together with a device check. -->
+    <!-- AOT and trimming are off for Android Release. They were turned off because TNC 2.x shipped
+         TelnetNegotiationCore.Functional.dll, whose FSharp.Core dependency broke both the Mono AOT
+         compiler and the trimmer (IL2040 / NETSDK1144). TNC 4.0 dropped FSharp.Core, so that reason is
+         gone. They stay off for now because .NET for Android allows AOT only with trimming (XA1030),
+         and EF Core and the Blazor WebView use reflection, so a trimmed APK has to be run on a device
+         before it ships. -->
     <PropertyGroup Condition="'$(Configuration)' == 'Release' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+        <RunAOTCompilation>false</RunAOTCompilation>
+        <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
         <PublishTrimmed>false</PublishTrimmed>
     </PropertyGroup>
 
@@ -117,7 +118,7 @@
              intermittently bounced back to the login screen.
              4.6.1: SendNAWS moved to NAWSProtocol.SendWindowSizeAsync, the client names itself
              only through WithClientIdentity (TelnetConnection sets it), and FSharp.Core is gone,
-             which is what let Android Release AOT come back on. -->
+             so AOT and trimming can be turned back on once a trimmed APK is checked on a device. -->
         <PackageReference Include="TelnetNegotiationCore" Version="4.6.1" />
     </ItemGroup>
 
