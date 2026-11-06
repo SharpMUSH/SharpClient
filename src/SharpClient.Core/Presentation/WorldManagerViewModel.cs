@@ -44,9 +44,25 @@ public sealed class WorldManagerViewModel
         RaiseChanged();
     }
 
-    public async Task AddWorldAsync(string name, string host, int port, CancellationToken cancellationToken = default)
+    public Task AddWorldAsync(string name, string host, int port, CancellationToken cancellationToken = default) =>
+        AddWorldAsync(name, host, port, useTls: false, allowInvalidCertificate: false, cancellationToken);
+
+    public async Task AddWorldAsync(
+        string name,
+        string host,
+        int port,
+        bool useTls,
+        bool allowInvalidCertificate,
+        CancellationToken cancellationToken = default)
     {
-        var world = new World { Name = name, Host = host, Port = port };
+        var world = new World
+        {
+            Name = name,
+            Host = host,
+            Port = port,
+            UseTls = useTls,
+            AllowInvalidCertificate = allowInvalidCertificate,
+        };
         await _store.AddWorldAsync(world, cancellationToken);
         await LoadAsync(cancellationToken);
     }

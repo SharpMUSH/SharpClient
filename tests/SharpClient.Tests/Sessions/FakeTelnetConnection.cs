@@ -12,6 +12,8 @@ public sealed class FakeTelnetConnection : ITelnetConnection
     public event Action? PuebloEnabled;
 
     public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
+    public bool UseTls { get; set; }
+    public bool AllowInvalidCertificate { get; set; }
     public List<string> Sent { get; } = [];
     public List<(int Width, int Height)> NawsSent { get; } = [];
 

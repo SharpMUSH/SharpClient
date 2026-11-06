@@ -48,6 +48,7 @@ public sealed class SettingsViewModel
     private string _accent;
     private bool   _glow;
     private bool   _scanlines;
+    private bool   _showImages;
 
     public event Action? Changed;
 
@@ -60,6 +61,7 @@ public sealed class SettingsViewModel
         _accent      = prefs.GetString("Accent",      "#9b7ed4");
         _glow        = prefs.GetBool  ("Glow",        true);
         _scanlines   = prefs.GetBool  ("Scanlines",   true);
+        _showImages  = prefs.GetBool  ("ShowImages",  true);
 
         // Clamp unknown accent to default so --acc2/soft/line don't desync.
         if (!s_accentMeta.ContainsKey(_accent))
@@ -103,6 +105,16 @@ public sealed class SettingsViewModel
     {
         get => _scanlines;
         set { _scanlines = value; _prefs.SetBool("Scanlines", value); Changed?.Invoke(); }
+    }
+
+    /// <summary>
+    /// Load MXP/Pueblo inline images. Loading one tells the image host this device's address, so it
+    /// can be turned off; the image's name is shown in its place.
+    /// </summary>
+    public bool ShowImages
+    {
+        get => _showImages;
+        set { _showImages = value; _prefs.SetBool("ShowImages", value); Changed?.Invoke(); }
     }
 
     public string FontFamily =>

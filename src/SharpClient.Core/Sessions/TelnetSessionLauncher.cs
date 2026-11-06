@@ -46,6 +46,8 @@ public sealed class TelnetSessionLauncher : ISessionLauncher
         CancellationToken cancellationToken = default)
     {
         var connection = _connFactory.CreateConnection();
+        connection.UseTls = world.UseTls;
+        connection.AllowInvalidCertificate = world.UseTls && world.AllowInvalidCertificate;
 
         var aliasRules = MergeAliases(world.Aliases, character.Aliases);
         var triggerRules = MergeTriggers(world.Triggers, character.Triggers);

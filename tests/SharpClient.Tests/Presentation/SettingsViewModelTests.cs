@@ -198,4 +198,19 @@ public sealed class SettingsViewModelTests
         // RootStyleVariables must not contain the unknown accent.
         await Assert.That(vm.RootStyleVariables).DoesNotContain("#badbad");
     }
+
+    [Test]
+    public async Task ShowImagesDefaultsOnAndPersists()
+    {
+        var (vm, prefs) = Build();
+        await Assert.That(vm.ShowImages).IsTrue();
+
+        var fired = 0;
+        vm.Changed += () => fired++;
+        vm.ShowImages = false;
+
+        await Assert.That(prefs.GetBool("ShowImages", true)).IsFalse();
+        await Assert.That(fired).IsEqualTo(1);
+        await Assert.That(new SettingsViewModel(prefs).ShowImages).IsFalse();
+    }
 }

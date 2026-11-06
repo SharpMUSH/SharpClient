@@ -23,6 +23,17 @@
             <span class="sc-field-label">port</span>
             <input class="sc-field-input" type="number" @bind="_port" @bind:event="oninput" placeholder="23" />
         </label>
+        <label class="sc-setting">
+            <span class="sc-setting-label">Use TLS</span>
+            <input type="checkbox" class="sc-toggle sc-world-tls" @bind="_useTls" />
+        </label>
+        @if (_useTls)
+        {
+            <label class="sc-setting">
+                <span class="sc-setting-label">Allow self-signed certificate</span>
+                <input type="checkbox" class="sc-toggle sc-world-invalid-cert" @bind="_allowInvalidCertificate" />
+            </label>
+        }
 
         <button type="button" class="sc-modal-submit" disabled="@(!CanSubmit)" @onclick="SubmitAsync">
             @(_isEdit ? "Save world" : "Add world")
@@ -39,6 +50,8 @@
     private string _name = string.Empty;
     private string _host = string.Empty;
     private int _port = 23;
+    private bool _useTls;
+    private bool _allowInvalidCertificate;
 
     private bool CanSubmit => !string.IsNullOrWhiteSpace(_name) && !string.IsNullOrWhiteSpace(_host);
 
@@ -50,6 +63,8 @@
             _name = World.Name;
             _host = World.Host;
             _port = World.Port;
+            _useTls = World.UseTls;
+            _allowInvalidCertificate = World.AllowInvalidCertificate;
         }
     }
 
@@ -62,13 +77,15 @@
 
         if (World is null)
         {
-            await Vm.AddWorldAsync(_name.Trim(), _host.Trim(), _port);
+            await Vm.AddWorldAsync(_name.Trim(), _host.Trim(), _port, _useTls, _useTls && _allowInvalidCertificate);
         }
         else
         {
             World.Name = _name.Trim();
             World.Host = _host.Trim();
             World.Port = _port;
+            World.UseTls = _useTls;
+            World.AllowInvalidCertificate = _useTls && _allowInvalidCertificate;
             await Vm.UpdateWorldAsync(World);
         }
 

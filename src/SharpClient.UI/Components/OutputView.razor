@@ -7,7 +7,7 @@
         <div class="sc-line">
             @foreach (var segment in line.Segments)
             {
-                @if (segment.ImageUrl is not null)
+                @if (segment.ImageUrl is not null && ShowImages)
                 {
                     @* no-referrer: the image host learns nothing about where it was shown. *@
                     @if (segment.Command is not null && OnSendCommand is not null)
@@ -43,4 +43,8 @@
     /// <summary>Invoked when a clickable MXP/Pueblo command-link is clicked.</summary>
     [Parameter]
     public Func<string, Task>? OnSendCommand { get; set; }
+
+    /// <summary>When false, an image segment renders as its text (its name or alt text) instead.</summary>
+    [Parameter]
+    public bool ShowImages { get; set; } = true;
 }
