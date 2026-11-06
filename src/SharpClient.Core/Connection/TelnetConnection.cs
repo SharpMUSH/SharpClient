@@ -3,6 +3,7 @@ using System.Text;
 using TelnetNegotiationCore.Builders;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Models;
+using TelnetNegotiationCore.Protocols;
 
 namespace SharpClient.Core.Connection;
 
@@ -20,6 +21,7 @@ public sealed class TelnetConnection : ITelnetConnection
     private string? _host;
     private int _port;
     private bool _intentionalDisconnect;
+    private (int Width, int Height)? _windowSize;
 
     private CancellationTokenSource? _heartbeatCts;
     private Task? _heartbeatTask;
@@ -32,6 +34,14 @@ public sealed class TelnetConnection : ITelnetConnection
     // long-running (e.g. in-car) connection, without meaningful battery cost.
     private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(45);
 
+    // TNC names nobody unless told to: without this, TTYPE answers UNKNOWN and NEW-ENVIRON sends no
+    // CLIENT_NAME. MTTS claims what AnsiParser renders: 16, 256 and 24-bit colour over UTF-8.
+    private static ClientIdentity Identity { get; } = new("SharpClient")
+    {
+        TerminalType = "XTERM",
+        Mtts = MttsCapabilities.Ansi | MttsCapabilities.Utf8 | MttsCapabilities.Colors256 | MttsCapabilities.Truecolor,
+    };
+
     public TelnetConnection(ITelnetInterpreterFactory factory, ReconnectOptions? reconnectOptions = null)
     {
         _factory = factory;
@@ -43,6 +53,7 @@ public sealed class TelnetConnection : ITelnetConnection
     public event Action<GmcpMessage>? GmcpReceived;
     public event Action<NegotiationEvent>? NegotiationReceived;
     public event Action? MxpEnabled;
+    public event Action? PuebloEnabled;
 
     public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
 
@@ -134,12 +145,17 @@ public sealed class TelnetConnection : ITelnetConnection
 
     public async Task SendNawsAsync(int width, int height)
     {
+        // Kept across reconnects: each new interpreter reports it once the server sends DO NAWS.
+        _windowSize = (width, height);
         if (_interpreter is null)
         {
             return;
         }
 
-        await _interpreter.SendNAWS((short)width, (short)height);
+        if (_interpreter.PluginManager?.GetPlugin<NAWSProtocol>() is WindowSizeProtocol naws)
+        {
+            await naws.ReportAsync(width, height);
+        }
     }
 
     public async Task DisconnectAsync()
@@ -287,13 +303,29 @@ public sealed class TelnetConnection : ITelnetConnection
         TrySetTcpUserTimeout(client.Client);
         await client.ConnectAsync(host, port, cancellationToken);
 
+        // The protocols AddDefaultMUDProtocols registers (NAWS, GMCP, MSDP, MSSP, TTYPE, CHARSET, EOR,
+        // SGA, MXP), spelled out so NAWS can be WindowSizeProtocol: the helper always adds the base
+        // NAWSProtocol, and a second plugin for the same option is rejected. Plus Pueblo.
+        // Kept as locals because the server's banner (and so the Pueblo hello) can arrive before
+        // BuildAndStartAsync returns and _interpreter is set.
+        var mxp = new MXPProtocol();
+        mxp.OnMXPEnabled(OnMxpEnabledAsync);
+        var pueblo = new PuebloProtocol();
+        pueblo.OnPuebloOffered(() => OnPuebloOfferedAsync(pueblo, mxp)).OnPuebloEnabled(OnPuebloEnabledAsync);
+
         var (interpreter, readTask) = await _factory.CreateBuilder()
             .OnSubmit(OnSubmitAsync)
-            .AddDefaultMUDProtocols(
-                onGMCPMessage: OnGmcpMessageAsync,
-                onMSSP: OnMsspAsync,
-                onMXPEnabled: OnMxpEnabledAsync,
-                charsetOrder: CharsetPreference)
+            .WithClientIdentity(Identity)
+            .AddPlugin(new WindowSizeProtocol(_windowSize))
+            .AddPlugin<GMCPProtocol>().OnGMCPMessage(OnGmcpMessageAsync)
+            .AddPlugin<MSDPProtocol>()
+            .AddPlugin<MSSPProtocol>().OnMSSP(OnMsspAsync)
+            .AddPlugin<TerminalTypeProtocol>()
+            .AddPlugin<CharsetProtocol>().WithCharsetOrder(CharsetPreference)
+            .AddPlugin<EORProtocol>()
+            .AddPlugin<SuppressGoAheadProtocol>()
+            .AddPlugin(mxp)
+            .AddPlugin(pueblo)
             .BuildAndStartAsync(client, cancellationToken);
 
         _client = client;
@@ -390,6 +422,33 @@ public sealed class TelnetConnection : ITelnetConnection
     {
         MxpEnabled?.Invoke();
         NegotiationReceived?.Invoke(new NegotiationEvent("MXP", "enabled"));
+        return ValueTask.CompletedTask;
+    }
+
+    // SharpMUSH offers MXP and Pueblo both. Answering the Pueblo hello switches the connection to
+    // Pueblo, and the server then sends no MXP, so a server that agreed MXP is left on MXP. That is
+    // the option (WILL MXP), which arrives before the banner; MXP mode itself may start later.
+    private static async ValueTask OnPuebloOfferedAsync(PuebloProtocol pueblo, MXPProtocol mxp)
+    {
+        if (mxp.IsMXPActive)
+        {
+            return;
+        }
+
+        try
+        {
+            await pueblo.AnnounceAsync();
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or ObjectDisposedException)
+        {
+            // The connection went away under the handshake; the reconnect starts it over.
+        }
+    }
+
+    private ValueTask OnPuebloEnabledAsync(PuebloClient client)
+    {
+        PuebloEnabled?.Invoke();
+        NegotiationReceived?.Invoke(new NegotiationEvent("Pueblo", $"enabled ({client.Version})"));
         return ValueTask.CompletedTask;
     }
 

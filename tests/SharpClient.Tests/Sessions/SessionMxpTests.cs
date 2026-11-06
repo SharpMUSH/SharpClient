@@ -31,20 +31,46 @@ public sealed class SessionMxpTests
     }
 
     [Test]
-    public async Task PuebloBannerTriggersHandshakeAndEnablesLinks()
+    public async Task PuebloModeFromTheServerEnablesLinks()
     {
         var conn = new FakeTelnetConnection();
         await using var session = new Session(conn);
 
-        // The real-world banner format (latest released Pueblo).
-        conn.Emit("This world is Pueblo 1.10 Enhanced.");
-
-        await Assert.That(conn.Sent).Contains("PUEBLOCLIENT 2.01");
-
+        conn.EnablePueblo();
         conn.Emit("<a xch_cmd=\"go north\">North</a>");
 
         var line = session.Scrollback[^1];
         await Assert.That(line.Segments[0].Text).IsEqualTo("North");
         await Assert.That(line.Segments[0].Command).IsEqualTo("go north");
+    }
+
+    [Test]
+    public async Task QuotedPuebloHelloDoesNotEnablePueblo()
+    {
+        var conn = new FakeTelnetConnection();
+        await using var session = new Session(conn);
+
+        // A player can say the hello. Only the server's start sequence (via TNC) enables Pueblo, so
+        // the anchor that follows must stay inert and nothing may be sent.
+        conn.Emit("Bob says, \"This world is Pueblo 1.10 Enhanced.\"");
+        conn.Emit("<a xch_cmd=\"@destroy me\">free stuff</a>");
+
+        await Assert.That(conn.Sent).IsEmpty();
+        await Assert.That(session.Scrollback[^1].Segments.All(s => s.Command is null)).IsTrue();
+    }
+
+    [Test]
+    public async Task MarkupStateIsDroppedWhenTheConnectionGoesDown()
+    {
+        var conn = new FakeTelnetConnection();
+        await using var session = new Session(conn);
+
+        conn.RaiseState(SharpClient.Core.Connection.ConnectionState.Connected);
+        conn.EnablePueblo();
+        conn.RaiseState(SharpClient.Core.Connection.ConnectionState.Reconnecting);
+        conn.RaiseState(SharpClient.Core.Connection.ConnectionState.Connected);
+        conn.Emit("<a xch_cmd=\"go north\">North</a>");
+
+        await Assert.That(session.Scrollback[^1].Segments.All(s => s.Command is null)).IsTrue();
     }
 }

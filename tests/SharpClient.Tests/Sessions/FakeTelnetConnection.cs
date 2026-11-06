@@ -9,6 +9,7 @@ public sealed class FakeTelnetConnection : ITelnetConnection
     public event Action<GmcpMessage>? GmcpReceived;
     public event Action<NegotiationEvent>? NegotiationReceived;
     public event Action? MxpEnabled;
+    public event Action? PuebloEnabled;
 
     public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
     public List<string> Sent { get; } = [];
@@ -59,6 +60,8 @@ public sealed class FakeTelnetConnection : ITelnetConnection
     public void Emit(string line) => LineReceived?.Invoke(line);
 
     public void EnableMxp() => MxpEnabled?.Invoke();
+
+    public void EnablePueblo() => PuebloEnabled?.Invoke();
 
     public void EmitGmcp(GmcpMessage msg) => GmcpReceived?.Invoke(msg);
 

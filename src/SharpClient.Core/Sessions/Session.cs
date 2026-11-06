@@ -67,6 +67,7 @@ public sealed class Session : ISession
         _connection.GmcpReceived += OnGmcpReceived;
         _connection.NegotiationReceived += OnNegotiationReceived;
         _connection.MxpEnabled += OnMxpEnabled;
+        _connection.PuebloEnabled += OnPuebloEnabled;
     }
 
     public IReadOnlyList<ScrollbackLine> Scrollback
@@ -144,7 +145,14 @@ public sealed class Session : ISession
         _connection.GmcpReceived -= OnGmcpReceived;
         _connection.NegotiationReceived -= OnNegotiationReceived;
         _connection.MxpEnabled -= OnMxpEnabled;
+        _connection.PuebloEnabled -= OnPuebloEnabled;
         await _connection.DisposeAsync();
+    }
+
+    private void OnPuebloEnabled()
+    {
+        _mxp.IsPuebloActive = true;
+        _protocolChanged?.Invoke();
     }
 
     private void OnMxpEnabled()
@@ -155,15 +163,6 @@ public sealed class Session : ISession
 
     private async void OnLineReceived(string raw)
     {
-        // Pueblo negotiation is banner-based (no telnet option): the server announces
-        // itself in plain text and the client replies with PUEBLOCLIENT over the data channel.
-        if (!_mxp.IsPuebloActive && raw.Contains("This world is Pueblo", StringComparison.OrdinalIgnoreCase))
-        {
-            _mxp.IsPuebloActive = true;
-            _protocolChanged?.Invoke();
-            await _connection.SendAsync("PUEBLOCLIENT 2.01");
-        }
-
         // Reset per-line MXP mode to the negotiated default before parsing this line.
         _mxp.BeginLine();
 
@@ -216,6 +215,17 @@ public sealed class Session : ISession
     {
         var previous = _lastState;
         _lastState = state;
+
+        // MXP and Pueblo belong to one connection: a reconnect negotiates them again, and the
+        // server it reaches may not offer either.
+        if (previous == ConnectionState.Connected && state != ConnectionState.Connected)
+        {
+            _mxp.IsMxpActive = false;
+            _mxp.IsPuebloActive = false;
+            _mxp.DefaultLineMode = 0;
+            _mxp.LineMode = 0;
+        }
+
         StateChanged?.Invoke(state);
 
         // On every transition into Connected — the initial connect AND each automatic reconnect —

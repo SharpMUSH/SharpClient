@@ -10,7 +10,7 @@ public sealed class MxpParserState
     /// <summary>Whether MXP telnet option 91 was successfully negotiated.</summary>
     public bool IsMxpActive { get; set; }
 
-    /// <summary>Whether the Pueblo banner was seen and the PUEBLOCLIENT handshake sent.</summary>
+    /// <summary>Whether the server switched this connection into Pueblo HTML mode.</summary>
     public bool IsPuebloActive { get; set; }
 
     /// <summary>
