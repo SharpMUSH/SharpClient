@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using MarkupString;
 using SharpClient.Core.Domain;
 using SharpClient.Core.Rendering;
 
@@ -15,12 +16,11 @@ public sealed class TriggerEngine : ITriggerEngine
     private static readonly ConcurrentDictionary<(string Pattern, RegexOptions Options), Regex>
         RegexCache = new();
 
-    public TriggerOutcome Apply(string rawLine, IReadOnlyList<TriggerRule> rules, MxpParserState? mxp = null)
+    public TriggerOutcome Apply(string rawLine, IReadOnlyList<MarkupText> lines, IReadOnlyList<TriggerRule> rules)
     {
-        IReadOnlyList<StyledSegment> segments = AnsiParser.Parse(rawLine, mxp);
         var sendCommands = new List<string>();
         var notifications = new List<string>();
-        AnsiColor? highlightForeground = null;
+        int? highlightForeground = null;
 
         foreach (var rule in rules)
         {
@@ -44,23 +44,23 @@ public sealed class TriggerEngine : ITriggerEngine
                     break;
                 case TriggerActionKind.Highlight:
                     // v1: whole-line highlight simplification — apply the highlight foreground to every
-                    // segment regardless of where the match occurred. Per-segment span highlighting is
+                    // run regardless of where the match occurred. Per-segment span highlighting is
                     // deferred to a future phase. Later Highlight rules override earlier ones.
                     if (int.TryParse(rule.ActionValue, out var index) && index is >= 0 and <= 255)
                     {
-                        highlightForeground = AnsiColor.Indexed(index);
+                        highlightForeground = index;
                     }
                     break;
             }
         }
 
-        if (highlightForeground.HasValue)
+        if (highlightForeground is { } fg)
         {
-            var fg = highlightForeground.Value;
-            segments = segments.Select(s => s with { Style = s.Style with { Foreground = fg } }).ToList();
+            var highlight = new TriggerHighlightMarkup(fg);
+            lines = lines.Select(line => MarkupText.Wrap(highlight, line)).ToList();
         }
 
-        return new TriggerOutcome(segments, sendCommands, notifications);
+        return new TriggerOutcome(lines, sendCommands, notifications);
     }
 
     private static bool Matches(string rawLine, TriggerRule rule)

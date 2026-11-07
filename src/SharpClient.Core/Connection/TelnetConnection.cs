@@ -41,7 +41,7 @@ public sealed class TelnetConnection : ITelnetConnection
     private static readonly TimeSpan TlsHandshakeTimeout = TimeSpan.FromSeconds(20);
 
     // TNC names nobody unless told to: without this, TTYPE answers UNKNOWN and NEW-ENVIRON sends no
-    // CLIENT_NAME. MTTS claims what AnsiParser renders: 16, 256 and 24-bit colour over UTF-8.
+    // CLIENT_NAME. MTTS claims what the output view draws: 16, 256 and 24-bit colour over UTF-8.
     private static ClientIdentity Identity { get; } = new("SharpClient")
     {
         TerminalType = "XTERM",

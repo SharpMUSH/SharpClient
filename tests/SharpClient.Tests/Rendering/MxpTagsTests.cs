@@ -8,7 +8,8 @@ public sealed class MxpTagsTests
     public async Task EmptyRequestListsEverySupportedTag()
     {
         var (supported, unsupported) = MxpTags.Answer([]);
-        await Assert.That(string.Join(",", supported)).IsEqualTo("send,image");
+        await Assert.That(supported).Contains("send").And.Contains("image").And.Contains("color").And.Contains("a");
+        await Assert.That(supported).DoesNotContain("frame").And.DoesNotContain("sound");
         await Assert.That(unsupported).IsEmpty();
     }
 
@@ -23,9 +24,9 @@ public sealed class MxpTagsTests
     [Test]
     public async Task AttributesAreAnsweredPerAttribute()
     {
-        var (supported, unsupported) = MxpTags.Answer(["send.href", "send.prompt", "image.url", "color.fore"]);
-        await Assert.That(string.Join(",", supported)).IsEqualTo("send.href,image.url");
-        await Assert.That(string.Join(",", unsupported)).IsEqualTo("send.prompt,color.fore");
+        var (supported, unsupported) = MxpTags.Answer(["send.href", "send.prompt", "image.url", "image.t", "color.fore", "font.face"]);
+        await Assert.That(string.Join(",", supported)).IsEqualTo("send.href,image.url,color.fore");
+        await Assert.That(string.Join(",", unsupported)).IsEqualTo("send.prompt,image.t,font.face");
     }
 
     [Test]

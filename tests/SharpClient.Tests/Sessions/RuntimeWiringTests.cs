@@ -289,7 +289,7 @@ public sealed class RuntimeWiringTests
     }
 
     [Test]
-    public async Task IncomingLineUsesAnsiParserWhenNoTriggerEngine()
+    public async Task IncomingLineIsDecodedWhenNoTriggerEngine()
     {
         var conn = new FakeTelnetConnection();
         await using var session = new Session(conn);
@@ -297,7 +297,7 @@ public sealed class RuntimeWiringTests
         conn.Emit("plain text");
 
         await Assert.That(session.Scrollback.Count).IsEqualTo(1);
-        await Assert.That(session.Scrollback[0].Segments[0].Text).IsEqualTo("plain text");
+        await Assert.That(session.Scrollback[0].Content.Text).IsEqualTo("plain text");
     }
 
     [Test]
