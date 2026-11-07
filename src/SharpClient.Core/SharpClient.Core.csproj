@@ -9,6 +9,10 @@
          did not, which crashed MSDP negotiation. No explicit FSharp.Core reference needed anymore. -->
     <PackageReference Include="TelnetNegotiationCore" Version="4.6.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
+    <!-- Decodes server output (ANSI/VT, MXP, Pueblo) into MarkupText and folds it into display spans. -->
+    <PackageReference Include="MarkupString.Ansi" Version="2.27.0" />
+    <PackageReference Include="MarkupString.Mxp" Version="2.27.0" />
+    <PackageReference Include="MarkupString.Pueblo" Version="2.27.0" />
   </ItemGroup>
 
 </Project>

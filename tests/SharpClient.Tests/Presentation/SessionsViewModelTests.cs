@@ -125,7 +125,7 @@ public sealed class SessionsViewModelTests
         vm.Changed += () => fired = true;
 
         // Simulate server line arriving on the active session.
-        session.Append(new ScrollbackLine([]));
+        session.Append(new ScrollbackLine(MarkupString.MarkupText.Empty));
 
         await Assert.That(fired).IsTrue();
     }

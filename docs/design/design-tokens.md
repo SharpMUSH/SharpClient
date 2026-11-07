@@ -65,20 +65,26 @@ Index → hex. This **is** `AnsiColor.Indexed(0..15)`:
 
 xterm-256: indices 16–231 are the 6×6×6 cube, 232–255 the grayscale ramp —
 computed by the standard xterm formula (the prototype shows representative
-samples). The renderer maps any `AnsiColor.Indexed(n)` for `n` in 0–255.
+samples). `OutputPalette` holds these sixteen; the cube and ramp are xterm's.
 
-## Styled-segment render contract
+## Output render contract
 
-Maps `StyledSegment` (`TextStyle` = fg/bg/bold/underline/inverse) to a rendered
-span. Equivalent to the prototype's `runStyle`:
+Server output is decoded by MarkupString (`OutputDecoder`) and folded into
+spans by its `SpanRenderer` (`OutputDisplay`), drawn by `OutputView`.
+Equivalent to the prototype's `runStyle`:
 
-- Default foreground (no fg set) → `--pho` (`#c4d1c8`); default background →
-  transparent (the `--outbg` shows through).
-- `Foreground = Indexed(n)` → palette/cube hex; `Background = Indexed(n)` →
-  hex + small horizontal padding (`0 2px`).
+- Default foreground (no fg set) → no inline colour, so `.sc-line`'s `--pho`
+  (`#c4d1c8`) shows; default background → transparent (the `--outbg` shows
+  through).
+- Palette colours → `OutputPalette` hex; truecolour as sent. A span with a
+  background also gets a small horizontal padding (`0 2px`).
 - **Inverse**: swap — foreground becomes `--outbg`, background becomes the
-  segment's foreground colour (or `--pho` if none).
-- **Bold** → font-weight 700. **Underline** → `text-decoration: underline`.
+  span's foreground colour (or `--pho` if none).
+- **Bold** → `font-weight:bold`, **faint** → `opacity:0.6`, **italic**,
+  **underline**, **overline**, **strikethrough** → `text-decoration`;
+  **blink** → class `ms-blink`; **conceal** → transparent text.
+- Command links are `button.sc-link`; web links `a.sc-link`; an MXP menu adds
+  a `▾` toggle listing its choices.
 - Glow (when enabled): `text-shadow: 0 0 6px rgba(150,210,170,.28)` on the feed.
 
 ## Connection-state palette (drives tabs, pills, dots)

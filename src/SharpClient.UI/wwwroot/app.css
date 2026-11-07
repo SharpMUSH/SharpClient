@@ -660,6 +660,61 @@ body {
     background: var(--acc-soft);
 }
 
+/* An OSC 8 / MXP <A> / Pueblo <a href> web link. */
+a.sc-link {
+    display: inline;
+}
+
+/* MXP <SEND href="a|b|c">: the text sends the first command, the toggle beside it lists them all. */
+.sc-menu {
+    position: relative;
+    display: inline-block;
+}
+.sc-menu-toggle {
+    background: none;
+    border: none;
+    padding: 0 2px;
+    margin: 0;
+    font: inherit;
+    line-height: inherit;
+    cursor: pointer;
+    color: var(--acc2);
+}
+.sc-menu-toggle:hover {
+    color: var(--acc);
+    background: var(--acc-soft);
+}
+.sc-menu-list {
+    position: absolute;
+    left: 0;
+    top: 100%;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    min-width: 8em;
+    padding: 4px 0;
+    background: var(--panel);
+    border: 1px solid var(--bd);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .4);
+}
+.sc-menu-choice {
+    padding: 4px 10px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+/* SGR 5 / 6. Players who find it distracting have reduced motion set. */
+.ms-blink {
+    animation: ms-blink 1s steps(1, end) infinite;
+}
+@keyframes ms-blink {
+    50% { visibility: hidden; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .ms-blink { animation: none; }
+}
+
 /* ── Bottom nav ────────────────────────────────────────────────────────── */
 .sc-nav {
     flex: none;

@@ -10,47 +10,13 @@ public static class ImageSource
     private const int MaxNameLength = 48;
 
     /// <summary>
-    /// MXP <c>&lt;IMAGE&gt;</c>: "The classname is appended to the URL, along with the name of the
-    /// graphics file itself", so <c>URL=http://h/img/ T=maps map.png</c> is <c>http://h/img/maps/map.png</c>.
-    /// Without <c>URL=</c> the name must itself be absolute; a bare file name refers to a local media
-    /// directory this client does not have.
+    /// The address an image the decoder read (MXP <c>&lt;IMAGE&gt;</c>, Pueblo <c>&lt;img&gt;</c>) may be loaded
+    /// from: an absolute http(s) URL, normalised, or a data:image URI. Null for anything else, including a
+    /// bare file name, which refers to a local media directory this client does not have.
     /// </summary>
-    public static string? ResolveMxp(string fileName, string? url, string? type)
+    public static string? Resolve(string source)
     {
-        var name = fileName.Trim();
-        if (name.Length == 0)
-        {
-            return null;
-        }
-
-        if (IsDataImage(name))
-        {
-            return string.IsNullOrWhiteSpace(url) ? name : null;
-        }
-
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return Absolute(name);
-        }
-
-        var basePath = EnsureSlash(url.Trim());
-        if (!string.IsNullOrWhiteSpace(type))
-        {
-            basePath = EnsureSlash(basePath + type.Trim().Trim('/'));
-        }
-
-        if (!Uri.TryCreate(basePath, UriKind.Absolute, out var baseUri) || !IsWeb(baseUri))
-        {
-            return null;
-        }
-
-        return Uri.TryCreate(baseUri, name, out var full) && IsWeb(full) ? full.AbsoluteUri : null;
-    }
-
-    /// <summary>Pueblo <c>&lt;img src&gt;</c>, which is plain HTML: an absolute URL or a data:image URI.</summary>
-    public static string? ResolvePueblo(string src)
-    {
-        var value = src.Trim();
+        var value = source.Trim();
         return IsDataImage(value) ? value : Absolute(value);
     }
 
@@ -88,8 +54,6 @@ public static class ImageSource
 
     private static string? Absolute(string value) =>
         Uri.TryCreate(value, UriKind.Absolute, out var uri) && IsWeb(uri) ? uri.AbsoluteUri : null;
-
-    private static string EnsureSlash(string value) => value.EndsWith('/') ? value : value + "/";
 
     private static bool IsWeb(Uri uri) => uri.Scheme is "http" or "https";
 }

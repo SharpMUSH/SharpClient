@@ -43,7 +43,7 @@ public sealed class ScrollbackConcurrencyTests
                     var seen = 0;
                     foreach (var line in session.Scrollback)
                     {
-                        seen += line.Segments.Count;
+                        seen += line.Content.Runs.Length;
                     }
                 }
             }

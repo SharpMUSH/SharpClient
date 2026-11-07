@@ -1,35 +1,102 @@
+@using System.Runtime.CompilerServices
+@using MarkupString.Display
 @using SharpClient.Core.Rendering
 @using SharpClient.Core.Sessions
 
 <div class="sc-output">
-    @foreach (var line in Lines)
+    @for (var lineIndex = 0; lineIndex < Lines.Count; lineIndex++)
     {
+        var spans = SpansOf(Lines[lineIndex]);
         <div class="sc-line">
-            @foreach (var segment in line.Segments)
+            @for (var spanIndex = 0; spanIndex < spans.Count; spanIndex++)
             {
-                @if (segment.ImageUrl is not null && ShowImages)
+                var span = spans[spanIndex];
+                if (span.Point is not null)
                 {
-                    @* no-referrer: the image host learns nothing about where it was shown. *@
-                    @if (segment.Command is not null && OnSendCommand is not null)
+                    // Bells, clears and the like: nothing to draw.
+                    continue;
+                }
+
+                var style = span.Style;
+                var interaction = style.Interaction;
+                var command = interaction is { Kind: InteractionKind.Command } && OnSendCommand is not null ? interaction : null;
+                var url = interaction is { Kind: InteractionKind.Url } ? interaction : null;
+                var text = span.Text;
+
+                if (style.Picture is { } picture)
+                {
+                    var src = ImageSource.Resolve(picture.Source);
+                    if (src is null || picture.Row is { Row: > 0 })
                     {
-                        <button type="button" class="sc-link sc-image-link"
-                                title="@(segment.Hint ?? segment.Command)"
-                                @onclick="() => OnSendCommand(segment.Command!)"><img class="sc-image" src="@segment.ImageUrl" alt="@segment.Text" loading="lazy" referrerpolicy="no-referrer" /></button>
+                        // A source the client may not load shows nothing; a picture sized in cells is drawn
+                        // once, on its first row.
+                        continue;
                     }
-                    else
+
+                    text = picture.Description ?? ImageSource.DisplayName(picture.Source);
+                    if (ShowImages)
                     {
-                        <img class="sc-image" src="@segment.ImageUrl" alt="@segment.Text" title="@segment.Text" loading="lazy" referrerpolicy="no-referrer" />
+                        @* no-referrer: the image host learns nothing about where it was shown. *@
+                        if (command is not null)
+                        {
+                            <button type="button" class="sc-link sc-image-link"
+                                    title="@(command.Hint ?? command.Target)"
+                                    @onclick="() => OnSendCommand!(command.Target)"><img class="sc-image" src="@src" alt="@text" width="@picture.Width" height="@picture.Height" loading="lazy" referrerpolicy="no-referrer" /></button>
+                        }
+                        else if (url is not null)
+                        {
+                            <a class="sc-link sc-image-link" href="@url.Target" target="_blank" rel="noopener noreferrer"
+                               title="@(url.Hint ?? url.Target)"><img class="sc-image" src="@src" alt="@text" width="@picture.Width" height="@picture.Height" loading="lazy" referrerpolicy="no-referrer" /></a>
+                        }
+                        else
+                        {
+                            <img class="sc-image" src="@src" alt="@text" title="@text" width="@picture.Width" height="@picture.Height" loading="lazy" referrerpolicy="no-referrer" />
+                        }
+
+                        continue;
                     }
                 }
-                else if (segment.Command is not null && OnSendCommand is not null)
+
+                var css = CssOf(style);
+                var classes = SpanRenderer.CssClasses(style);
+                if (command is not null)
                 {
-                    <button type="button" class="sc-link" style="@SegmentStyle.ToCss(segment)"
-                            title="@(segment.Hint ?? segment.Command)"
-                            @onclick="() => OnSendCommand(segment.Command!)">@(segment.Text.Length == 0 ? " " : segment.Text)</button>
+                    var key = (lineIndex, spanIndex);
+                    <button type="button" class="@Join("sc-link", classes)" style="@NullIfEmpty(css)"
+                            title="@(command.Hint ?? command.Target)"
+                            @onclick="() => OnSendCommand!(command.Target)">@text</button>
+                    if (command.Choices is { Count: > 1 } choices)
+                    {
+                        <span class="sc-menu">
+                            <button type="button" class="sc-menu-toggle" title="More choices"
+                                    aria-haspopup="menu" aria-expanded="@(_openMenu == key ? "true" : "false")"
+                                    @onclick="() => ToggleMenu(key)">▾</button>
+                            @if (_openMenu == key)
+                            {
+                                <span class="sc-menu-list" role="menu">
+                                    @foreach (var choice in choices)
+                                    {
+                                        <button type="button" class="sc-link sc-menu-choice" role="menuitem"
+                                                title="@choice.Command"
+                                                @onclick="() => ChooseAsync(choice.Command)">@choice.Label</button>
+                                    }
+                                </span>
+                            }
+                        </span>
+                    }
+                }
+                else if (url is not null)
+                {
+                    <a class="@Join("sc-link", classes)" style="@NullIfEmpty(css)" href="@url.Target" target="_blank" rel="noopener noreferrer"
+                       title="@(url.Hint ?? url.Target)">@text</a>
+                }
+                else if (css.Length == 0 && classes.Length == 0)
+                {
+                    <span>@text</span>
                 }
                 else
                 {
-                    <span style="@SegmentStyle.ToCss(segment)">@(segment.Text.Length == 0 ? " " : segment.Text)</span>
+                    <span class="@NullIfEmpty(classes)" style="@NullIfEmpty(css)">@text</span>
                 }
             }
         </div>
@@ -37,14 +104,45 @@
 </div>
 
 @code {
+    // A line's spans depend only on the line (the display options are fixed), so each line is folded once
+    // rather than on every render of the scrollback.
+    private static readonly ConditionalWeakTable<ScrollbackLine, IReadOnlyList<DisplaySpan>> s_spans = new();
+
+    private (int Line, int Span)? _openMenu;
+
     [Parameter]
     public IReadOnlyList<ScrollbackLine> Lines { get; set; } = [];
 
-    /// <summary>Invoked when a clickable MXP/Pueblo command-link is clicked.</summary>
+    /// <summary>Invoked when a clickable MXP/Pueblo command-link, or one of its menu choices, is clicked.</summary>
     [Parameter]
     public Func<string, Task>? OnSendCommand { get; set; }
 
-    /// <summary>When false, an image segment renders as its text (its name or alt text) instead.</summary>
+    /// <summary>When false, an image renders as its text (its name or alt text) instead.</summary>
     [Parameter]
     public bool ShowImages { get; set; } = true;
+
+    private static IReadOnlyList<DisplaySpan> SpansOf(ScrollbackLine line) =>
+        s_spans.GetValue(line, static l => OutputDisplay.Render(l.Content));
+
+    private static string CssOf(DisplayStyle style)
+    {
+        var css = SpanRenderer.Css(style);
+        // A little room either side, so a coloured background does not crowd the glyphs.
+        return style.Background is null ? css : css + ";padding:0 2px";
+    }
+
+    private static string? NullIfEmpty(string value) => value.Length == 0 ? null : value;
+
+    private static string Join(string first, string more) => more.Length == 0 ? first : first + " " + more;
+
+    private void ToggleMenu((int Line, int Span) key) => _openMenu = _openMenu == key ? null : key;
+
+    private async Task ChooseAsync(string choice)
+    {
+        _openMenu = null;
+        if (OnSendCommand is not null)
+        {
+            await OnSendCommand(choice);
+        }
+    }
 }
