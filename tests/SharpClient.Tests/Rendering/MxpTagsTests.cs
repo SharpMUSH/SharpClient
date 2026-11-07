@@ -25,8 +25,8 @@ public sealed class MxpTagsTests
     public async Task AttributesAreAnsweredPerAttribute()
     {
         var (supported, unsupported) = MxpTags.Answer(["send.href", "send.prompt", "image.url", "image.t", "color.fore", "font.face"]);
-        await Assert.That(string.Join(",", supported)).IsEqualTo("send.href,image.url,color.fore");
-        await Assert.That(string.Join(",", unsupported)).IsEqualTo("send.prompt,image.t,font.face");
+        await Assert.That(string.Join(",", supported)).IsEqualTo("send.href,image.url,image.t,color.fore");
+        await Assert.That(string.Join(",", unsupported)).IsEqualTo("send.prompt,font.face");
     }
 
     [Test]

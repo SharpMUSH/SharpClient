@@ -25,7 +25,7 @@ public static class MxpTags
         ("br", []), ("sbr", []), ("p", []), ("nobr", []),
         ("a", ["href", "hint"]),
         ("send", ["href", "hint"]),
-        ("image", ["fname", "url", "w", "h"]),
+        ("image", ["fname", "url", "t", "w", "h"]),
         ("element", []), ("entity", []), ("attlist", []), ("tag", []),
     ];
 
