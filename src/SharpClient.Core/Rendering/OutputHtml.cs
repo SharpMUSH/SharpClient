@@ -7,7 +7,7 @@ namespace SharpClient.Core.Rendering;
 /// <summary>
 /// How SharpClient's output view writes a decoded line: MarkupString's HTML, which the page shows with
 /// <c>MarkupString.Web</c>'s stylesheet and script. Pictures go through <see cref="OutputImageEmitter"/>, and a
-/// Highlight trigger through <see cref="TriggerHighlightEmitter"/>.
+/// Highlight trigger through <see cref="TriggerHighlightEmitter"/>. Web links pass <see cref="OutputLinks"/>.
 /// </summary>
 public static class OutputHtml
 {
@@ -29,5 +29,6 @@ public static class OutputHtml
             .WithAnsi()
             .WithHtml()
             .With(new OutputImageEmitter(showImages))
-            .With(TriggerHighlightEmitter.Instance);
+            .With(TriggerHighlightEmitter.Instance)
+            .WithLinks(OutputLinks.Instance);
 }

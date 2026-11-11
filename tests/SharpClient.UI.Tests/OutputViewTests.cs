@@ -42,6 +42,20 @@ public sealed class OutputViewTests
     }
 
     [Test]
+    public async Task RepeatedLinesAreEachShown()
+    {
+        using var ctx = NewContext();
+        var first = Lines("You say, \"hi\"");
+        var cut = ctx.Render<OutputView>(p => p.Add(c => c.Lines, first));
+
+        // Blazor matches lines by key when it re-renders, so two equal keys fail there.
+        ScrollbackLine[] both = [.. first, .. Lines("You say, \"hi\"")];
+        cut.Render(p => p.Add(c => c.Lines, both));
+
+        await Assert.That(cut.FindAll("div.sc-line").Count).IsEqualTo(2);
+    }
+
+    [Test]
     public async Task EmptyLineRendersAnEmptyLine()
     {
         using var ctx = NewContext();
@@ -68,6 +82,20 @@ public sealed class OutputViewTests
         // The lines are Blazor's: the script must not clear them or move their text to a pane.
         await Assert.That(forward).Contains("clear");
         await Assert.That(forward).Contains("pane");
+    }
+
+    [Test]
+    public async Task DisposingDetachesTheScript()
+    {
+        using var ctx = new BunitContext();
+        var module = ctx.JSInterop.SetupModule(OutputView.ScriptPath);
+        var runtime = module.SetupModule("attachDotNet", _ => true);
+        runtime.SetupVoid("detach").SetVoidResult();
+        var cut = ctx.Render<OutputView>(p => p.Add(c => c.Lines, Lines("x")));
+
+        await cut.Instance.DisposeAsync();
+
+        runtime.VerifyInvoke("detach");
     }
 
     [Test]

@@ -207,6 +207,41 @@ public sealed class OutputRenderingTests
         await Assert.That(line.InnerHtml).IsEqualTo("x");
     }
 
+    // A browser drops tabs and newlines from a URL, and spaces and controls around it, so these are all
+    // javascript: links once clicked.
+    [Test]
+    [Arguments("java&#9;script:alert(1)")]
+    [Arguments("java&#10;script:alert(1)")]
+    [Arguments("&#13;javascript:alert(1)")]
+    [Arguments("&#1;javascript:alert(1)")]
+    [Arguments(" javascript:alert(1)")]
+    public async Task ScriptLinkHiddenByControlCharactersIsText(string href)
+    {
+        var mxp = Mxp($"\e[1z<A href=\"{href}\">x</A>");
+        var pueblo = Pueblo($"<a href=\"{href}\">x</a>");
+
+        await Assert.That(mxp.QuerySelector("a")).IsNull();
+        await Assert.That(mxp.TextContent).IsEqualTo("x");
+        await Assert.That(pueblo.QuerySelector("a")).IsNull();
+        await Assert.That(pueblo.TextContent).IsEqualTo("x");
+    }
+
+    [Test]
+    public async Task LinkWithASpaceInsideIsKept()
+    {
+        var link = Mxp("\e[1z<A href=\"https://example.com/a b\">x</A>").QuerySelector("a")!;
+
+        await Assert.That(link.GetAttribute("href")).IsEqualTo("https://example.com/a b");
+    }
+
+    [Test]
+    public async Task OscHyperlinkToAScriptBehindATabIsText()
+    {
+        var line = Plain("\e]8;;java\tscript:alert(1)\e\\x\e]8;;\e\\");
+
+        await Assert.That(line.QuerySelector("a")).IsNull();
+    }
+
     [Test]
     public async Task MarkupIsLiteralWithoutMxpOrPueblo()
     {

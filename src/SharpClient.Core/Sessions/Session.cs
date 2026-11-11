@@ -9,8 +9,16 @@ using SharpClient.Core.Triggers;
 
 namespace SharpClient.Core.Sessions;
 
-/// <summary>One line of output, decoded. <see cref="Rendering.OutputHtml"/> writes it for the output view.</summary>
-public sealed record ScrollbackLine(MarkupText Content);
+/// <summary>
+/// One line of output, decoded. <see cref="Rendering.OutputHtml"/> writes it for the output view. Each line is
+/// equal only to itself: the view keys lines by them, and a server can send the same text twice.
+/// </summary>
+public sealed record ScrollbackLine(MarkupText Content)
+{
+    public bool Equals(ScrollbackLine? other) => ReferenceEquals(this, other);
+
+    public override int GetHashCode() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
+}
 
 public sealed class Session : ISession
 {
