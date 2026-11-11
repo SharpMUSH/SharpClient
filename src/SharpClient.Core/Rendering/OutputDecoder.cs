@@ -15,7 +15,7 @@ namespace SharpClient.Core.Rendering;
 public sealed class OutputDecoder
 {
     /// <summary>ANSI/VT, MXP and Pueblo. MXP and Pueblo stay off until telnet negotiates them.</summary>
-    public static DecoderRegistry Registry { get; } = DecoderRegistry.Empty.WithVt().WithMxp().WithPueblo();
+    public static DecoderRegistry Registry { get; } = DecoderRegistry.Empty.WithVt().WithMxp(MxpTags.Options).WithPueblo();
 
     private readonly Lock _lock = new();
     private readonly Decoder _decoder = Registry.CreateDecoder(new DecoderOptions

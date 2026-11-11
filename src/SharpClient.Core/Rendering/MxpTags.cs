@@ -1,3 +1,5 @@
+using MarkupString.Mxp.Decoding;
+
 namespace SharpClient.Core.Rendering;
 
 /// <summary>
@@ -29,64 +31,21 @@ public static class MxpTags
         ("element", []), ("entity", []), ("attlist", []), ("tag", []),
     ];
 
+    /// <summary>
+    /// The MXP options SharpClient decodes with. <see cref="MxpOptions.Supports"/> holds the tags above, so
+    /// the decoder and the <c>&lt;SUPPORT&gt;</c> answer agree.
+    /// </summary>
+    public static MxpOptions Options { get; } = new()
+    {
+        Supports = s_rendered.ToDictionary(r => r.Tag, r => (IReadOnlyList<string>)r.Attributes, StringComparer.OrdinalIgnoreCase),
+    };
+
     public static IReadOnlyList<string> Supported { get; } = [.. s_rendered.Select(r => r.Tag)];
 
-    private static readonly Dictionary<string, string[]> s_attributes =
-        s_rendered.ToDictionary(r => r.Tag, r => r.Attributes, StringComparer.OrdinalIgnoreCase);
-
     /// <summary>
-    /// The answer to a <c>&lt;SUPPORT&gt;</c> naming <paramref name="asked"/>: every supported tag when
-    /// it named nothing, otherwise each entry as supported or not. <c>tag.attr</c> is supported when the
-    /// parser reads that attribute; <c>tag.*</c> expands to each attribute of a supported tag, as the
-    /// specification asks, and is <c>-tag.*</c> for a tag this client does not render.
+    /// The answer to a <c>&lt;SUPPORT&gt;</c> naming <paramref name="asked"/>: every supported tag when it
+    /// named nothing, otherwise each entry as supported or not (<see cref="MxpOptions.Answer"/>).
     /// </summary>
-    public static (IReadOnlyList<string> Supported, IReadOnlyList<string> Unsupported) Answer(IReadOnlyList<string> asked)
-    {
-        if (asked.Count == 0)
-        {
-            return (Supported, []);
-        }
-
-        var supported = new List<string>();
-        var unsupported = new List<string>();
-        foreach (var entry in asked)
-        {
-            var name = entry.Trim('"', '\'');
-            if (name.Length == 0)
-            {
-                continue;
-            }
-
-            var dot = name.IndexOf('.', StringComparison.Ordinal);
-            if (dot < 0)
-            {
-                (IsSupported(name) ? supported : unsupported).Add(name);
-                continue;
-            }
-
-            var tag = name[..dot];
-            var attribute = name[(dot + 1)..];
-            var tagSupported = s_attributes.TryGetValue(tag, out var known);
-            var attributes = known ?? Array.Empty<string>();
-            if (attribute == "*")
-            {
-                if (tagSupported)
-                {
-                    supported.AddRange(attributes.Select(a => $"{tag}.{a}"));
-                }
-                else
-                {
-                    unsupported.Add(name);
-                }
-            }
-            else
-            {
-                (attributes.Contains(attribute, StringComparer.OrdinalIgnoreCase) ? supported : unsupported).Add(name);
-            }
-        }
-
-        return (supported, unsupported);
-    }
-
-    private static bool IsSupported(string tag) => s_attributes.ContainsKey(tag);
+    public static (IReadOnlyList<string> Supported, IReadOnlyList<string> Unsupported) Answer(IReadOnlyList<string> asked) =>
+        Options.Answer(asked);
 }
