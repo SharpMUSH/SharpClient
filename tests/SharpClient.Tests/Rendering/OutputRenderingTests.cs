@@ -267,6 +267,16 @@ public sealed class OutputRenderingTests
     }
 
     [Test]
+    public async Task SecureLineEndingInBreakEndsWithTheTelnetLine()
+    {
+        var decoder = new OutputDecoder();
+        decoder.EnableMxp();
+        decoder.Decode("\e[1zserver<BR>");
+
+        await Assert.That(Render(decoder, "<SEND href=\"quit\">Quit</SEND>").Commands()).IsEmpty();
+    }
+
+    [Test]
     public async Task LockedLineShowsMarkupAsText()
     {
         await Assert.That(Mxp("\e[2za <b> c").TextContent).IsEqualTo("a <b> c");

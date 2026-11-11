@@ -84,9 +84,13 @@ public sealed class OutputDecoder
             lines.Add(line.Content);
         }
 
-        if (_decoder.HasPendingLine || lines.Count == 0)
+        // The telnet line always ends here, so a line mode such as MXP secure (ESC[1z) ends with it even
+        // when a <BR> already closed the last display line. Only the empty line that leaves is dropped.
+        var pending = _decoder.HasPendingLine;
+        var ended = _decoder.EndLine();
+        if (pending || lines.Count == 0)
         {
-            lines.Add(_decoder.EndLine().Content);
+            lines.Add(ended.Content);
         }
 
         return lines;
