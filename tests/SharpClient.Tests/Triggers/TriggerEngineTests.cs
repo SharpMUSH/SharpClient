@@ -177,7 +177,7 @@ public sealed class TriggerEngineTests
 
         var outcome = Apply(_engine, "the red dragon", [rule]);
 
-        await Assert.That(Highlights(outcome)).IsEquivalentTo([Hex(196)]);
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([(string?)Hex(196)]);
     }
 
     [Test]
@@ -194,7 +194,7 @@ public sealed class TriggerEngineTests
         // "danger" is red and " ahead" default; the highlight covers both, the server's red included.
         var outcome = Apply(_engine, "\e[31mdanger\e[0m ahead", [rule]);
 
-        await Assert.That(Highlights(outcome)).IsEquivalentTo([Hex(9)]);
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([(string?)Hex(9)]);
         await Assert.That(outcome.Lines.Single().Dom().TextContent).IsEqualTo("danger ahead");
     }
 
@@ -258,7 +258,7 @@ public sealed class TriggerEngineTests
 
         var outcome = Apply(_engine, "The dragon roars.", [first, second]);
 
-        await Assert.That(Highlights(outcome)).IsEquivalentTo([Hex(9)]);
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([(string?)Hex(9)]);
     }
 
     [Test]
@@ -308,7 +308,7 @@ public sealed class TriggerEngineTests
 
         var outcome = Apply(_engine, "brave hero stands", [first, second]);
 
-        await Assert.That(Highlights(outcome)).IsEquivalentTo([Hex(3)]);
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([(string?)Hex(3)]);
     }
 
     [Test]

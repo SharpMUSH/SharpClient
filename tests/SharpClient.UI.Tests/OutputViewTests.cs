@@ -64,7 +64,7 @@ public sealed class OutputViewTests
         var call = module.VerifyInvoke("attachDotNet");
         var options = call.Arguments[2]!;
         var forward = (string[])options.GetType().GetProperty("forward")!.GetValue(options)!;
-        await Assert.That(options.GetType().GetProperty("sounds")!.GetValue(options)).IsEqualTo(false);
+        await Assert.That(options.GetType().GetProperty("sounds")!.GetValue(options) as bool?).IsFalse();
         // The lines are Blazor's: the script must not clear them or move their text to a pane.
         await Assert.That(forward).Contains("clear");
         await Assert.That(forward).Contains("pane");
