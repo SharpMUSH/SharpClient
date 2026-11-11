@@ -226,6 +226,26 @@ public sealed class OutputRenderingTests
         await Assert.That(pueblo.TextContent).IsEqualTo("x");
     }
 
+    // Two equal elements side by side are two: a client that joined them would send one command for both.
+    [Test]
+    [Arguments("\e[1z<SEND href=\"go\">north</SEND><SEND href=\"go\">south</SEND>", "a[xch_cmd]")]
+    [Arguments("\e[1z<SEND href=\"n|s\">north</SEND><SEND href=\"n|s\">south</SEND>", ".ms-menu")]
+    [Arguments("\e[1z<A href=\"https://x.org\">north</A><A href=\"https://x.org\">south</A>", "a[href]")]
+    public async Task EqualLinksSideBySideStayTwo(string raw, string selector)
+    {
+        var links = Mxp(raw).QuerySelectorAll(selector);
+
+        await Assert.That(links.Select(link => link.TextContent)).IsEquivalentTo(["north", "south"]);
+    }
+
+    [Test]
+    public async Task TwoPicturesOfOneFileSideBySideAreTwo()
+    {
+        var line = Mxp("\e[1z<IMAGE m.png URL=\"https://x.org/\"><IMAGE m.png URL=\"https://x.org/\">");
+
+        await Assert.That(line.QuerySelectorAll("img").Length).IsEqualTo(2);
+    }
+
     [Test]
     public async Task LinkWithASpaceInsideIsKept()
     {

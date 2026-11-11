@@ -10,10 +10,10 @@
     <PackageReference Include="TelnetNegotiationCore" Version="4.11.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
     <!-- Decodes server output (ANSI/VT, MXP, Pueblo) into MarkupText and folds it into display spans. -->
-    <PackageReference Include="MarkupString.Ansi" Version="2.28.1" />
-    <PackageReference Include="MarkupString.Html" Version="2.28.1" />
-    <PackageReference Include="MarkupString.Mxp" Version="2.28.1" />
-    <PackageReference Include="MarkupString.Pueblo" Version="2.28.1" />
+    <PackageReference Include="MarkupString.Ansi" Version="2.29.1" />
+    <PackageReference Include="MarkupString.Html" Version="2.29.1" />
+    <PackageReference Include="MarkupString.Mxp" Version="2.29.1" />
+    <PackageReference Include="MarkupString.Pueblo" Version="2.29.1" />
   </ItemGroup>
 
 </Project>
