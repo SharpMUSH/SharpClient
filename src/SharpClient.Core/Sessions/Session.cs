@@ -9,7 +9,7 @@ using SharpClient.Core.Triggers;
 
 namespace SharpClient.Core.Sessions;
 
-/// <summary>One line of output, decoded. <see cref="Rendering.OutputDisplay"/> draws it.</summary>
+/// <summary>One line of output, decoded. <see cref="Rendering.OutputHtml"/> writes it for the output view.</summary>
 public sealed record ScrollbackLine(MarkupText Content);
 
 public sealed class Session : ISession

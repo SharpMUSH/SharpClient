@@ -1,56 +1,61 @@
-using MarkupString.Display;
+using AngleSharp.Dom;
 using SharpClient.Core.Rendering;
+using static SharpClient.Tests.Rendering.LineHtml;
 
 namespace SharpClient.Tests.Rendering;
 
 /// <summary>
-/// What a line from the server looks like once decoded and folded into spans: every capability the
-/// old AnsiParser had, and the SGR it used to drop.
+/// What a line from the server looks like once decoded and written as the output view's HTML: every
+/// capability the old AnsiParser had, and the SGR it used to drop.
 /// </summary>
 public sealed class OutputRenderingTests
 {
     private const string PuebloHtml = "</xch_mudtext><img xch_mode=html>";
 
-    private static IReadOnlyList<DisplaySpan> Plain(string raw) => Render(new OutputDecoder(), raw);
+    private static IElement Plain(string raw) => Render(new OutputDecoder(), raw);
 
-    private static IReadOnlyList<DisplaySpan> Mxp(string raw)
+    private static IElement Mxp(string raw)
     {
         var decoder = new OutputDecoder();
         decoder.EnableMxp();
         return Render(decoder, raw);
     }
 
-    private static IReadOnlyList<DisplaySpan> Pueblo(string raw)
+    private static IElement Pueblo(string raw, bool showImages = true)
     {
         var decoder = new OutputDecoder();
         decoder.EnablePueblo();
         decoder.Decode(PuebloHtml);
-        return Render(decoder, raw);
+        return Render(decoder, raw, showImages);
     }
 
-    private static IReadOnlyList<DisplaySpan> Render(OutputDecoder decoder, string raw) =>
-        [.. decoder.Decode(raw).SelectMany(line => line.Spans())];
+    private static IElement Render(OutputDecoder decoder, string raw, bool showImages = true) =>
+        decoder.Decode(raw).Single().Dom(showImages);
 
-    private static string Text(IReadOnlyList<DisplaySpan> spans) => string.Concat(spans.Select(s => s.Text));
-
-    private static string Hex(int index) => SpanRenderer.Hex(OutputPalette.Instance.Entry(index));
+    /// <summary>The innermost element around <paramref name="text"/>.</summary>
+    private static IElement At(IElement root, string text) =>
+        root.Descendants<IElement>().Last(e => e.TextContent == text);
 
     // ── ANSI ──────────────────────────────────────────────────────────────
 
     [Test]
-    public async Task PlainTextIsOneUnstyledSpan()
+    public async Task PlainTextIsJustText()
     {
-        var spans = Plain("hello world");
+        var line = Plain("hello world");
 
-        await Assert.That(spans.Count).IsEqualTo(1);
-        await Assert.That(spans[0].Text).IsEqualTo("hello world");
-        await Assert.That(spans[0].Style).IsEqualTo(DisplayStyle.Plain);
+        await Assert.That(line.InnerHtml).IsEqualTo("hello world");
     }
 
     [Test]
-    public async Task EmptyLineHasNoSpans()
+    public async Task TextIsEscaped()
     {
-        await Assert.That(Plain(string.Empty)).IsEmpty();
+        await Assert.That(Plain("<b>x</b> & y").InnerHtml).IsEqualTo("&lt;b&gt;x&lt;/b&gt; &amp; y");
+    }
+
+    [Test]
+    public async Task EmptyLineIsEmpty()
+    {
+        await Assert.That(Plain(string.Empty).InnerHtml).IsEmpty();
     }
 
     [Test]
@@ -61,31 +66,29 @@ public sealed class OutputRenderingTests
     [Arguments("\e[38:5:208m", 208)]
     public async Task PaletteColoursUseTheClientPalette(string sgr, int index)
     {
-        var spans = Plain(sgr + "x");
-
-        await Assert.That(spans[0].Color()).IsEqualTo(Hex(index));
+        await Assert.That(At(Plain(sgr + "x"), "x").Color()).IsEqualTo(Hex(index));
     }
 
     [Test]
     public async Task StandardColoursAreTheClientsOwn()
     {
-        await Assert.That(Plain("\e[31mx")[0].Color()).IsEqualTo("#e06c75");
-        await Assert.That(Plain("\e[97mx")[0].Color()).IsEqualTo("#e8edf2");
-        await Assert.That(Plain("\e[44mx")[0].BackgroundColor()).IsEqualTo("#61afef");
-        await Assert.That(Plain("\e[38;5;16mx")[0].Color()).IsEqualTo("#000000");
-        await Assert.That(Plain("\e[38;5;232mx")[0].Color()).IsEqualTo("#080808");
+        await Assert.That(OutputPalette.CustomProperties).Contains("--ms-ansi-1:#e06c75");
+        await Assert.That(OutputPalette.CustomProperties).Contains("--ms-ansi-15:#e8edf2");
+        await Assert.That(At(Plain("\e[31mx"), "x").Color()).IsEqualTo("#e06c75");
+        await Assert.That(At(Plain("\e[97mx"), "x").Color()).IsEqualTo("#e8edf2");
+        await Assert.That(At(Plain("\e[44mx"), "x").BackgroundColor()).IsEqualTo("#61afef");
+        await Assert.That(At(Plain("\e[38;5;16mx"), "x").Color()).IsEqualTo("#000000");
+        await Assert.That(At(Plain("\e[38;5;232mx"), "x").Color()).IsEqualTo("#080808");
     }
 
     [Test]
     public async Task ResetEndsTheColour()
     {
-        var spans = Plain("\e[31mred\e[0m normal");
+        var line = Plain("\e[31mred\e[0m normal");
 
-        await Assert.That(spans.Count).IsEqualTo(2);
-        await Assert.That(spans[0].Text).IsEqualTo("red");
-        await Assert.That(spans[0].Color()).IsEqualTo(Hex(1));
-        await Assert.That(spans[1].Text).IsEqualTo(" normal");
-        await Assert.That(spans[1].Color()).IsNull();
+        await Assert.That(At(line, "red").Color()).IsEqualTo(Hex(1));
+        await Assert.That(line.LastChild!.TextContent).IsEqualTo(" normal");
+        await Assert.That(line.LastChild).IsTypeOf<AngleSharp.Dom.IText>();
     }
 
     [Test]
@@ -94,14 +97,14 @@ public sealed class OutputRenderingTests
         var decoder = new OutputDecoder();
         decoder.Decode("\e[32mgreen");
 
-        await Assert.That(decoder.Decode("still green")[0].Spans()[0].Color()).IsEqualTo(Hex(2));
+        await Assert.That(At(Render(decoder, "still green"), "still green").Color()).IsEqualTo(Hex(2));
     }
 
     [Test]
     public async Task TruecolorForegroundAndBackground()
     {
-        var fg = Plain("\e[38;2;40;50;60mX")[0];
-        var bg = Plain("\e[48;2;10;20;30mX")[0];
+        var fg = At(Plain("\e[38;2;40;50;60mX"), "X");
+        var bg = At(Plain("\e[48;2;10;20;30mX"), "X");
 
         await Assert.That(fg.Color()).IsEqualTo("#28323c");
         await Assert.That(fg.BackgroundColor()).IsNull();
@@ -112,38 +115,33 @@ public sealed class OutputRenderingTests
     [Test]
     public async Task TruecolorAmongOtherCodesAppliesAll()
     {
-        var span = Plain("\e[1;38;2;255;128;0;4mX")[0];
+        var span = At(Plain("\e[1;38;2;255;128;0;4mX"), "X");
 
         await Assert.That(span.Color()).IsEqualTo("#ff8000");
-        await Assert.That(span.Style.Has(TextAttributes.Bold)).IsTrue();
-        await Assert.That(span.Style.Has(TextAttributes.Underline)).IsTrue();
+        await Assert.That(span.ClassList).Contains("ms-bold");
+        await Assert.That(span.ClassList).Contains("ms-underline");
     }
 
     [Test]
     public async Task TruncatedTruecolorColoursNothing()
     {
         // "38;2;40" is missing G and B: nothing is coloured, and "40" is not read as a background.
-        var span = Plain("\e[38;2;40mX")[0];
-
-        await Assert.That(span.Color()).IsNull();
-        await Assert.That(span.BackgroundColor()).IsNull();
+        await Assert.That(Plain("\e[38;2;40mX").InnerHtml).IsEqualTo("X");
     }
 
     [Test]
-    [Arguments("\e[1m", TextAttributes.Bold)]
-    [Arguments("\e[2m", TextAttributes.Faint)]
-    [Arguments("\e[3m", TextAttributes.Italic)]
-    [Arguments("\e[4m", TextAttributes.Underline)]
-    [Arguments("\e[21m", TextAttributes.Underline)]
-    [Arguments("\e[5m", TextAttributes.Blink)]
-    [Arguments("\e[8m", TextAttributes.Conceal)]
-    [Arguments("\e[9m", TextAttributes.Strikethrough)]
-    [Arguments("\e[53m", TextAttributes.Overline)]
-    public async Task AttributesAreDrawn(string sgr, TextAttributes attribute)
+    [Arguments("\e[1m", "ms-bold")]
+    [Arguments("\e[2m", "ms-faint")]
+    [Arguments("\e[3m", "ms-italic")]
+    [Arguments("\e[4m", "ms-underline")]
+    [Arguments("\e[21m", "ms-underline")]
+    [Arguments("\e[5m", "ms-blink")]
+    [Arguments("\e[8m", "ms-conceal")]
+    [Arguments("\e[9m", "ms-strike")]
+    [Arguments("\e[53m", "ms-overline")]
+    public async Task AttributesAreDrawn(string sgr, string cssClass)
     {
-        var span = Plain(sgr + "x")[0];
-
-        await Assert.That(span.Style.Has(attribute)).IsTrue();
+        await Assert.That(At(Plain(sgr + "x"), "x").ClassList).Contains(cssClass);
     }
 
     [Test]
@@ -155,73 +153,67 @@ public sealed class OutputRenderingTests
     [Arguments("\e[9m", "\e[29m")]
     public async Task AttributesTurnOff(string on, string off)
     {
-        var spans = Plain(on + "a" + off + "b");
+        var line = Plain(on + "a" + off + "b");
 
-        await Assert.That(spans[^1].Text).IsEqualTo("b");
-        await Assert.That(spans[^1].Style).IsEqualTo(DisplayStyle.Plain);
-    }
-
-    [Test]
-    public async Task CssCarriesEveryAttribute()
-    {
-        var css = SpanRenderer.Css(Plain("\e[1;2;3;4;9;53mx")[0].Style);
-
-        await Assert.That(css).Contains("font-weight:bold");
-        await Assert.That(css).Contains("opacity:0.6");
-        await Assert.That(css).Contains("font-style:italic");
-        await Assert.That(css).Contains("text-decoration:underline overline line-through");
-        await Assert.That(SpanRenderer.CssClasses(Plain("\e[5mx")[0].Style)).IsEqualTo("ms-blink");
+        await Assert.That(line.LastChild!.TextContent).IsEqualTo("b");
+        await Assert.That(line.LastChild).IsTypeOf<AngleSharp.Dom.IText>();
     }
 
     [Test]
     public async Task InverseSwapsColoursAgainstTheOutputDefaults()
     {
-        var coloured = Plain("\e[32;7mx")[0];
-        var plain = Plain("\e[7mx")[0];
+        var coloured = At(Plain("\e[32;7mx"), "x");
+        var background = At(Plain("\e[41;7mx"), "x");
+        var plain = At(Plain("\e[7mx"), "x");
 
         await Assert.That(coloured.Color()).IsEqualTo("#090c10");
         await Assert.That(coloured.BackgroundColor()).IsEqualTo(Hex(2));
-        await Assert.That(plain.Color()).IsEqualTo("#090c10");
-        await Assert.That(plain.BackgroundColor()).IsEqualTo("#c4d1c8");
+        await Assert.That(background.Color()).IsEqualTo(Hex(1));
+        await Assert.That(background.BackgroundColor()).IsEqualTo("#c4d1c8");
+        // No colour to swap: ms-invert, which the stylesheet draws with --ms-bg on --ms-fg.
+        await Assert.That(plain.ClassList).Contains("ms-invert");
     }
 
     [Test]
     public async Task BoldIsNotBrightened()
     {
-        await Assert.That(Plain("\e[1;31mx")[0].Color()).IsEqualTo(Hex(1));
+        await Assert.That(At(Plain("\e[1;31mx"), "x").Color()).IsEqualTo(Hex(1));
     }
 
     [Test]
     public async Task OtherControlSequencesAreNotShown()
     {
-        await Assert.That(Text(Plain("a\e[?25lb\e[Hc"))).IsEqualTo("abc");
+        await Assert.That(Plain("a\e[?25lb\e[Hc").TextContent).IsEqualTo("abc");
     }
 
     [Test]
     public async Task OscHyperlinkIsAWebLink()
     {
-        var spans = Plain("see \e]8;;https://example.com/help\e\\help\e]8;;\e\\ now");
+        var line = Plain("see \e]8;;https://example.com/help\e\\help\e]8;;\e\\ now");
 
-        await Assert.That(spans[1].Text).IsEqualTo("help");
-        await Assert.That(spans[1].Style.Interaction).IsEqualTo(new Interaction(InteractionKind.Url, "https://example.com/help"));
-        await Assert.That(spans[2].Style.Interaction).IsNull();
+        var link = line.QuerySelector("a")!;
+        await Assert.That(link.TextContent).IsEqualTo("help");
+        await Assert.That(link.GetAttribute("href")).IsEqualTo("https://example.com/help");
+        await Assert.That(link.GetAttribute("target")).IsEqualTo("_blank");
+        await Assert.That(link.GetAttribute("rel")).IsEqualTo("noopener noreferrer");
+        await Assert.That(line.QuerySelectorAll("a").Length).IsEqualTo(1);
     }
 
     [Test]
     public async Task OscHyperlinkToAScriptIsText()
     {
-        var spans = Plain("\e]8;;javascript:alert(1)\e\\x\e]8;;\e\\");
+        var line = Plain("\e]8;;javascript:alert(1)\e\\x\e]8;;\e\\");
 
-        await Assert.That(spans.All(s => s.Style.Interaction is null)).IsTrue();
+        await Assert.That(line.InnerHtml).IsEqualTo("x");
     }
 
     [Test]
     public async Task MarkupIsLiteralWithoutMxpOrPueblo()
     {
-        var spans = Plain("<SEND href=\"x\">y</SEND> 5 &gt; 3");
+        var line = Plain("<SEND href=\"x\">y</SEND> 5 &gt; 3");
 
-        await Assert.That(Text(spans)).IsEqualTo("<SEND href=\"x\">y</SEND> 5 &gt; 3");
-        await Assert.That(spans.All(s => s.Command() is null)).IsTrue();
+        await Assert.That(line.TextContent).IsEqualTo("<SEND href=\"x\">y</SEND> 5 &gt; 3");
+        await Assert.That(line.Commands()).IsEmpty();
     }
 
     // ── MXP ───────────────────────────────────────────────────────────────
@@ -229,30 +221,29 @@ public sealed class OutputRenderingTests
     [Test]
     public async Task SendOnSecureLineIsACommandLink()
     {
-        var spans = Mxp("\e[1z<SEND href=\"go north\" hint=\"Move north\">North</SEND>");
+        var line = Mxp("\e[1z<SEND href=\"go north\" hint=\"Move north\">North</SEND>");
 
-        await Assert.That(spans.Count).IsEqualTo(1);
-        await Assert.That(spans[0].Text).IsEqualTo("North");
-        await Assert.That(spans[0].Command()).IsEqualTo("go north");
-        await Assert.That(spans[0].Style.Interaction!.Hint).IsEqualTo("Move north");
+        var link = line.QuerySelector("a.ms-cmd-link")!;
+        await Assert.That(link.TextContent).IsEqualTo("North");
+        await Assert.That(link.GetAttribute("xch_cmd")).IsEqualTo("go north");
+        await Assert.That(link.GetAttribute("title")).IsEqualTo("Move north");
+        await Assert.That(line.TextContent).IsEqualTo("North");
     }
 
     [Test]
     public async Task ShorthandSendSendsItsText()
     {
-        var spans = Mxp("\e[1z<SEND>look</SEND>");
+        var line = Mxp("\e[1z<SEND>look</SEND>");
 
-        await Assert.That(spans[0].Text).IsEqualTo("look");
-        await Assert.That(spans[0].Command()).IsEqualTo("look");
+        await Assert.That(line.Commands()).IsEquivalentTo(["look"]);
     }
 
     [Test]
     public async Task SendOnOpenLineShowsItsTextOnly()
     {
-        var spans = Mxp("<SEND href=\"go north\">North</SEND>");
+        var line = Mxp("<SEND href=\"go north\">North</SEND>");
 
-        await Assert.That(Text(spans)).IsEqualTo("North");
-        await Assert.That(spans.All(s => s.Command() is null)).IsTrue();
+        await Assert.That(line.InnerHtml).IsEqualTo("North");
     }
 
     [Test]
@@ -262,9 +253,7 @@ public sealed class OutputRenderingTests
         decoder.EnableMxp();
         decoder.Decode("\e[6zwelcome");
 
-        var spans = Render(decoder, "<SEND href=\"quit\">Quit</SEND>");
-
-        await Assert.That(spans[0].Command()).IsEqualTo("quit");
+        await Assert.That(Render(decoder, "<SEND href=\"quit\">Quit</SEND>").Commands()).IsEquivalentTo(["quit"]);
     }
 
     [Test]
@@ -274,75 +263,73 @@ public sealed class OutputRenderingTests
         decoder.EnableMxp();
         decoder.Decode("\e[1zsecure");
 
-        var spans = Render(decoder, "<SEND href=\"quit\">Quit</SEND>");
-
-        await Assert.That(spans.All(s => s.Command() is null)).IsTrue();
+        await Assert.That(Render(decoder, "<SEND href=\"quit\">Quit</SEND>").Commands()).IsEmpty();
     }
 
     [Test]
     public async Task LockedLineShowsMarkupAsText()
     {
-        var spans = Mxp("\e[2za <b> c");
-
-        await Assert.That(Text(spans)).IsEqualTo("a <b> c");
+        await Assert.That(Mxp("\e[2za <b> c").TextContent).IsEqualTo("a <b> c");
     }
 
     [Test]
     public async Task ColourInsideALinkKeepsTheLink()
     {
-        var spans = Mxp("\e[1z<SEND href=\"hit\">\e[31mAttack\e[0m</SEND>");
+        var line = Mxp("\e[1z<SEND href=\"hit\">\e[31mAttack\e[0m</SEND>");
 
-        await Assert.That(spans.Count).IsEqualTo(1);
-        await Assert.That(spans[0].Text).IsEqualTo("Attack");
-        await Assert.That(spans[0].Command()).IsEqualTo("hit");
-        await Assert.That(spans[0].Color()).IsEqualTo(Hex(1));
+        var link = line.QuerySelector("a.ms-cmd-link")!;
+        await Assert.That(link.TextContent).IsEqualTo("Attack");
+        await Assert.That(link.GetAttribute("xch_cmd")).IsEqualTo("hit");
+        await Assert.That(link.Color()).IsEqualTo(Hex(1));
     }
 
     [Test]
     public async Task SendWithSeveralCommandsIsAMenu()
     {
-        var spans = Mxp("\e[1z<SEND href=\"buy sword|look sword\" hint=\"Sword|Buy|Look\">sword</SEND>");
+        var line = Mxp("\e[1z<SEND href=\"buy sword|look sword\" hint=\"Sword|Buy|Look\">sword</SEND>");
 
-        var interaction = spans[0].Style.Interaction!;
-        await Assert.That(interaction.Target).IsEqualTo("buy sword");
-        await Assert.That(interaction.Hint).IsEqualTo("Sword");
-        await Assert.That(interaction.Choices!.Select(c => (c.Label, c.Command)))
-            .IsEquivalentTo([("Buy", "buy sword"), ("Look", "look sword")]);
+        var menu = line.QuerySelector(".ms-menu")!;
+        await Assert.That(menu.TextContent).IsEqualTo("sword");
+        await Assert.That(menu.GetAttribute("title")).IsEqualTo("Sword");
+        await Assert.That(menu.GetAttribute("data-commands"))
+            .IsEqualTo("[{\"label\":\"Buy\",\"command\":\"buy sword\"},{\"label\":\"Look\",\"command\":\"look sword\"}]");
     }
 
     [Test]
-    public async Task PromptSendIsSentAsACommand()
+    public async Task PromptSendIsAPromptMenu()
     {
-        var spans = Mxp("\e[1z<SEND href=\"say \" PROMPT>talk</SEND>");
+        var line = Mxp("\e[1z<SEND href=\"say \" PROMPT>talk</SEND>");
 
-        await Assert.That(spans[0].Style.Interaction!.Kind).IsEqualTo(InteractionKind.Command);
+        // markupstring.js asks the view's Prompt, which sends it.
+        await Assert.That(line.QuerySelector(".ms-menu.ms-prompt")!.TextContent).IsEqualTo("talk");
     }
 
     [Test]
     public async Task EntitiesAreDecoded()
     {
-        await Assert.That(Text(Mxp("5 &gt; 3 &amp; &lt;"))).IsEqualTo("5 > 3 & <");
+        await Assert.That(Mxp("5 &gt; 3 &amp; &lt;").TextContent).IsEqualTo("5 > 3 & <");
     }
 
     [Test]
     public async Task OpenTagsStyleText()
     {
-        var spans = Mxp("<B>bold</B> <I>it</I> <U>u</U> <S>s</S> <COLOR fore=red back=#000080>c</COLOR>");
+        var line = Mxp("<B>bold</B> <I>it</I> <U>u</U> <S>s</S> <COLOR fore=red back=#000080>c</COLOR>");
 
-        await Assert.That(spans[0].Style.Has(TextAttributes.Bold)).IsTrue();
-        await Assert.That(spans[2].Style.Has(TextAttributes.Italic)).IsTrue();
-        await Assert.That(spans[4].Style.Has(TextAttributes.Underline)).IsTrue();
-        await Assert.That(spans[6].Style.Has(TextAttributes.Strikethrough)).IsTrue();
-        await Assert.That(spans[8].Color()).IsEqualTo("#ff0000");
-        await Assert.That(spans[8].BackgroundColor()).IsEqualTo("#000080");
+        await Assert.That(At(line, "bold").ClassList).Contains("ms-bold");
+        await Assert.That(At(line, "it").ClassList).Contains("ms-italic");
+        await Assert.That(At(line, "u").ClassList).Contains("ms-underline");
+        await Assert.That(At(line, "s").ClassList).Contains("ms-strike");
+        await Assert.That(At(line, "c").Color()).IsEqualTo("#ff0000");
+        await Assert.That(At(line, "c").BackgroundColor()).IsEqualTo("#000080");
     }
 
     [Test]
     public async Task MxpAnchorIsAWebLink()
     {
-        var spans = Mxp("\e[1z<A href=\"https://example.com\" hint=\"Site\">site</A>");
+        var link = Mxp("\e[1z<A href=\"https://example.com\" hint=\"Site\">site</A>").QuerySelector("a")!;
 
-        await Assert.That(spans[0].Style.Interaction).IsEqualTo(new Interaction(InteractionKind.Url, "https://example.com") { Hint = "Site" });
+        await Assert.That(link.GetAttribute("href")).IsEqualTo("https://example.com");
+        await Assert.That(link.GetAttribute("title")).IsEqualTo("Site");
     }
 
     [Test]
@@ -359,60 +346,65 @@ public sealed class OutputRenderingTests
     [Test]
     public async Task MxpImageOnSecureLineIsAPicture()
     {
-        var spans = Mxp("\e[1z<IMAGE FName=\"https://h.example/a/b.jpg?x=1\">");
+        var image = Mxp("\e[1z<IMAGE FName=\"https://h.example/a/b.jpg?x=1\">").QuerySelector("img")!;
 
-        await Assert.That(spans[0].Style.Picture!.Source).IsEqualTo("https://h.example/a/b.jpg?x=1");
-        await Assert.That(ImageSource.DisplayName(spans[0].Style.Picture!.Source)).IsEqualTo("b.jpg");
+        await Assert.That(image.GetAttribute("src")).IsEqualTo("https://h.example/a/b.jpg?x=1");
+        await Assert.That(image.GetAttribute("alt")).IsEqualTo("b.jpg");
+        await Assert.That(image.GetAttribute("referrerpolicy")).IsEqualTo("no-referrer");
+        await Assert.That(image.GetAttribute("loading")).IsEqualTo("lazy");
     }
 
     [Test]
     public async Task MxpImageJoinsUrlAndName()
     {
-        var spans = Mxp("\e[1z<IMAGE map.png URL=\"https://h.example/img/\">");
+        var image = Mxp("\e[1z<IMAGE map.png URL=\"https://h.example/img/\">").QuerySelector("img")!;
 
-        await Assert.That(ImageSource.Resolve(spans[0].Style.Picture!.Source)).IsEqualTo("https://h.example/img/map.png");
+        await Assert.That(image.GetAttribute("src")).IsEqualTo("https://h.example/img/map.png");
     }
 
     [Test]
     public async Task MxpImageJoinsUrlTypeAndName()
     {
-        var spans = Mxp("\e[1z<IMAGE map.png URL=\"https://h.example/img/\" T=maps>");
+        var image = Mxp("\e[1z<IMAGE map.png URL=\"https://h.example/img/\" T=maps>").QuerySelector("img")!;
 
-        await Assert.That(ImageSource.Resolve(spans[0].Style.Picture!.Source)).IsEqualTo("https://h.example/img/maps/map.png");
-        await Assert.That(ImageSource.DisplayName(spans[0].Style.Picture!.Source)).IsEqualTo("map.png");
+        await Assert.That(image.GetAttribute("src")).IsEqualTo("https://h.example/img/maps/map.png");
+        await Assert.That(image.GetAttribute("alt")).IsEqualTo("map.png");
+    }
+
+    [Test]
+    public async Task MxpImageSizeIsKept()
+    {
+        var image = Mxp("\e[1z<IMAGE https://h.example/x.png W=64 H=32>").QuerySelector("img")!;
+
+        await Assert.That(image.GetAttribute("width")).IsEqualTo("64");
+        await Assert.That(image.GetAttribute("height")).IsEqualTo("32");
     }
 
     [Test]
     public async Task MxpImageOnOpenLineIsNotAPicture()
     {
-        var spans = Mxp("before <IMAGE https://h.example/x.png> after");
-
-        await Assert.That(spans.Any(s => s.Style.Picture is not null)).IsFalse();
+        await Assert.That(Mxp("before <IMAGE https://h.example/x.png> after").QuerySelector("img")).IsNull();
     }
 
     [Test]
-    public async Task MxpImageWithBareFileNameIsNotLoaded()
+    public async Task MxpImageWithBareFileNameShowsNothing()
     {
-        var spans = Mxp("\e[1z<IMAGE map.png>");
-
-        await Assert.That(ImageSource.Resolve(spans[0].Style.Picture!.Source)).IsNull();
+        await Assert.That(Mxp("\e[1z<IMAGE map.png>").InnerHtml).IsEmpty();
     }
 
     [Test]
     public async Task ImageInsideASendIsClickable()
     {
-        var spans = Mxp("\e[1z<SEND href=\"look map\"><IMAGE https://h.example/m.png></SEND>");
+        var link = Mxp("\e[1z<SEND href=\"look map\"><IMAGE https://h.example/m.png></SEND>").QuerySelector("a.ms-cmd-link")!;
 
-        await Assert.That(spans[0].Style.Picture!.Source).IsEqualTo("https://h.example/m.png");
-        await Assert.That(spans[0].Command()).IsEqualTo("look map");
+        await Assert.That(link.GetAttribute("xch_cmd")).IsEqualTo("look map");
+        await Assert.That(link.QuerySelector("img")!.GetAttribute("src")).IsEqualTo("https://h.example/m.png");
     }
 
     [Test]
     public async Task ImagesAreTextWithoutMxpOrPueblo()
     {
-        var spans = Plain("\e[1z<IMAGE https://h.example/x.png><img src=\"https://h.example/y.png\">");
-
-        await Assert.That(spans.Any(s => s.Style.Picture is not null)).IsFalse();
+        await Assert.That(Plain("\e[1z<IMAGE https://h.example/x.png><img src=\"https://h.example/y.png\">").QuerySelector("img")).IsNull();
     }
 
     [Test]
@@ -422,11 +414,10 @@ public sealed class OutputRenderingTests
         decoder.EnableMxp();
         decoder.Decode("\e[1z<!ELEMENT RName '<B><COLOR red>'>");
 
-        var spans = Render(decoder, "\e[1z<RName>The Hall</RName>");
+        var hall = At(Render(decoder, "\e[1z<RName>The Hall</RName>"), "The Hall");
 
-        await Assert.That(spans[0].Text).IsEqualTo("The Hall");
-        await Assert.That(spans[0].Style.Has(TextAttributes.Bold)).IsTrue();
-        await Assert.That(spans[0].Color()).IsEqualTo("#ff0000");
+        await Assert.That(hall.ClassList).Contains("ms-bold");
+        await Assert.That(hall.Color()).IsEqualTo("#ff0000");
     }
 
     // ── Pueblo ────────────────────────────────────────────────────────────
@@ -434,64 +425,70 @@ public sealed class OutputRenderingTests
     [Test]
     public async Task PuebloAnchorWithXchCmdIsACommandLink()
     {
-        var spans = Pueblo("<a xch_cmd=\"go north\" xch_hint=\"Move\">North</a>");
+        var link = Pueblo("<a xch_cmd=\"go north\" xch_hint=\"Move\">North</a>").QuerySelector("a.ms-cmd-link")!;
 
-        await Assert.That(spans.Count).IsEqualTo(1);
-        await Assert.That(spans[0].Text).IsEqualTo("North");
-        await Assert.That(spans[0].Command()).IsEqualTo("go north");
-        await Assert.That(spans[0].Style.Interaction!.Hint).IsEqualTo("Move");
+        await Assert.That(link.TextContent).IsEqualTo("North");
+        await Assert.That(link.GetAttribute("xch_cmd")).IsEqualTo("go north");
+        await Assert.That(link.GetAttribute("title")).IsEqualTo("Move");
     }
 
     [Test]
     public async Task PuebloEntitiesAreDecoded()
     {
-        await Assert.That(Text(Pueblo("5 &gt; 3 &amp;&amp; 2 &lt; 4 &quot;q&quot;"))).IsEqualTo("5 > 3 && 2 < 4 \"q\"");
-        await Assert.That(Text(Pueblo("it&apos;s&nbsp;here"))).IsEqualTo("it's here");
-        await Assert.That(Text(Pueblo("&#62;&#x3E;&#38;"))).IsEqualTo(">>&");
+        await Assert.That(Pueblo("5 &gt; 3 &amp;&amp; 2 &lt; 4 &quot;q&quot;").TextContent).IsEqualTo("5 > 3 && 2 < 4 \"q\"");
+        await Assert.That(Pueblo("it&apos;s&nbsp;here").TextContent).IsEqualTo("it's here");
+        await Assert.That(Pueblo("&#62;&#x3E;&#38;").TextContent).IsEqualTo(">>&");
     }
 
     [Test]
     public async Task LoneAndUnknownAmpersandsStay()
     {
-        await Assert.That(Text(Pueblo("Tom & Jerry"))).IsEqualTo("Tom & Jerry");
-        await Assert.That(Text(Pueblo("x&notathing;y"))).IsEqualTo("x&notathing;y");
+        await Assert.That(Pueblo("Tom & Jerry").TextContent).IsEqualTo("Tom & Jerry");
+        await Assert.That(Pueblo("x&notathing;y").TextContent).IsEqualTo("x&notathing;y");
     }
 
     [Test]
     public async Task EntityInsideAnAttributeIsDecoded()
     {
-        var spans = Pueblo("<a xch_cmd=\"say 5 &gt; 3\">go</a>");
-
-        await Assert.That(spans[0].Command()).IsEqualTo("say 5 > 3");
+        await Assert.That(Pueblo("<a xch_cmd=\"say 5 &gt; 3\">go</a>").Commands()).IsEquivalentTo(["say 5 > 3"]);
     }
 
     [Test]
     public async Task GreaterThanInsideAQuotedAttributeDoesNotEndTheTag()
     {
-        var spans = Pueblo("<a xch_cmd=\"say 5 > 3\">go</a>");
+        var line = Pueblo("<a xch_cmd=\"say 5 > 3\">go</a>");
 
-        await Assert.That(spans.Count).IsEqualTo(1);
-        await Assert.That(spans[0].Text).IsEqualTo("go");
-        await Assert.That(spans[0].Command()).IsEqualTo("say 5 > 3");
+        await Assert.That(line.TextContent).IsEqualTo("go");
+        await Assert.That(line.Commands()).IsEquivalentTo(["say 5 > 3"]);
     }
 
     [Test]
     public async Task PuebloImgUsesSrcAndAlt()
     {
-        var spans = Pueblo("Look: <img src=\"https://h.example/cat.gif\" alt=\"a cat\">!");
+        var line = Pueblo("Look: <img src=\"https://h.example/cat.gif\" alt=\"a cat\">!");
 
-        await Assert.That(spans.Count).IsEqualTo(3);
-        await Assert.That(spans[1].Style.Picture!.Source).IsEqualTo("https://h.example/cat.gif");
-        await Assert.That(spans[1].Style.Picture!.Description).IsEqualTo("a cat");
-        await Assert.That(spans[2].Text).IsEqualTo("!");
+        var image = line.QuerySelector("img")!;
+        await Assert.That(image.GetAttribute("src")).IsEqualTo("https://h.example/cat.gif");
+        await Assert.That(image.GetAttribute("alt")).IsEqualTo("a cat");
+        await Assert.That(line.TextContent).IsEqualTo("Look: !");
+    }
+
+    [Test]
+    public async Task ImagesOffShowsTheirName()
+    {
+        var line = Pueblo("Look: <img src=\"https://h.example/cat.gif\" alt=\"a cat\">!", showImages: false);
+
+        await Assert.That(line.QuerySelector("img")).IsNull();
+        await Assert.That(line.TextContent).IsEqualTo("Look: a cat!");
     }
 
     [Test]
     public async Task PuebloModeSwitchesAndPageClearShowNothing()
     {
-        var spans = Pueblo("</xch_mudtext><img xch_mode=purehtml><xch_page clear=text>");
+        var line = Pueblo("</xch_mudtext><img xch_mode=purehtml><xch_page clear=text>");
 
-        await Assert.That(spans.All(s => s.Point is not null)).IsTrue();
+        await Assert.That(line.TextContent).IsEmpty();
+        await Assert.That(line.QuerySelector("img")).IsNull();
     }
 
     [Test]
@@ -499,19 +496,18 @@ public sealed class OutputRenderingTests
     [Arguments("file:///etc/passwd")]
     [Arguments("/local/path.png")]
     [Arguments("content://media/1")]
-    public async Task NonWebImageSourcesAreRefused(string src)
+    public async Task NonWebImageSourcesShowNothing(string src)
     {
-        var spans = Pueblo($"<img src=\"{src}\">");
-
-        await Assert.That(ImageSource.Resolve(spans[0].Style.Picture!.Source)).IsNull();
+        await Assert.That(Pueblo($"<img src=\"{src}\">").InnerHtml).IsEmpty();
+        await Assert.That(Pueblo($"<img src=\"{src}\">", showImages: false).InnerHtml).IsEmpty();
     }
 
     [Test]
     public async Task DataImageIsAccepted()
     {
-        var spans = Pueblo("<img src=\"data:image/png;base64,iVBORw0KGgo=\">");
+        var image = Pueblo("<img src=\"data:image/png;base64,iVBORw0KGgo=\">").QuerySelector("img")!;
 
-        await Assert.That(ImageSource.Resolve(spans[0].Style.Picture!.Source)).IsEqualTo("data:image/png;base64,iVBORw0KGgo=");
+        await Assert.That(image.GetAttribute("src")).IsEqualTo("data:image/png;base64,iVBORw0KGgo=");
     }
 
     [Test]
@@ -534,10 +530,10 @@ public sealed class OutputRenderingTests
         decoder.Decode("\e[31m\e[6z");
         decoder.Reset();
 
-        var spans = Render(decoder, "<SEND href=\"x\">y</SEND>");
+        var line = Render(decoder, "<SEND href=\"x\">y</SEND>");
 
         await Assert.That(decoder.ActiveProtocol).IsNull();
-        await Assert.That(Text(spans)).IsEqualTo("<SEND href=\"x\">y</SEND>");
-        await Assert.That(spans[0].Color()).IsNull();
+        await Assert.That(line.TextContent).IsEqualTo("<SEND href=\"x\">y</SEND>");
+        await Assert.That(line.Children.Length).IsEqualTo(0);
     }
 }

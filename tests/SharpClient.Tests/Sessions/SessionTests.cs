@@ -47,10 +47,10 @@ public sealed class SessionTests
         await server.SendLineAsync("\e[31mAlert\e[0m");
 
         var line = await appended.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        var spans = line.Spans();
-        await Assert.That(spans.Count).IsEqualTo(1);
-        await Assert.That(spans[0].Text).IsEqualTo("Alert");
-        await Assert.That(spans[0].Color()).IsEqualTo("#e06c75");
+        var dom = line.Dom();
+        await Assert.That(dom.Children.Length).IsEqualTo(1);
+        await Assert.That(dom.TextContent).IsEqualTo("Alert");
+        await Assert.That(dom.FirstElementChild!.Color()).IsEqualTo("#e06c75");
         await Assert.That(session.Scrollback.Count).IsEqualTo(1);
     }
 

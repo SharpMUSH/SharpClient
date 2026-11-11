@@ -1,7 +1,6 @@
 using MarkupString;
 using MarkupString.Ansi.Decoding;
 using MarkupString.Decoding;
-using MarkupString.Display;
 using MarkupString.Mxp.Decoding;
 using MarkupString.Pueblo.Decoding;
 
@@ -92,31 +91,4 @@ public sealed class OutputDecoder
 
         return lines;
     }
-}
-
-/// <summary>How SharpClient's output view draws a decoded line.</summary>
-public static class OutputDisplay
-{
-    /// <summary>ANSI styles and the shared vocabulary (pictures, menus), then trigger highlights.</summary>
-    public static DisplayRegistry Styles { get; } = DisplayRegistry.Core.WithAnsi().With(TriggerHighlightStyles.Instance);
-
-    /// <summary>
-    /// A browser that opens links, sends commands and shows menus and pictures. Prompt links become
-    /// command links (there is no prompt-into-input yet), and sound and panes are not drawn.
-    /// </summary>
-    public static DisplayOptions Options { get; } = new()
-    {
-        Capabilities = OutputCapabilities.Browser with
-        {
-            Interactions = InteractionKinds.Url | InteractionKinds.Command | InteractionKinds.Menu,
-            Sound = false,
-            Panes = false,
-        },
-        Colors = OutputPalette.Instance,
-        DefaultForeground = OutputPalette.Phosphor,
-        DefaultBackground = OutputPalette.Background,
-    };
-
-    public static IReadOnlyList<DisplaySpan> Render(MarkupText content) =>
-        SpanRenderer.Render(content, Styles, Options);
 }

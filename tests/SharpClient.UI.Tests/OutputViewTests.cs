@@ -10,59 +10,94 @@ public sealed class OutputViewTests
     private static ScrollbackLine[] Lines(string raw) =>
         [.. new OutputDecoder().Decode(raw).Select(content => new ScrollbackLine(content))];
 
-    [Test]
-    public async Task RendersOneSpanPerStyleWithTheClientPalette()
+    private static BunitContext NewContext()
     {
-        using var ctx = new BunitContext();
-
-        var cut = ctx.Render<OutputView>(p => p.Add(c => c.Lines, Lines("\e[31mred\e[0m plain")));
-
-        var spans = cut.FindAll("span");
-        await Assert.That(spans.Count).IsEqualTo(2);
-        await Assert.That(spans[0].GetAttribute("style")).IsEqualTo("color:#e06c75");
-        await Assert.That(spans[0].TextContent).IsEqualTo("red");
-        // Default text takes .sc-line's colour.
-        await Assert.That(spans[1].GetAttribute("style")).IsNull();
-        await Assert.That(spans[1].TextContent).IsEqualTo(" plain");
+        var ctx = new BunitContext();
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        return ctx;
     }
 
     [Test]
-    public async Task BackgroundGetsPadding()
+    public async Task EachLineIsMarkupStringHtml()
     {
-        using var ctx = new BunitContext();
+        using var ctx = NewContext();
+        var lines = Lines("\e[31mred\e[0m plain");
 
-        var cut = ctx.Render<OutputView>(p => p.Add(c => c.Lines, Lines("\e[44mbg")));
+        var cut = ctx.Render<OutputView>(p => p.Add(c => c.Lines, lines));
 
-        await Assert.That(cut.Find("span").GetAttribute("style")).IsEqualTo("background-color:#61afef;padding:0 2px");
+        var line = cut.Find("div.sc-line");
+        await Assert.That(line.InnerHtml).IsEqualTo(OutputHtml.Render(lines[0].Content));
+        await Assert.That(line.QuerySelector("span")!.GetAttribute("style")).StartsWith("color: var(--ms-ansi-1,");
+        await Assert.That(line.TextContent).IsEqualTo("red plain");
     }
 
     [Test]
-    public async Task AttributesAreDrawn()
+    public async Task TheOutputCarriesTheClientPalette()
     {
-        using var ctx = new BunitContext();
+        using var ctx = NewContext();
 
-        var cut = ctx.Render<OutputView>(p => p.Add(c => c.Lines, Lines("\e[1;3;4;9mx\e[0m \e[5mblink")));
+        var cut = ctx.Render<OutputView>(p => p.Add(c => c.Lines, Lines("x")));
 
-        var spans = cut.FindAll("span");
-        await Assert.That(spans[0].GetAttribute("style")).IsEqualTo("font-weight:bold;font-style:italic;text-decoration:underline line-through");
-        await Assert.That(spans[2].ClassList).Contains("ms-blink");
+        await Assert.That(cut.Find("div.sc-output").GetAttribute("style")).IsEqualTo(OutputPalette.CustomProperties);
     }
 
     [Test]
     public async Task EmptyLineRendersAnEmptyLine()
     {
-        using var ctx = new BunitContext();
+        using var ctx = NewContext();
 
         var cut = ctx.Render<OutputView>(p => p.Add(c => c.Lines, Lines(string.Empty)));
 
         await Assert.That(cut.FindAll("div.sc-line").Count).IsEqualTo(1);
-        await Assert.That(cut.FindAll("span").Count).IsEqualTo(0);
+        await Assert.That(cut.Find("div.sc-line").InnerHtml).IsEmpty();
     }
 
     [Test]
-    public async Task TriggerHighlightReplacesTheServersColour()
+    public async Task AttachesMarkupStringWebWithoutSoundAndKeepsItsLines()
     {
         using var ctx = new BunitContext();
+        var module = ctx.JSInterop.SetupModule(OutputView.ScriptPath);
+        module.SetupModule("attachDotNet", _ => true);
+
+        ctx.Render<OutputView>(p => p.Add(c => c.Lines, Lines("x")));
+
+        var call = module.VerifyInvoke("attachDotNet");
+        var options = call.Arguments[2]!;
+        var forward = (string[])options.GetType().GetProperty("forward")!.GetValue(options)!;
+        await Assert.That(options.GetType().GetProperty("sounds")!.GetValue(options)).IsEqualTo(false);
+        // The lines are Blazor's: the script must not clear them or move their text to a pane.
+        await Assert.That(forward).Contains("clear");
+        await Assert.That(forward).Contains("pane");
+    }
+
+    [Test]
+    public async Task CommandsFromTheScriptAreSent()
+    {
+        using var ctx = NewContext();
+        var sent = new List<string>();
+        var cut = ctx.Render<OutputView>(p => p
+            .Add(c => c.Lines, Lines("x"))
+            .Add(c => c.OnSendCommand, cmd => { sent.Add(cmd); return Task.CompletedTask; }));
+
+        await cut.Instance.Send("go north");
+        await cut.Instance.Prompt("say ");
+
+        await Assert.That(sent).IsEquivalentTo(["go north", "say "]);
+    }
+
+    [Test]
+    public async Task CommandWithoutAHandlerDoesNothing()
+    {
+        using var ctx = NewContext();
+        var cut = ctx.Render<OutputView>(p => p.Add(c => c.Lines, Lines("x")));
+
+        await cut.Instance.Send("go north");
+    }
+
+    [Test]
+    public async Task TriggerHighlightCoversTheLine()
+    {
+        using var ctx = NewContext();
         var rule = new SharpClient.Core.Domain.TriggerRule
         {
             Kind = SharpClient.Core.Domain.TriggerKind.Substring,
@@ -75,7 +110,8 @@ public sealed class OutputViewTests
 
         var cut = ctx.Render<OutputView>(p => p.Add(c => c.Lines, outcome.Lines.Select(l => new ScrollbackLine(l)).ToArray()));
 
-        await Assert.That(cut.Find("span").GetAttribute("style")).IsEqualTo("color:#ff8088");
-        await Assert.That(cut.Find("span").TextContent).IsEqualTo("danger ahead");
+        var highlight = cut.Find("div.sc-line > span.sc-highlight");
+        await Assert.That(highlight.GetAttribute("style")).IsEqualTo("--sc-highlight: #ff8088");
+        await Assert.That(highlight.TextContent).IsEqualTo("danger ahead");
     }
 }

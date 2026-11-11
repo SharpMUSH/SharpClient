@@ -4,18 +4,13 @@ using MarkupString.Ansi.Decoding;
 namespace SharpClient.Core.Rendering;
 
 /// <summary>
-/// SharpClient's colours for the sixteen standard ANSI colours, and the output's own foreground and
-/// background. The 256-colour cube and grey ramp are xterm's, as before.
+/// SharpClient's colours for the sixteen standard ANSI colours; the 256-colour cube and grey ramp are
+/// xterm's. The output view hands the sixteen to MarkupString's HTML as <c>--ms-ansi-N</c>
+/// (<see cref="CustomProperties"/>).
 /// </summary>
 public sealed class OutputPalette : AnsiColors
 {
     public static OutputPalette Instance { get; } = new();
-
-    /// <summary>Text with no colour of its own (the CSS variable <c>--pho</c>).</summary>
-    public static RgbColor Phosphor { get; } = new(0xc4, 0xd1, 0xc8);
-
-    /// <summary>The output area's background (the CSS variable <c>--outbg</c>).</summary>
-    public static RgbColor Background { get; } = new(0x09, 0x0c, 0x10);
 
     private static readonly RgbColor[] s_base16 =
     [
@@ -33,6 +28,16 @@ public sealed class OutputPalette : AnsiColors
 
     /// <summary>Palette entry <paramref name="index"/> (0–255) in this palette.</summary>
     public RgbColor Entry(int index) => index < 16 ? Standard(index & 7, index >= 8) : Xterm(index);
+
+    /// <summary>
+    /// The sixteen colours as the CSS custom properties MarkupString's HTML reads them from
+    /// (<c>--ms-ansi-0</c> to <c>--ms-ansi-15</c>), for a style attribute.
+    /// </summary>
+    public static string CustomProperties { get; } =
+        string.Join(";", s_base16.Select((color, index) => $"--ms-ansi-{index}:{Hex(color)}"));
+
+    /// <summary><paramref name="color"/> as <c>#rrggbb</c>.</summary>
+    public static string Hex(RgbColor color) => $"#{color.R:x2}{color.G:x2}{color.B:x2}";
 
     private static RgbColor Hex(int rgb) => new((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
 }

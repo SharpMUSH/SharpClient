@@ -17,9 +17,9 @@ public sealed class SessionMxpTests
         conn.EnableMxp();
         conn.Emit("\e[1z<SEND href=\"look\">Look here</SEND>");
 
-        var spans = session.Scrollback[^1].Spans();
-        await Assert.That(spans[0].Text).IsEqualTo("Look here");
-        await Assert.That(spans[0].Command()).IsEqualTo("look");
+        var link = session.Scrollback[^1].Dom().QuerySelector("a[xch_cmd]")!;
+        await Assert.That(link.TextContent).IsEqualTo("Look here");
+        await Assert.That(link.GetAttribute("xch_cmd")).IsEqualTo("look");
     }
 
     [Test]
@@ -31,7 +31,7 @@ public sealed class SessionMxpTests
         // No EnableMxp(): markup must pass through inert, never clickable.
         conn.Emit("\e[1z<SEND href=\"rm -rf\">click</SEND>");
 
-        await Assert.That(session.Scrollback[^1].Spans().All(s => s.Command() is null)).IsTrue();
+        await Assert.That(session.Scrollback[^1].Dom().Commands()).IsEmpty();
     }
 
     [Test]
@@ -44,9 +44,9 @@ public sealed class SessionMxpTests
         conn.Emit(PuebloHtml);
         conn.Emit("<a xch_cmd=\"go north\">North</a>");
 
-        var spans = session.Scrollback[^1].Spans();
-        await Assert.That(spans[0].Text).IsEqualTo("North");
-        await Assert.That(spans[0].Command()).IsEqualTo("go north");
+        var link = session.Scrollback[^1].Dom().QuerySelector("a[xch_cmd]")!;
+        await Assert.That(link.TextContent).IsEqualTo("North");
+        await Assert.That(link.GetAttribute("xch_cmd")).IsEqualTo("go north");
     }
 
     [Test]
@@ -62,7 +62,7 @@ public sealed class SessionMxpTests
         conn.Emit("<a xch_cmd=\"@destroy me\">free stuff</a>");
 
         await Assert.That(conn.Sent).IsEmpty();
-        await Assert.That(session.Scrollback[^1].Spans().All(s => s.Command() is null)).IsTrue();
+        await Assert.That(session.Scrollback[^1].Dom().Commands()).IsEmpty();
     }
 
     [Test]
@@ -79,6 +79,6 @@ public sealed class SessionMxpTests
         conn.Emit(PuebloHtml);
         conn.Emit("<a xch_cmd=\"go north\">North</a>");
 
-        await Assert.That(session.Scrollback[^1].Spans().All(s => s.Command() is null)).IsTrue();
+        await Assert.That(session.Scrollback[^1].Dom().Commands()).IsEmpty();
     }
 }

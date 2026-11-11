@@ -638,79 +638,60 @@ body {
 .sc-modal-submit { margin-top: 4px; font-size: 14px; font-weight: 600; color: #0a0c10; background: var(--acc2); border: none; border-radius: 10px; padding: 13px; cursor: pointer; }
 .sc-modal-submit:disabled { opacity: .5; cursor: not-allowed; }
 
-/* ── MXP / Pueblo clickable command-links ──────────────────────────────── */
-.sc-link {
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    font: inherit;
-    cursor: pointer;
-    color: var(--acc2);
+/* ── MarkupString output (markupstring.css styles the ms-* classes) ──────── */
+/* The client's colours: reverse video swaps against the output's own, and the sixteen standard
+   colours (--ms-ansi-N) are set on .sc-output by OutputView, from OutputPalette. */
+.sc-output {
+    --ms-fg: var(--pho);
+    --ms-bg: var(--outbg);
+}
+
+/* A SEND menu's popup is put on <body>, outside .sc-output. */
+:root {
+    --ms-menu-fg: var(--tx);
+    --ms-menu-bg: var(--panel);
+    --ms-menu-border: var(--bd);
+    --ms-menu-active-fg: var(--acc);
+    --ms-menu-active-bg: var(--acc-soft);
+}
+.ms-menu-popup {
+    font-family: var(--mono);
+    font-size: var(--out-fs);
+    border-radius: 4px;
+}
+
+/* A little room either side, so a coloured background does not crowd the glyphs. */
+.sc-line [style*="background-color"] {
+    padding: 0 2px;
+}
+
+/* Command links (MXP SEND, Pueblo xch_cmd), SEND menus, and web links (OSC 8, MXP A, Pueblo a href).
+   A link takes the accent colour only when the server gave it none: one inside a coloured span keeps it. */
+.sc-line :is(a.ms-cmd-link, a[href], .ms-menu) {
     text-decoration: underline;
     text-underline-offset: 2px;
-    /* A clickable command link is an inline-block button; let its text wrap (and break long tokens)
-       so it can never be the one element that refuses to wrap and forces horizontal overflow. */
-    white-space: normal;
     overflow-wrap: anywhere;
-    text-align: left;
 }
-.sc-link:hover {
-    color: var(--acc);
-    background: var(--acc-soft);
-}
-
-/* An OSC 8 / MXP <A> / Pueblo <a href> web link. */
-a.sc-link {
-    display: inline;
-}
-
-/* MXP <SEND href="a|b|c">: the text sends the first command, the toggle beside it lists them all. */
-.sc-menu {
-    position: relative;
-    display: inline-block;
-}
-.sc-menu-toggle {
-    background: none;
-    border: none;
-    padding: 0 2px;
-    margin: 0;
-    font: inherit;
-    line-height: inherit;
-    cursor: pointer;
+.sc-line :is(a.ms-cmd-link, a[href], .ms-menu):not([style^="color"] *) {
     color: var(--acc2);
 }
-.sc-menu-toggle:hover {
+.sc-line :is(a.ms-cmd-link, a[href], .ms-menu):hover {
     color: var(--acc);
     background: var(--acc-soft);
 }
-.sc-menu-list {
-    position: absolute;
-    left: 0;
-    top: 100%;
-    z-index: 20;
-    display: flex;
-    flex-direction: column;
-    min-width: 8em;
-    padding: 4px 0;
-    background: var(--panel);
-    border: 1px solid var(--bd);
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .4);
-}
-.sc-menu-choice {
-    padding: 4px 10px;
+.sc-line a.ms-expired {
+    color: inherit;
     text-decoration: none;
-    white-space: nowrap;
+    background: none;
+}
+
+/* A Highlight trigger's colour, over whatever the server gave. */
+.sc-highlight,
+.sc-highlight * {
+    color: var(--sc-highlight) !important;
 }
 
 /* SGR 5 / 6. Players who find it distracting have reduced motion set. */
-.ms-blink {
-    animation: ms-blink 1s steps(1, end) infinite;
-}
-@keyframes ms-blink {
-    50% { visibility: hidden; }
-}
 @media (prefers-reduced-motion: reduce) {
     .ms-blink { animation: none; }
 }
@@ -932,8 +913,3 @@ a.sc-link {
     vertical-align: bottom;
 }
 
-.sc-image-link {
-    padding: 0;
-    border: 0;
-    background: none;
-}

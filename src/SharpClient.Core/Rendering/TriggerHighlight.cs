@@ -1,5 +1,5 @@
+using System.Buffers;
 using MarkupString;
-using MarkupString.Display;
 
 namespace SharpClient.Core.Rendering;
 
@@ -7,32 +7,39 @@ namespace SharpClient.Core.Rendering;
 public sealed record TriggerHighlightMarkup(int Index) : IMarkup;
 
 /// <summary>
-/// Draws <see cref="TriggerHighlightMarkup"/> as the text colour. Added after the ANSI styles, so it
-/// replaces whatever colour the server gave, and inverse text still swaps it into the background.
+/// Writes <see cref="TriggerHighlightMarkup"/> as a <c>span.sc-highlight</c> that sets <c>--sc-highlight</c>.
+/// The stylesheet gives that colour to everything inside, over the server's own colours.
 /// </summary>
-public sealed class TriggerHighlightStyles : IStyleContributor
+public sealed class TriggerHighlightEmitter : IMarkupEmitter
 {
-    public static TriggerHighlightStyles Instance { get; } = new();
+    public static TriggerHighlightEmitter Instance { get; } = new();
 
-    private TriggerHighlightStyles()
+    private TriggerHighlightEmitter()
     {
     }
 
-    public void Contribute(MarkupSet markups, StyleBuilder style, DisplayOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(markups);
-        ArgumentNullException.ThrowIfNull(style);
-        ArgumentNullException.ThrowIfNull(options);
+    public Type MarkupType => typeof(TriggerHighlightMarkup);
 
-        // Innermost first: the first highlight found is the one applied last.
-        foreach (var markup in markups)
+    public MarkupFormat Format => MarkupFormat.Html;
+
+    public void Emit(IMarkup markup, ReadOnlySpan<char> body, in EmitContext context, IBufferWriter<char> output)
+    {
+        ArgumentNullException.ThrowIfNull(markup);
+        ArgumentNullException.ThrowIfNull(output);
+
+        var highlight = (TriggerHighlightMarkup)markup;
+        if (context.StartsRegion(markup))
         {
-            if (markup is TriggerHighlightMarkup highlight)
-            {
-                var palette = options.Colors as OutputPalette ?? OutputPalette.Instance;
-                style.Foreground = palette.Entry(Math.Clamp(highlight.Index, 0, 255));
-                return;
-            }
+            output.Write("<span class=\"sc-highlight\" style=\"--sc-highlight: ");
+            output.Write(OutputPalette.Hex(OutputPalette.Instance.Entry(Math.Clamp(highlight.Index, 0, 255))));
+            output.Write("\">");
+        }
+
+        output.Write(body);
+
+        if (context.EndsRegion(markup))
+        {
+            output.Write("</span>");
         }
     }
 }

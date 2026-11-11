@@ -12,10 +12,20 @@ public sealed class TriggerEngineTests
     private static TriggerOutcome Apply(TriggerEngine engine, string raw, IReadOnlyList<TriggerRule> rules) =>
         engine.Apply(raw, new OutputDecoder().Decode(raw), rules);
 
-    private static IEnumerable<MarkupString.Display.DisplaySpan> Spans(TriggerOutcome outcome) =>
-        outcome.Lines.SelectMany(line => line.Spans());
+    /// <summary>
+    /// For each line, the Highlight colour over the whole of it, or null when it has none. The stylesheet
+    /// draws everything inside <c>.sc-highlight</c> in <c>--sc-highlight</c>.
+    /// </summary>
+    private static IReadOnlyList<string?> Highlights(TriggerOutcome outcome) =>
+        [.. outcome.Lines.Select(line =>
+        {
+            var dom = line.Dom();
+            return dom.Children is [{ } only] && only.ClassList.Contains("sc-highlight") && only.TextContent == dom.TextContent
+                ? only.GetAttribute("style")!.Replace("--sc-highlight: ", string.Empty, StringComparison.Ordinal)
+                : null;
+        })];
 
-    private static string Hex(int index) => MarkupString.Display.SpanRenderer.Hex(OutputPalette.Instance.Entry(index));
+    private static string Hex(int index) => LineHtml.Hex(index);
 
     [Test]
     public async Task NoRulesReturnsTheDecodedLinesAndEmptyActions()
@@ -34,7 +44,7 @@ public sealed class TriggerEngineTests
         var outcome = Apply(_engine, string.Empty, []);
 
         await Assert.That(outcome.Lines.Count).IsEqualTo(1);
-        await Assert.That(Spans(outcome)).IsEmpty();
+        await Assert.That(outcome.Lines.Single().Dom().InnerHtml).IsEmpty();
         await Assert.That(outcome.SendCommands).IsEmpty();
         await Assert.That(outcome.Notifications).IsEmpty();
     }
@@ -167,11 +177,7 @@ public sealed class TriggerEngineTests
 
         var outcome = Apply(_engine, "the red dragon", [rule]);
 
-        await Assert.That(Spans(outcome)).IsNotEmpty();
-        foreach (var segment in Spans(outcome))
-        {
-            await Assert.That(segment.Color()).IsEqualTo(Hex(196));
-        }
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([Hex(196)]);
     }
 
     [Test]
@@ -185,12 +191,11 @@ public sealed class TriggerEngineTests
             ActionValue = "9",
         };
 
-        // "danger" is red and " ahead" default; the highlight makes both one colour, so one span.
+        // "danger" is red and " ahead" default; the highlight covers both, the server's red included.
         var outcome = Apply(_engine, "\e[31mdanger\e[0m ahead", [rule]);
 
-        var spans = Spans(outcome).ToList();
-        await Assert.That(spans.Select(s => s.Text)).IsEquivalentTo(["danger ahead"]);
-        await Assert.That(spans[0].Color()).IsEqualTo(Hex(9));
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([Hex(9)]);
+        await Assert.That(outcome.Lines.Single().Dom().TextContent).IsEqualTo("danger ahead");
     }
 
     [Test]
@@ -206,7 +211,7 @@ public sealed class TriggerEngineTests
 
         var outcome = Apply(_engine, "hello world", [rule]);
 
-        await Assert.That(Spans(outcome).Single().Color()).IsNull();
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([(string?)null]);
     }
 
     [Test]
@@ -253,10 +258,7 @@ public sealed class TriggerEngineTests
 
         var outcome = Apply(_engine, "The dragon roars.", [first, second]);
 
-        foreach (var segment in Spans(outcome))
-        {
-            await Assert.That(segment.Color()).IsEqualTo(Hex(9));
-        }
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([Hex(9)]);
     }
 
     [Test]
@@ -306,11 +308,7 @@ public sealed class TriggerEngineTests
 
         var outcome = Apply(_engine, "brave hero stands", [first, second]);
 
-        await Assert.That(Spans(outcome)).IsNotEmpty();
-        foreach (var segment in Spans(outcome))
-        {
-            await Assert.That(segment.Color()).IsEqualTo(Hex(3));
-        }
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([Hex(3)]);
     }
 
     [Test]
@@ -326,10 +324,6 @@ public sealed class TriggerEngineTests
 
         var outcome = Apply(_engine, "brave hero stands", [rule]);
 
-        await Assert.That(Spans(outcome)).IsNotEmpty();
-        foreach (var segment in Spans(outcome))
-        {
-            await Assert.That(segment.Color()).IsNull();
-        }
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([(string?)null]);
     }
 }
