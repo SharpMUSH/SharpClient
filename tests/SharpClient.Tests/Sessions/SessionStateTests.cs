@@ -30,7 +30,7 @@ public sealed class SessionStateTests
         fake.Emit("plain");
 
         await Assert.That(session.Scrollback.Count).IsEqualTo(1);
-        await Assert.That(session.Scrollback[0].Segments[0].Text).IsEqualTo("plain");
+        await Assert.That(session.Scrollback[0].Content.Text).IsEqualTo("plain");
     }
 
     [Test]

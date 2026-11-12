@@ -119,7 +119,7 @@
              4.6.1: SendNAWS moved to NAWSProtocol.SendWindowSizeAsync, the client names itself
              only through WithClientIdentity (TelnetConnection sets it), and FSharp.Core is gone,
              so AOT and trimming can be turned back on once a trimmed APK is checked on a device. -->
-        <PackageReference Include="TelnetNegotiationCore" Version="4.6.1" />
+        <PackageReference Include="TelnetNegotiationCore" Version="4.11.0" />
     </ItemGroup>
 
     <ItemGroup>

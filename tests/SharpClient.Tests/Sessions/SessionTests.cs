@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpClient.Core.Connection;
 using SharpClient.Core.Sessions;
+using SharpClient.Tests.Rendering;
 using SharpClient.Tests.Connection;
 using TelnetNegotiationCore.Builders;
 
@@ -46,8 +47,10 @@ public sealed class SessionTests
         await server.SendLineAsync("\e[31mAlert\e[0m");
 
         var line = await appended.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        await Assert.That(line.Segments.Count).IsEqualTo(1);
-        await Assert.That(line.Segments[0].Text).IsEqualTo("Alert");
+        var dom = line.Dom();
+        await Assert.That(dom.Children.Length).IsEqualTo(1);
+        await Assert.That(dom.TextContent).IsEqualTo("Alert");
+        await Assert.That(dom.FirstElementChild!.Color()).IsEqualTo("#e06c75");
         await Assert.That(session.Scrollback.Count).IsEqualTo(1);
     }
 
@@ -63,6 +66,6 @@ public sealed class SessionTests
         await Assert.That(conn.Sent).Contains("hello");
         // ...and locally echoed into the scrollback so the user sees what they typed.
         await Assert.That(session.Scrollback.Count).IsEqualTo(1);
-        await Assert.That(session.Scrollback[0].Segments[0].Text).Contains("hello");
+        await Assert.That(session.Scrollback[0].Content.Text).IsEqualTo("> hello");
     }
 }

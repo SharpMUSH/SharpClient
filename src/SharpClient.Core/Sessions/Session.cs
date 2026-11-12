@@ -1,3 +1,5 @@
+using MarkupString;
+using MarkupString.Ansi;
 using SharpClient.Core.Connection;
 using SharpClient.Core.Domain;
 using SharpClient.Core.Persistence;
@@ -7,7 +9,16 @@ using SharpClient.Core.Triggers;
 
 namespace SharpClient.Core.Sessions;
 
-public sealed record ScrollbackLine(IReadOnlyList<StyledSegment> Segments);
+/// <summary>
+/// One line of output, decoded. <see cref="Rendering.OutputHtml"/> writes it for the output view. Each line is
+/// equal only to itself: the view keys lines by them, and a server can send the same text twice.
+/// </summary>
+public sealed record ScrollbackLine(MarkupText Content)
+{
+    public bool Equals(ScrollbackLine? other) => ReferenceEquals(this, other);
+
+    public override int GetHashCode() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
+}
 
 public sealed class Session : ISession
 {
@@ -33,7 +44,7 @@ public sealed class Session : ISession
     private readonly List<ScrollbackLine> _scrollback = [];
     private readonly List<NegotiationEvent> _negotiationLog = [];
     private readonly List<GmcpMessage> _gmcpLog = [];
-    private readonly MxpParserState _mxp = new();
+    private readonly OutputDecoder _decoder = new();
     private event Action? _protocolChanged;
 
     public Session(
@@ -114,7 +125,8 @@ public sealed class Session : ISession
 
     public Task ReconnectAsync() => _connection.ReconnectAsync();
 
-    private static readonly TextStyle EchoStyle = TextStyle.Default with { Foreground = AnsiColor.Indexed(8) };
+    // Bright black (palette 8): dim against the server's own output.
+    private static readonly AnsiMarkup EchoStyle = AnsiMarkup.Create(foreground: new AnsiColor.Standard(0, Bright: true));
 
     public async Task SendAsync(string line)
     {
@@ -124,7 +136,7 @@ public sealed class Session : ISession
 
         // Local echo: MUSH/MUD servers normally don't echo your commands back, so
         // show what was typed in the scrollback (dim, prefixed) for visibility.
-        var echo = new ScrollbackLine([new StyledSegment("> " + line, EchoStyle)]);
+        var echo = new ScrollbackLine(MarkupText.Wrap(EchoStyle, "> " + line));
         lock (_scrollbackLock)
         {
             _scrollback.Add(echo);
@@ -151,46 +163,49 @@ public sealed class Session : ISession
 
     private void OnPuebloEnabled()
     {
-        _mxp.IsPuebloActive = true;
+        _decoder.EnablePueblo();
         _protocolChanged?.Invoke();
     }
 
     private void OnMxpEnabled()
     {
-        _mxp.IsMxpActive = true;
+        _decoder.EnableMxp();
         _protocolChanged?.Invoke();
     }
 
     private async void OnLineReceived(string raw)
     {
-        // Reset per-line MXP mode to the negotiated default before parsing this line.
-        _mxp.BeginLine();
+        // The decoder keeps the style, MXP line mode and open elements from line to line.
+        var decoded = _decoder.Decode(raw);
 
-        IReadOnlyList<StyledSegment> segments;
+        IReadOnlyList<MarkupText> lines;
         IReadOnlyList<string> sendCommands;
         IReadOnlyList<string> notifications;
 
         if (_triggerEngine is not null && _triggerRules is not null)
         {
-            var outcome = _triggerEngine.Apply(raw, _triggerRules, _mxp);
-            segments = outcome.Segments;
+            var outcome = _triggerEngine.Apply(raw, decoded, _triggerRules);
+            lines = outcome.Lines;
             sendCommands = outcome.SendCommands;
             notifications = outcome.Notifications;
         }
         else
         {
-            segments = AnsiParser.Parse(raw, _mxp);
+            lines = decoded;
             sendCommands = [];
             notifications = [];
         }
 
-        var line = new ScrollbackLine(segments);
-        lock (_scrollbackLock)
+        foreach (var content in lines)
         {
-            _scrollback.Add(line);
-        }
+            var line = new ScrollbackLine(content);
+            lock (_scrollbackLock)
+            {
+                _scrollback.Add(line);
+            }
 
-        LineAppended?.Invoke(line);
+            LineAppended?.Invoke(line);
+        }
 
         foreach (var cmd in sendCommands)
         {
@@ -220,10 +235,7 @@ public sealed class Session : ISession
         // server it reaches may not offer either.
         if (previous == ConnectionState.Connected && state != ConnectionState.Connected)
         {
-            _mxp.IsMxpActive = false;
-            _mxp.IsPuebloActive = false;
-            _mxp.DefaultLineMode = 0;
-            _mxp.LineMode = 0;
+            _decoder.Reset();
         }
 
         StateChanged?.Invoke(state);

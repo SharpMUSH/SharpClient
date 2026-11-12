@@ -1,50 +1,136 @@
+@using System.Runtime.CompilerServices
+@using System.Text.Json
+@using Microsoft.JSInterop
 @using SharpClient.Core.Rendering
 @using SharpClient.Core.Sessions
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 
-<div class="sc-output">
+@* Each line is MarkupString's HTML. markupstring.js (MarkupString.Web) runs its command links and menus. *@
+<div class="sc-output" style="@OutputPalette.CustomProperties" @ref="_root">
     @foreach (var line in Lines)
     {
-        <div class="sc-line">
-            @foreach (var segment in line.Segments)
-            {
-                @if (segment.ImageUrl is not null && ShowImages)
-                {
-                    @* no-referrer: the image host learns nothing about where it was shown. *@
-                    @if (segment.Command is not null && OnSendCommand is not null)
-                    {
-                        <button type="button" class="sc-link sc-image-link"
-                                title="@(segment.Hint ?? segment.Command)"
-                                @onclick="() => OnSendCommand(segment.Command!)"><img class="sc-image" src="@segment.ImageUrl" alt="@segment.Text" loading="lazy" referrerpolicy="no-referrer" /></button>
-                    }
-                    else
-                    {
-                        <img class="sc-image" src="@segment.ImageUrl" alt="@segment.Text" title="@segment.Text" loading="lazy" referrerpolicy="no-referrer" />
-                    }
-                }
-                else if (segment.Command is not null && OnSendCommand is not null)
-                {
-                    <button type="button" class="sc-link" style="@SegmentStyle.ToCss(segment)"
-                            title="@(segment.Hint ?? segment.Command)"
-                            @onclick="() => OnSendCommand(segment.Command!)">@(segment.Text.Length == 0 ? " " : segment.Text)</button>
-                }
-                else
-                {
-                    <span style="@SegmentStyle.ToCss(segment)">@(segment.Text.Length == 0 ? " " : segment.Text)</span>
-                }
-            }
-        </div>
+        <div class="sc-line" @key="line">@HtmlOf(line)</div>
     }
 </div>
 
 @code {
+    /// <summary>Where Blazor serves MarkupString.Web's script from.</summary>
+    public const string ScriptPath = "./_content/MarkupString.Web/markupstring.js";
+
+    // Effects the script would carry out on elements Blazor owns. They come here instead and are ignored:
+    // a clear would remove scrollback lines, and a pane would move a line's text out of it. Relocation and
+    // login prompts need the connection, which the view does not have.
+    private static readonly string[] s_forwarded = ["clear", "pane", "relocate", "login"];
+
+    // A line's HTML depends only on the line and whether images are shown, so each is written once.
+    private static readonly ConditionalWeakTable<ScrollbackLine, string> s_withPictures = new();
+    private static readonly ConditionalWeakTable<ScrollbackLine, string> s_withPictureNames = new();
+
+    private ElementReference _root;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _runtime;
+    private DotNetObjectReference<OutputView>? _self;
+    private bool _disposed;
+
     [Parameter]
     public IReadOnlyList<ScrollbackLine> Lines { get; set; } = [];
 
-    /// <summary>Invoked when a clickable MXP/Pueblo command-link is clicked.</summary>
+    /// <summary>Invoked when a clickable MXP/Pueblo command link, or one of its menu choices, is clicked.</summary>
     [Parameter]
     public Func<string, Task>? OnSendCommand { get; set; }
 
-    /// <summary>When false, an image segment renders as its text (its name or alt text) instead.</summary>
+    /// <summary>When false, an image renders as its text (its name or alt text) instead.</summary>
     [Parameter]
     public bool ShowImages { get; set; } = true;
+
+    private Microsoft.AspNetCore.Components.MarkupString HtmlOf(ScrollbackLine line) => new(ShowImages
+        ? s_withPictures.GetValue(line, static l => OutputHtml.Render(l.Content, showImages: true))
+        : s_withPictureNames.GetValue(line, static l => OutputHtml.Render(l.Content, showImages: false)));
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", ScriptPath);
+            if (_disposed)
+            {
+                await ReleaseAsync();
+                return;
+            }
+
+            _self = DotNetObjectReference.Create(this);
+            _runtime = await _module.InvokeAsync<IJSObjectReference>(
+                "attachDotNet", _root, _self, new { forward = s_forwarded, sounds = false });
+            if (_disposed)
+            {
+                // The view went away while the script attached: undo what DisposeAsync could not see.
+                await ReleaseAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The page went away first.
+        }
+        catch (Exception) when (_disposed)
+        {
+            // Disposed mid-attach; whatever failed belonged to the view that is gone.
+        }
+    }
+
+    /// <summary>A command link or menu choice was clicked.</summary>
+    [JSInvokable]
+    public Task Send(string command) => OnSendCommand?.Invoke(command) ?? Task.CompletedTask;
+
+    /// <summary>
+    /// A prompt link (MXP <c>SEND PROMPT</c>, Pueblo <c>xch_mode=prompt</c>) was clicked. There is no way to
+    /// put text in the input line from here yet, so it is sent, as before.
+    /// </summary>
+    [JSInvokable]
+    public Task Prompt(string command) => Send(command);
+
+    /// <summary>An effect in <see cref="s_forwarded"/>: ignored.</summary>
+    [JSInvokable]
+    public Task OnEffect(string name, JsonElement detail) => Task.CompletedTask;
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        await ReleaseAsync();
+    }
+
+    private async Task ReleaseAsync()
+    {
+        var runtime = _runtime;
+        var module = _module;
+        _runtime = null;
+        _module = null;
+        try
+        {
+            if (runtime is not null)
+            {
+                await runtime.InvokeVoidAsync("detach");
+                await runtime.DisposeAsync();
+            }
+
+            if (module is not null)
+            {
+                await module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The page went away first.
+        }
+        finally
+        {
+            _self?.Dispose();
+            _self = null;
+        }
+    }
 }

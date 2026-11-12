@@ -1,5 +1,6 @@
 using SharpClient.Core.Domain;
 using SharpClient.Core.Rendering;
+using SharpClient.Tests.Rendering;
 using SharpClient.Core.Triggers;
 
 namespace SharpClient.Tests.Triggers;
@@ -8,24 +9,42 @@ public sealed class TriggerEngineTests
 {
     private readonly TriggerEngine _engine = new();
 
-    [Test]
-    public async Task NoRulesReturnsAnsiParsedSegmentsAndEmptyActions()
-    {
-        var outcome = _engine.Apply("hello world", []);
+    private static TriggerOutcome Apply(TriggerEngine engine, string raw, IReadOnlyList<TriggerRule> rules) =>
+        engine.Apply(raw, new OutputDecoder().Decode(raw), rules);
 
-        var expected = AnsiParser.Parse("hello world");
-        await Assert.That(outcome.Segments.Count).IsEqualTo(expected.Count);
-        await Assert.That(outcome.Segments[0]).IsEqualTo(expected[0]);
+    /// <summary>
+    /// For each line, the Highlight colour over the whole of it, or null when it has none. The stylesheet
+    /// draws everything inside <c>.sc-highlight</c> in <c>--sc-highlight</c>.
+    /// </summary>
+    private static IReadOnlyList<string?> Highlights(TriggerOutcome outcome) =>
+        [.. outcome.Lines.Select(line =>
+        {
+            var dom = line.Dom();
+            return dom.Children is [{ } only] && only.ClassList.Contains("sc-highlight") && only.TextContent == dom.TextContent
+                ? only.GetAttribute("style")!.Replace("--sc-highlight: ", string.Empty, StringComparison.Ordinal)
+                : null;
+        })];
+
+    private static string Hex(int index) => LineHtml.Hex(index);
+
+    [Test]
+    public async Task NoRulesReturnsTheDecodedLinesAndEmptyActions()
+    {
+        var decoded = new OutputDecoder().Decode("hello world");
+        var outcome = _engine.Apply("hello world", decoded, []);
+
+        await Assert.That(outcome.Lines).IsEqualTo(decoded);
         await Assert.That(outcome.SendCommands).IsEmpty();
         await Assert.That(outcome.Notifications).IsEmpty();
     }
 
     [Test]
-    public async Task NoRulesEmptyLineReturnsEmptySegmentsAndEmptyActions()
+    public async Task NoRulesEmptyLineReturnsOneEmptyLineAndEmptyActions()
     {
-        var outcome = _engine.Apply(string.Empty, []);
+        var outcome = Apply(_engine, string.Empty, []);
 
-        await Assert.That(outcome.Segments).IsEmpty();
+        await Assert.That(outcome.Lines.Count).IsEqualTo(1);
+        await Assert.That(outcome.Lines.Single().Dom().InnerHtml).IsEmpty();
         await Assert.That(outcome.SendCommands).IsEmpty();
         await Assert.That(outcome.Notifications).IsEmpty();
     }
@@ -41,7 +60,7 @@ public sealed class TriggerEngineTests
             ActionValue = "attack dragon",
         };
 
-        var outcome = _engine.Apply("A dragon appears!", [rule]);
+        var outcome = Apply(_engine, "A dragon appears!", [rule]);
 
         await Assert.That(outcome.SendCommands).Contains("attack dragon");
         await Assert.That(outcome.Notifications).IsEmpty();
@@ -58,7 +77,7 @@ public sealed class TriggerEngineTests
             ActionValue = "HP critical!",
         };
 
-        var outcome = _engine.Apply("Your health low, be careful.", [rule]);
+        var outcome = Apply(_engine, "Your health low, be careful.", [rule]);
 
         await Assert.That(outcome.Notifications).Contains("HP critical!");
         await Assert.That(outcome.SendCommands).IsEmpty();
@@ -75,7 +94,7 @@ public sealed class TriggerEngineTests
             ActionValue = "loot",
         };
 
-        var outcome = _engine.Apply("You kill the goblin.", [rule]);
+        var outcome = Apply(_engine, "You kill the goblin.", [rule]);
 
         await Assert.That(outcome.SendCommands).Contains("loot");
     }
@@ -91,7 +110,7 @@ public sealed class TriggerEngineTests
             ActionValue = "flee",
         };
 
-        var outcome = _engine.Apply("A dragon appears!", [rule]);
+        var outcome = Apply(_engine, "A dragon appears!", [rule]);
 
         await Assert.That(outcome.SendCommands).IsEmpty();
     }
@@ -107,7 +126,7 @@ public sealed class TriggerEngineTests
             ActionValue = "flee",
         };
 
-        var outcome = _engine.Apply("A dragon appears!", [rule]);
+        var outcome = Apply(_engine, "A dragon appears!", [rule]);
 
         await Assert.That(outcome.SendCommands).IsEmpty();
     }
@@ -124,7 +143,7 @@ public sealed class TriggerEngineTests
             Enabled = false,
         };
 
-        var outcome = _engine.Apply("A dragon appears!", [rule]);
+        var outcome = Apply(_engine, "A dragon appears!", [rule]);
 
         await Assert.That(outcome.SendCommands).IsEmpty();
     }
@@ -140,13 +159,13 @@ public sealed class TriggerEngineTests
             ActionValue = "should not appear",
         };
 
-        var outcome = _engine.Apply("some line", [rule]);
+        var outcome = Apply(_engine, "some line", [rule]);
 
         await Assert.That(outcome.SendCommands).IsEmpty();
     }
 
     [Test]
-    public async Task HighlightRestylesAllSegmentsWithGivenIndex()
+    public async Task HighlightRestylesAllSpansWithGivenIndex()
     {
         var rule = new TriggerRule
         {
@@ -156,17 +175,13 @@ public sealed class TriggerEngineTests
             ActionValue = "196",
         };
 
-        var outcome = _engine.Apply("the red dragon", [rule]);
+        var outcome = Apply(_engine, "the red dragon", [rule]);
 
-        await Assert.That(outcome.Segments).IsNotEmpty();
-        foreach (var segment in outcome.Segments)
-        {
-            await Assert.That(segment.Style.Foreground).IsEqualTo(AnsiColor.Indexed(196));
-        }
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([(string?)Hex(196)]);
     }
 
     [Test]
-    public async Task HighlightWithAnsiInputRestylesAllSegments()
+    public async Task HighlightWithAnsiInputRestylesAllSpans()
     {
         var rule = new TriggerRule
         {
@@ -176,12 +191,11 @@ public sealed class TriggerEngineTests
             ActionValue = "9",
         };
 
-        // Two segments: "danger" (red fg) and " ahead" (default)
-        var outcome = _engine.Apply("\e[31mdanger\e[0m ahead", [rule]);
+        // "danger" is red and " ahead" default; the highlight covers both, the server's red included.
+        var outcome = Apply(_engine, "\e[31mdanger\e[0m ahead", [rule]);
 
-        await Assert.That(outcome.Segments.Count).IsEqualTo(2);
-        await Assert.That(outcome.Segments[0].Style.Foreground).IsEqualTo(AnsiColor.Indexed(9));
-        await Assert.That(outcome.Segments[1].Style.Foreground).IsEqualTo(AnsiColor.Indexed(9));
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([(string?)Hex(9)]);
+        await Assert.That(outcome.Lines.Single().Dom().TextContent).IsEqualTo("danger ahead");
     }
 
     [Test]
@@ -195,9 +209,9 @@ public sealed class TriggerEngineTests
             ActionValue = "not-a-number",
         };
 
-        var outcome = _engine.Apply("hello world", [rule]);
+        var outcome = Apply(_engine, "hello world", [rule]);
 
-        await Assert.That(outcome.Segments[0].Style.Foreground).IsEqualTo(AnsiColor.Default);
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([(string?)null]);
     }
 
     [Test]
@@ -218,7 +232,7 @@ public sealed class TriggerEngineTests
             ActionValue = "Dragon spotted!",
         };
 
-        var outcome = _engine.Apply("The dragon roars.", [sendRule, notifyRule]);
+        var outcome = Apply(_engine, "The dragon roars.", [sendRule, notifyRule]);
 
         await Assert.That(outcome.SendCommands).Contains("attack");
         await Assert.That(outcome.Notifications).Contains("Dragon spotted!");
@@ -242,12 +256,9 @@ public sealed class TriggerEngineTests
             ActionValue = "9",
         };
 
-        var outcome = _engine.Apply("The dragon roars.", [first, second]);
+        var outcome = Apply(_engine, "The dragon roars.", [first, second]);
 
-        foreach (var segment in outcome.Segments)
-        {
-            await Assert.That(segment.Style.Foreground).IsEqualTo(AnsiColor.Indexed(9));
-        }
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([(string?)Hex(9)]);
     }
 
     [Test]
@@ -268,7 +279,7 @@ public sealed class TriggerEngineTests
             ActionValue = "loot",
         };
 
-        var outcome = _engine.Apply("The dragon dies.", [rule1, rule2]);
+        var outcome = Apply(_engine, "The dragon dies.", [rule1, rule2]);
 
         await Assert.That(outcome.SendCommands.Count).IsEqualTo(2);
         await Assert.That(outcome.SendCommands).Contains("attack");
@@ -295,17 +306,13 @@ public sealed class TriggerEngineTests
             ActionValue = "256", // out of range — skipped
         };
 
-        var outcome = _engine.Apply("brave hero stands", [first, second]);
+        var outcome = Apply(_engine, "brave hero stands", [first, second]);
 
-        await Assert.That(outcome.Segments).IsNotEmpty();
-        foreach (var segment in outcome.Segments)
-        {
-            await Assert.That(segment.Style.Foreground).IsEqualTo(AnsiColor.Indexed(3));
-        }
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([(string?)Hex(3)]);
     }
 
     [Test]
-    public async Task HighlightOnlyOutOfRangeActionValueLeavesSegmentsDefault()
+    public async Task HighlightOnlyOutOfRangeActionValueLeavesSpansDefault()
     {
         var rule = new TriggerRule
         {
@@ -315,12 +322,8 @@ public sealed class TriggerEngineTests
             ActionValue = "256", // out of range — no highlight applied
         };
 
-        var outcome = _engine.Apply("brave hero stands", [rule]);
+        var outcome = Apply(_engine, "brave hero stands", [rule]);
 
-        await Assert.That(outcome.Segments).IsNotEmpty();
-        foreach (var segment in outcome.Segments)
-        {
-            await Assert.That(segment.Style.Foreground).IsEqualTo(AnsiColor.Default);
-        }
+        await Assert.That(Highlights(outcome)).IsEquivalentTo([(string?)null]);
     }
 }

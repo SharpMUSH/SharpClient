@@ -65,20 +65,33 @@ Index → hex. This **is** `AnsiColor.Indexed(0..15)`:
 
 xterm-256: indices 16–231 are the 6×6×6 cube, 232–255 the grayscale ramp —
 computed by the standard xterm formula (the prototype shows representative
-samples). The renderer maps any `AnsiColor.Indexed(n)` for `n` in 0–255.
+samples). `OutputPalette` holds these sixteen; the cube and ramp are xterm's.
 
-## Styled-segment render contract
+## Output render contract
 
-Maps `StyledSegment` (`TextStyle` = fg/bg/bold/underline/inverse) to a rendered
-span. Equivalent to the prototype's `runStyle`:
+Server output is decoded by MarkupString (`OutputDecoder`) and written as
+MarkupString's HTML (`OutputHtml`); `OutputView` shows each line and attaches
+`MarkupString.Web`'s script, whose stylesheet (`markupstring.css`) the hosts
+load before `app.css`. Equivalent to the prototype's `runStyle`:
 
-- Default foreground (no fg set) → `--pho` (`#c4d1c8`); default background →
-  transparent (the `--outbg` shows through).
-- `Foreground = Indexed(n)` → palette/cube hex; `Background = Indexed(n)` →
-  hex + small horizontal padding (`0 2px`).
-- **Inverse**: swap — foreground becomes `--outbg`, background becomes the
-  segment's foreground colour (or `--pho` if none).
-- **Bold** → font-weight 700. **Underline** → `text-decoration: underline`.
+- Default foreground (no fg set) → no inline colour, so `.sc-line`'s `--pho`
+  (`#c4d1c8`) shows; default background → transparent (the `--outbg` shows
+  through).
+- The sixteen standard colours are written as `var(--ms-ansi-N, …)`;
+  `OutputView` sets `--ms-ansi-0` to `--ms-ansi-15` from `OutputPalette`.
+  Other palette colours and truecolour are written as sent. A span with a
+  background also gets a small horizontal padding (`0 2px`).
+- **Inverse**: swap — foreground becomes `--ms-bg` (`--outbg`), background
+  becomes the span's foreground colour, or `--ms-fg` (`--pho`) if none.
+- **Bold**, **faint**, **italic**, **underline**, **overline**,
+  **strikethrough**, **blink**, **conceal** → `ms-*` classes from
+  `markupstring.css`; blink stops under reduced motion.
+- Command links are `a.ms-cmd-link[xch_cmd]` and web links `a[href]`, in the
+  accent colour unless the server coloured them; an MXP menu is `.ms-menu`, and
+  the script opens its choices in a popup. The script calls back into
+  `OutputView` to send a command; clears and panes are not acted on.
+- A Highlight trigger wraps the line in `span.sc-highlight`, whose
+  `--sc-highlight` colour overrides the server's.
 - Glow (when enabled): `text-shadow: 0 0 6px rgba(150,210,170,.28)` on the feed.
 
 ## Connection-state palette (drives tabs, pills, dots)
