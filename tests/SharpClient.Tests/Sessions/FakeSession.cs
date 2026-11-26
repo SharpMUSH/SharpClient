@@ -32,6 +32,16 @@ public sealed class FakeSession : ISession
         return Task.CompletedTask;
     }
 
+    public int ForceReconnects { get; private set; }
+
+    public Exception? ForceReconnectFailure { get; set; }
+
+    public Task ForceReconnectAsync()
+    {
+        ForceReconnects++;
+        return ForceReconnectFailure is { } ex ? Task.FromException(ex) : Task.CompletedTask;
+    }
+
     public void RaiseState(ConnectionState state)
     {
         State = state;

@@ -7,7 +7,7 @@ namespace SharpClient.Core.Connection;
 /// </summary>
 /// <remarks>
 /// Registered in DI in the App head (Android: a foreground service proxy; other platforms: a no-op)
-/// and driven by ConnectionKeepAliveCoordinator off the session lifecycle. Socket-level SO_KEEPALIVE
+/// and driven by <see cref="ConnectionKeepAliveCoordinator"/> off the session lifecycle. Socket-level SO_KEEPALIVE
 /// and telnet-NOP keepalive remain owned by the Core connection layer.
 /// </remarks>
 public interface IConnectionKeepAlive

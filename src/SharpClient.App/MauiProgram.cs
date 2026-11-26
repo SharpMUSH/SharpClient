@@ -115,7 +115,8 @@ public static class MauiProgram
 
         // Eagerly resolve the coordinator so it begins observing session/connection activity at
         // startup (DI singletons are otherwise lazily constructed on first request).
-        app.Services.GetRequiredService<ConnectionKeepAliveCoordinator>();
+        var keepAlive = app.Services.GetRequiredService<ConnectionKeepAliveCoordinator>();
+        NetworkChangeSignal.Changed += keepAlive.ReconnectAll;
 
         return app;
     }
