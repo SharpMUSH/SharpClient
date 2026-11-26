@@ -28,6 +28,9 @@ internal sealed class ConnectionKeepAliveService : Service
     private const int    NotificationId = 1_001;
     private const string WakeLockTag    = "SharpClient::KeepAlive";
 
+    // The text on the notification, kept so a network change can re-post it unchanged.
+    private static string s_status = "Connected";
+
     private PowerManager.WakeLock? _wakeLock;
     private ConnectivityManager? _connectivity;
     private ConnectivityManager.NetworkCallback? _networkCallback;
@@ -39,9 +42,9 @@ internal sealed class ConnectionKeepAliveService : Service
     [return: GeneratedEnum]
     public override StartCommandResult OnStartCommand(Intent? intent, [GeneratedEnum] StartCommandFlags flags, int startId)
     {
-        EnsureNotificationChannel();
-        var status       = intent?.GetStringExtra(AndroidConnectionKeepAlive.ExtraStatus) ?? "Connected";
-        var notification = BuildNotification(status);
+        EnsureNotificationChannel(this);
+        s_status         = intent?.GetStringExtra(AndroidConnectionKeepAlive.ExtraStatus) ?? s_status;
+        var notification = BuildNotification(this, s_status);
 
         // On API 29+ supply the foreground service type declared in AndroidManifest.xml.
         // TypeConnectedDevice = FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE (connectedDevice; API 29+).
@@ -157,8 +160,7 @@ internal sealed class ConnectionKeepAliveService : Service
         }
         _haveSeenNetwork = true;
 
-        var nm = (NotificationManager?)GetSystemService(NotificationService);
-        nm?.Notify(NotificationId, BuildNotification("Connected"));
+        UpdateStatus(this, s_status);
     }
 
     private void OnNetworkLost(Network network)
@@ -171,18 +173,29 @@ internal sealed class ConnectionKeepAliveService : Service
         }
     }
 
-    private void EnsureNotificationChannel()
+    /// <summary>
+    /// Changes the text on the running service's notification. Unlike another
+    /// StartForegroundService, this is allowed while the app is in the background.
+    /// </summary>
+    internal static void UpdateStatus(Context context, string statusText)
+    {
+        s_status = statusText;
+        var nm = (NotificationManager?)context.GetSystemService(NotificationService);
+        nm?.Notify(NotificationId, BuildNotification(context, statusText));
+    }
+
+    private static void EnsureNotificationChannel(Context context)
     {
         var channel = new NotificationChannel(ChannelId, ChannelName, NotificationImportance.Low)
         {
             Description = "Keeps the MUSH TCP connection alive while the app is in the background.",
         };
-        var nm = (NotificationManager?)GetSystemService(NotificationService);
+        var nm = (NotificationManager?)context.GetSystemService(NotificationService);
         nm?.CreateNotificationChannel(channel);
     }
 
-    private Notification BuildNotification(string statusText) =>
-        new Notification.Builder(this, ChannelId)
+    private static Notification BuildNotification(Context context, string statusText) =>
+        new Notification.Builder(context, ChannelId)
             .SetContentTitle("SharpClient")
             .SetContentText(statusText)
             .SetSmallIcon(Resource.Drawable.ic_stat_keepalive)

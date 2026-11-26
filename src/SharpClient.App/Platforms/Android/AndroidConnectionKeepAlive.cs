@@ -16,9 +16,20 @@ internal sealed class AndroidConnectionKeepAlive : IConnectionKeepAlive
     // service's android26.0 SupportedOSPlatform requirement.
     internal const string ExtraStatus = "extra_status_text";
 
+    private bool _started;
+
     public void Start(string statusText)
     {
-        var ctx    = Android.App.Application.Context;
+        var ctx = Android.App.Application.Context;
+
+        // Android 12+ refuses StartForegroundService while the app is in the background (screen
+        // locked), so once the service runs a status change only re-posts its notification.
+        if (_started && OperatingSystem.IsAndroidVersionAtLeast(26))
+        {
+            ConnectionKeepAliveService.UpdateStatus(ctx, statusText);
+            return;
+        }
+
         var intent = new Intent(ctx, typeof(ConnectionKeepAliveService))
             .PutExtra(ExtraStatus, statusText);
 
@@ -31,10 +42,13 @@ internal sealed class AndroidConnectionKeepAlive : IConnectionKeepAlive
         {
             ctx.StartService(intent);
         }
+
+        _started = true;
     }
 
     public void Halt()
     {
+        _started = false;
         var ctx = Android.App.Application.Context;
         ctx.StopService(new Intent(ctx, typeof(ConnectionKeepAliveService)));
     }
